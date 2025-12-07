@@ -1,6 +1,15 @@
 """Module docstring: mark hidden directories to be ignored by the repository rules."""
 
 # instead of .bazelignore w/o glob https://bazel.build/run/bazelrc#bazelignore
+#  https://bazel.build/rules/lib/globals/repo#ignore_directories
 ignore_directories([
-    ".*"
+    # ".*", # cannot be used alone, as it would also ignore .clwb which is required for CLion Bazel plugin
+    ".external*",
+    ".git",
+    ".github",
+    ".vscode",
+    ".idea",
+    ".cache",
+    ".gradle",
+    ".lldb",
 ])
