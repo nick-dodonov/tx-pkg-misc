@@ -30,21 +30,20 @@ bazel_dep(name = "tx-kit-ext")  # not published in private registry yet
 git_override(
     module_name = "tx-kit-ext",
     remote = "https://github.com/nick-dodonov/tx-kit-ext.git",
-    tag = "v/0.2.0-pre.3",
+    tag = "v/0.2.1",
 )
 
 # demo/test deps
 bazel_dep(name = "tx-pkg-aux")  # not published in private registry yet
 git_override(
     module_name = "tx-pkg-aux",
-    #branch = "main",  # need bazel run @tx-kit-ext//tools:cleanup tx-pkg-aux && bazel clean
     remote = "https://github.com/nick-dodonov/tx-pkg-aux.git",
-    tag = "v/0.1.0",
+    tag = "v/0.2.0",
     verbose = True,
 )
 
-bazel_dep(name = "boost.asio", version = "1.89.0.bcr.1.1-tx.1")
-bazel_dep(name = "asio", version = "1.34.2-tx.1")
+bazel_dep(name = "boost.asio", version = "1.89.0.bcr.1.1-tx.1")  # private registry
+bazel_dep(name = "asio", version = "1.34.2-tx.1")  # private registry
 # bazel_dep(name = "asio", version = "1.34.2")
 # single_version_override(
 #     module_name = "asio",
@@ -54,7 +53,7 @@ bazel_dep(name = "asio", version = "1.34.2-tx.1")
 
 bazel_dep(name = "nghttp2", version = "1.65.0")
 bazel_dep(name = "openssl", version = "3.3.1.bcr.9")
-#TODO: try bazel_dep(name = "boringssl", version = "0.20251110.0")
+bazel_dep(name = "boringssl", version = "0.20251124.0")
 
 bazel_dep(name = "sdl3", version = "3.2.26-tx.1")
 bazel_dep(name = "sdl3pp", version = "0.3.1-tx.1")

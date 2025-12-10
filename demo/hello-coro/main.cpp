@@ -456,7 +456,7 @@ void demonstrate_parallel_tasks() {
     Log::Info("Общее время выполнения: " + std::to_string(duration.count()) + " мс");
 }
 
-int main(int argc, char** argv)
+int main(int argc, const char** argv)
 {
     Boot::LogHeader(argc, argv);
     Log::Info("=== ДЕМОНСТРАЦИЯ КОРУТИН C++20 ===");

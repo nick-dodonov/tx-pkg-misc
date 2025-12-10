@@ -53,7 +53,7 @@ void mainLoop(void* arg)
     SDL_RenderPresent(ctx->renderer);
 }
 
-int main(int argc, char** argv)
+int main(int argc, const char** argv)
 {
     Boot::LogHeader(argc, argv);
     Log::Info("SDL3 try demo 1st");

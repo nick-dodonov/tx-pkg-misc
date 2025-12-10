@@ -101,7 +101,7 @@ int main_server() {
   return 0;
 }
 
-int main(int argc, char** argv)
+int main(int argc, const char** argv)
 {
     Boot::LogHeader(argc, argv);
 

@@ -211,7 +211,7 @@ HttpResponse makeHttpRequest(const std::string& host, int port, const std::strin
     return response;
 }
 
-int main(int argc, char** argv)
+int main(int argc, const char** argv)
 {
     Boot::LogHeader(argc, argv);
 
