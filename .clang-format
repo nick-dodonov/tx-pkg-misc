@@ -7,10 +7,11 @@ UseTab: Never
 ContinuationIndentWidth: 4
 AccessModifierOffset: -4
 NamespaceIndentation: All
-IndentRequires: false
+IndentRequires: false # for C++20 requires clauses
 IndentCaseLabels: true
-IndentPPDirectives: BeforeHash
-ColumnLimit: 120
+IndentPPDirectives: None # BeforeHash
+IndentExternBlock: Indent
+ColumnLimit: 160
 
 # pointer and reference alignment
 PointerAlignment: Left
@@ -46,18 +47,21 @@ PackConstructorInitializers: Never
 BreakConstructorInitializers: BeforeComma
 
 # brace wrapping
-BreakBeforeBraces: Stroustrup
-# BreakBeforeBraces: Custom
-# BraceWrapping:
-#   AfterClass: false
+# BreakBeforeBraces: Linux
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterNamespace: true
+  AfterClass: true
+  AfterStruct: true
+  AfterEnum: true
+  AfterFunction: true
+  SplitEmptyFunction: false
 #   AfterControlStatement: false
-#   AfterEnum: false
-#   AfterFunction: false
-#   AfterNamespace: false
-#   AfterStruct: false
+#   AfterControlStatement: MultiLine
+#   AfterControlStatement: Never
 #   AfterUnion: false
 #   BeforeCatch: false
-#   BeforeElse: false
+  BeforeElse: false
 #   AfterCaseLabel: false
 #   AfterExternBlock: false
 #   BeforeLambdaBody: false
@@ -66,10 +70,7 @@ BreakBeforeBraces: Stroustrup
 #   SplitEmptyFunction: false
 #   SplitEmptyRecord: false
 #   SplitEmptyNamespace: false
-#   AfterControlStatement: false
 #   AfterCaseLabel: false
-#   AfterControlStatement: MultiLine
-#   AfterControlStatement: Never
 #   AfterCaseLabel: false
 #   AfterCaseLabel: false
 
@@ -88,3 +89,8 @@ AllowShortLoopsOnASingleLine: false
 SpaceAfterCStyleCast: false
 SpaceBeforeParens: ControlStatements
 FixNamespaceComments: false
+InsertNewlineAtEOF: true
+
+# https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html#calling-javascript-from-c-c
+WhitespaceSensitiveMacros: ['EM_ASM', 'EM_JS', 'EM_ASM_INT', 'EM_ASM_DOUBLE', 'EM_ASM_PTR', 'MAIN_THREAD_EM_ASM', 'MAIN_THREAD_EM_ASM_INT', 'MAIN_THREAD_EM_ASM_DOUBLE', 'MAIN_THREAD_EM_ASM_DOUBLE', 'MAIN_THREAD_ASYNC_EM_ASM']
+
