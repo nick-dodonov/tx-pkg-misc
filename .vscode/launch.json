@@ -3,6 +3,19 @@
     "configurations": [
         // ================ debug demo configurations
         {
+            "name": "demo <user> (LLDB)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/bazel-bin/${config:tx.debugTaskName}",
+            "cwd": "${workspaceFolder}",
+            "initCommands": [
+                "platform setting -w ${workspaceFolder}",
+                "command source ${env:HOME}/.lldbinit",
+                "command source ${workspaceFolder}/.lldbinit",
+            ],
+            "preLaunchTask": "build demo <user>",
+        },
+        {
             "name": "demo <relative> (LLDB)",
             "type": "lldb",
             "request": "launch",

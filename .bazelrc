@@ -6,8 +6,7 @@ common --enable_platform_specific_config
 # Configure boost.asio to use BoringSSL for SSL support
 build --@boost.asio//:ssl=boringssl
 build:wasm --@boost.asio//:ssl=no_ssl
-# WASM threading support w/ boost
-# build:wasm --copt="-pthread"
+build:windows --cxxopt="/std:c++latest"
 
 try-import %workspace%/.dev.bazelrc
 try-import %workspace%/.user.bazelrc
