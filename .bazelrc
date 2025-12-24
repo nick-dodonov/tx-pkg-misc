@@ -3,6 +3,12 @@ common --registry=https://raw.githubusercontent.com/nick-dodonov/tx-kit-registry
 common --registry=https://bcr.bazel.build/
 common --enable_platform_specific_config
 
+# C++ standard settings per platform (boost.asio w/ coroutines needs C++20 at least)
+build:linux --cxxopt="-std=c++23"
+build:macos --cxxopt="-std=c++23"
+build:wasm --cxxopt="-std=c++23"
+build:windows --cxxopt="/std:c++latest"
+
 # Configure boost.asio to use BoringSSL for SSL support
 build --@boost.asio//:ssl=boringssl
 build:wasm --@boost.asio//:ssl=no_ssl
