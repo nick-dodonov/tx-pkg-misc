@@ -1,9 +1,11 @@
 #include "Sdl/Loop/Sdl3Looper.h"
 #include "App/Domain.h"
 #include "Log/Log.h"
+#include "Boot/CliArgs.h"
 #include "FpsCounter.h"
 #include <cmath>
 #include <memory>
+#include <charconv>
 #include <boost/asio/experimental/awaitable_operators.hpp>
 
 namespace asio = boost::asio;
@@ -11,20 +13,15 @@ using namespace asio::experimental::awaitable_operators;
 
 static std::shared_ptr<App::Domain> domain;
 
-static asio::awaitable<int> CoroMain()
+static asio::awaitable<int> CoroMain(int timeoutSeconds)
 {
     auto executor = co_await asio::this_coro::executor;
     auto looper = domain->GetLooper<Sdl::Loop::Sdl3Looper>();
 
-    Log::Info("SDL3 window is ready");
-    Log::Info("waiting for quit event or 3-second timeout...");
-
-    // Create a timer for 3 seconds
-    auto timer = asio::steady_timer(executor);
-    timer.expires_after(std::chrono::seconds(3));
-
     // Wait for EITHER quit event OR timer - whichever comes first
-    // Using asio::experimental::awaitable_operators::operator||
+    Log::Info("waiting for quit event or {}-second timeout...", timeoutSeconds);
+    auto timer = asio::steady_timer(executor);
+    timer.expires_after(std::chrono::seconds(timeoutSeconds));
     auto result = co_await (
         looper->WaitForQuit() || 
         timer.async_wait(asio::use_awaitable)
@@ -35,7 +32,7 @@ static asio::awaitable<int> CoroMain()
     if (result.index() == 0) {
         Log::Info("window was closed by user");
     } else {
-        Log::Info("3-second timeout reached, requesting quit");
+        Log::Info("{}-second timeout reached, requesting quit", timeoutSeconds);
         looper->RequestQuit(0);
     }
 
@@ -45,6 +42,20 @@ static asio::awaitable<int> CoroMain()
 
 int main(const int argc, const char* argv[])
 {
+    // Parse command line arguments
+    Boot::CliArgs args(argc, argv);
+    
+    // Get timeout from first argument (default 3 seconds)
+    int timeoutSeconds = 3;
+    if (args.size() > 1) {
+        std::string_view timeoutStr = args[1];
+        auto result = std::from_chars(timeoutStr.data(), timeoutStr.data() + timeoutStr.size(), timeoutSeconds);
+        if (result.ec == std::errc::invalid_argument) {
+            Log::Warn("Invalid timeout argument '{}', using default 3 seconds", timeoutStr);
+            timeoutSeconds = 3;
+        }
+    }
+
     // Configure SDL3 looper
     auto looper = std::make_shared<Sdl::Loop::Sdl3Looper>(
         Sdl::Loop::Sdl3Looper::Options{
@@ -109,5 +120,5 @@ int main(const int argc, const char* argv[])
 
     // Create domain with custom looper
     domain = std::make_shared<App::Domain>(argc, argv, looper);
-    return domain->RunCoroMain(CoroMain());
+    return domain->RunCoroMain(CoroMain(timeoutSeconds));
 }
