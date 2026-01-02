@@ -66,21 +66,21 @@ int main(const int argc, const char* argv[])
                 float centerX = 320.0f;
                 float centerY = 240.0f;
                 float radius = 100.0f;
-                float x = centerX + radius * std::cos(elapsed * 2.0f);
-                float y = centerY + radius * std::sin(elapsed * 2.0f);
-                float size = 50.0f + 20.0f * std::sin(elapsed * 4.0f);
+                float x = centerX + radius * std::cosf(elapsed * 2.0f);
+                float y = centerY + radius * std::sinf(elapsed * 2.0f);
+                float size = 50.0f + 20.0f * std::sinf(elapsed * 4.0f);
 
                 // Color cycles through red/orange
-                auto r = static_cast<Uint8>(200 + 55 * std::sin(elapsed * 3.0f));
-                auto g = static_cast<Uint8>(80 + 40 * std::sin(elapsed * 2.0f));
+                auto r = static_cast<Uint8>(200 + 55 * std::sinf(elapsed * 3.0f));
+                auto g = static_cast<Uint8>(80 + 40 * std::sinf(elapsed * 2.0f));
                 
                 SDL_SetRenderDrawColor(renderer, r, g, 50, 255);
                 SDL_FRect rect = {x - size/2, y - size/2, size, size};
                 SDL_RenderFillRect(renderer, &rect);
 
                 // Second rectangle rotating opposite direction
-                float x2 = centerX + radius * std::cos(-elapsed * 1.5f);
-                float y2 = centerY + radius * std::sin(-elapsed * 1.5f);
+                float x2 = centerX + radius * std::cosf(-elapsed * 1.5f);
+                float y2 = centerY + radius * std::sinf(-elapsed * 1.5f);
                 SDL_SetRenderDrawColor(renderer, 100, 200, 100, 255);
                 SDL_FRect rect2 = {x2 - 25, y2 - 25, 50, 50};
                 SDL_RenderFillRect(renderer, &rect2);

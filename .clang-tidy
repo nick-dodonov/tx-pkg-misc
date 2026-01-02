@@ -17,7 +17,9 @@ Checks: >
   -readability-magic-numbers,
   -readability-convert-member-functions-to-static,
   -readability-identifier-length,
-  -readability-static-definition-in-anonymous-namespace
+  -readability-static-definition-in-anonymous-namespace,
+  -readability-uppercase-literal-suffix,
+  -readability-math-missing-parentheses
 
 # Disabled checks explanation:
 # - alpha.*: Experimental checks, too many false positives
@@ -28,7 +30,7 @@ Checks: >
 # - readability-magic-numbers: Acceptable in test code
 # - readability-convert-member-functions-to-static: Breaks coroutine awaiter protocol
 # - readability-identifier-length: Conflicts with naming conventions (variable i/j/n are common)
-# -bugprone-exception-escape - False positives in codebases that do not use exceptions at all
+# - bugprone-exception-escape - False positives in codebases that do not use exceptions at all
 
 CheckOptions:
   - key: readability-identifier-naming.VariableCase
