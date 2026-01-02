@@ -25,8 +25,9 @@ Window window{SDL_CreateWindow("Title", 800, 600, 0)};
  * This code is public domain. Feel free to use it for any purpose!
  */
 
-#define SDL_MAIN_USE_CALLBACKS 1 /* use the callbacks instead of main() */
 #include <SDL3/SDL.h>
+#define SDL_MAIN_USE_CALLBACKS 1 /* use the callbacks instead of main() */
+// #define SDL_MAIN_HANDLED
 #include <SDL3/SDL_main.h>
 
 /* We will use this renderer to draw into this window every frame. */
@@ -167,3 +168,9 @@ SDL_AppResult SDL_AppIterate(void* appstate)
 
     return SDL_APP_CONTINUE; /* carry on with the program! */
 }
+
+// int main(const int argc, const char* argv[])
+// {
+//     //App::Domain domain{argc, argv};
+//     return 0;// domain.RunCoroMain(CoroMain());
+// }

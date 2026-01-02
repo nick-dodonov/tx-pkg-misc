@@ -1,0 +1,13 @@
+load("@tx-kit-ext//rules/build:tx_library.bzl", "tx_library")
+
+tx_library(
+    name = "pkg-sdl",
+    srcs = glob(["Sdl/Loop/**/*.cpp"]),
+    hdrs = glob(["Sdl/Loop/**/*.h"]),
+    strip_include_prefix = ".",
+    deps = [
+        "@tx-pkg-aux//:pkg-app",
+        "@sdl3//:sdl3_static",
+    ],
+    visibility = ["//visibility:public"],
+)

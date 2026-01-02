@@ -36,6 +36,19 @@
         // https://web.archive.org/web/20220716134022/https://shanee.io/blog/2019/05/28/bazel-with-visual-studio-code/
         {
             "type": "shell",
+            "label": "build demo <user>",
+            "command": "bazel build ${config:tx.debugTaskName}",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "focus": true,
+            },
+            "problemMatcher": "$gcc",
+        },
+        {
+            "type": "shell",
             "label": "build demo <relative>",
             "command": "bazel build ${relativeFileDirname}",
             "group": {

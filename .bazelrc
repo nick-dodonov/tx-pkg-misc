@@ -3,13 +3,27 @@ common --registry=https://raw.githubusercontent.com/nick-dodonov/tx-kit-registry
 common --registry=https://bcr.bazel.build/
 common --enable_platform_specific_config
 
+# C++ standard settings per platform (boost.asio w/ coroutines needs C++20 at least)
+build:linux --cxxopt="-std=c++23"
+build:macos --cxxopt="-std=c++23"
+build:wasm --cxxopt="-std=c++23"
+build:windows --cxxopt="/std:c++latest"
+
 # Configure boost.asio to use BoringSSL for SSL support
 build --@boost.asio//:ssl=boringssl
 build:wasm --@boost.asio//:ssl=no_ssl
-# WASM threading support w/ boost
-# build:wasm --copt="-pthread"
 
 try-import %workspace%/.dev.bazelrc
+
+# WASM threading support w/ boost
+#TODO: custom toolchain (tx-kit-ext) for WASM support w/ boost
+#TODO: benchmark https://github.com/WebAssembly/design/issues/1271 (-Wpthreads-mem-growth)
+build:wasm --copt="-pthread"
+#build:wasm --copt="-DBOOST_HAS_PTHREADS"
+#build:wasm --linkopt="-sALLOW_MEMORY_GROWTH=1"
+#build:wasm --linkopt="-sUSE_PTHREADS=1"
+#build:wasm --linkopt="-sWASM_BIGINT=1"
+
 try-import %workspace%/.user.bazelrc
 
 #TODO: make kit-ext tool for verbose output foreign rules (cmake) during build
