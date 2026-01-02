@@ -5,9 +5,9 @@
 #include <SDL3/SDL_main.h>
 
 // Thread-local for passing 'this' to SDL callbacks
-namespace { thread_local App::Loop::Sdl3Looper* g_currentSdl3Looper = nullptr; }
+namespace { thread_local Sdl::Loop::Sdl3Looper* g_currentSdl3Looper = nullptr; }
 
-namespace App::Loop
+namespace Sdl::Loop
 {
     Sdl3Looper::Sdl3Looper(Options options)
         : _options{std::move(options)}

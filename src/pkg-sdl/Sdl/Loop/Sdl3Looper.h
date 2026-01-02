@@ -9,8 +9,13 @@
 #include <atomic>
 #include <mutex>
 
-namespace App::Loop
+namespace Sdl::Loop
 {
+    // Import types from App::Loop
+    using App::Loop::ILooper;
+    using App::Loop::UpdateCtx;
+    using App::Loop::FinishData;
+
     /// SDL3-based looper that uses SDL_EnterAppMainCallbacks for cross-platform support
     class Sdl3Looper final : public ILooper
     {

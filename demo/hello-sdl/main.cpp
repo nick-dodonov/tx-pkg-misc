@@ -1,4 +1,4 @@
-#include "Sdl3Looper.h"
+#include "Sdl/Loop/Sdl3Looper.h"
 #include "App/Domain.h"
 #include "Log/Log.h"
 #include <cmath>
@@ -13,7 +13,7 @@ static std::shared_ptr<App::Domain> domain;
 static asio::awaitable<int> CoroMain()
 {
     auto executor = co_await asio::this_coro::executor;
-    auto looper = domain->GetLooper<App::Loop::Sdl3Looper>();
+    auto looper = domain->GetLooper<Sdl::Loop::Sdl3Looper>();
 
     Log::Info("SDL3 window is ready");
     Log::Info("waiting for quit event or 3-second timeout...");
@@ -45,14 +45,14 @@ static asio::awaitable<int> CoroMain()
 int main(const int argc, const char* argv[])
 {
     // Configure SDL3 looper
-    auto looper = std::make_shared<App::Loop::Sdl3Looper>(
-        App::Loop::Sdl3Looper::Options{
+    auto looper = std::make_shared<Sdl::Loop::Sdl3Looper>(
+        Sdl::Loop::Sdl3Looper::Options{
             .Window = {
                 .Title = "Hello SDL3",
                 .Width = 640,
                 .Height = 480,
             },
-            .OnRender = [](SDL_Renderer* renderer, const App::Loop::UpdateCtx& ctx) {
+            .OnRender = [](SDL_Renderer* renderer, const Sdl::Loop::UpdateCtx& ctx) {
                 // Accumulate elapsed time from frame deltas
                 static float elapsed = 0.0f;
                 elapsed += std::chrono::duration<float>(ctx.FrameDelta).count();
