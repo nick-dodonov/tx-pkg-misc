@@ -2,7 +2,7 @@ load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
 
 tx_binary(
     name = "hello-sdl",
-    srcs = glob(["*.cpp"]),
+    srcs = glob(["*.cpp", "*.h"]),
     deps = [
         "@tx-pkg-aux//:pkg-app",
         "@sdl3//:sdl3_static",
