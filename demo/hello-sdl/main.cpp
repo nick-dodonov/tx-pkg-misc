@@ -55,7 +55,7 @@ int main(const int argc, const char* argv[])
             .OnRender = [](SDL_Renderer* renderer, const Sdl::Loop::UpdateCtx& ctx) {
                 // Accumulate elapsed time from frame deltas
                 static float elapsed = 0.0f;
-                elapsed += std::chrono::duration<float>(ctx.FrameDelta).count();
+                elapsed += ctx.frame.seconds;
 
                 // Clear with dark blue
                 SDL_SetRenderDrawColor(renderer, 30, 30, 130, 255);
