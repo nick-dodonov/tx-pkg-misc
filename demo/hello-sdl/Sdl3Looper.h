@@ -28,8 +28,8 @@ namespace App::Loop
             WindowConfig Window{};
             SDL_InitFlags InitFlags = SDL_INIT_VIDEO;
 
-            /// Optional render callback, called each frame
-            std::function<void(SDL_Renderer*)> OnRender;
+            /// Optional render callback, called each frame with renderer and timing context
+            std::function<void(SDL_Renderer*, const UpdateCtx&)> OnRender;
 
             /// Optional event callback, called for each SDL event
             std::function<void(const SDL_Event&)> OnEvent;

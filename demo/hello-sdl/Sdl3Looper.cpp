@@ -59,7 +59,7 @@ namespace App::Loop
             return false;
         }
 
-        Log::Debug("window and renderer created successfully");
+        Log::Trace("window and renderer created successfully");
         return true;
     }
 
@@ -77,20 +77,18 @@ namespace App::Loop
             _window = nullptr;
         }
 
-        Log::Debug("SDL cleanup complete");
+        Log::Trace("SDL cleanup complete");
     }
 
     void Sdl3Looper::Start(UpdateAction updateAction)
     {
-        Log::Trace("starting");
+        Log::Debug("starting");
         _updateAction = std::move(updateAction);
         _updateCtx.FrameStartTime = UpdateCtx::Clock::now();
         _running = true;
 
         // Set thread-local for SDL callbacks to access 'this'
         g_currentSdl3Looper = this;
-
-        Log::Info("entering SDL main loop via SDL_EnterAppMainCallbacks");
 
         // Use SDL's cross-platform main loop implementation
         // This handles platform-specific details (macOS app delegate, emscripten, etc.)
@@ -103,11 +101,11 @@ namespace App::Loop
         );
 
         g_currentSdl3Looper = nullptr;
-        Log::Debug("SDL_EnterAppMainCallbacks returned {}", result);
+        Log::Trace("SDL_EnterAppMainCallbacks returned {}", result);
     }
 
     // SDL App Callbacks - called by SDL's cross-platform loop
-    SDL_AppResult SDLCALL Sdl3Looper::AppInit(void** appstate, int /*argc*/, char* /*argv*/[])
+    SDL_AppResult SDLCALL Sdl3Looper::AppInit(void** appstate, int /*argc*/, char** /*argv*/)
     {
         auto* self = g_currentSdl3Looper;
         
@@ -189,7 +187,7 @@ namespace App::Loop
     void Sdl3Looper::DoRender()
     {
         if (_options.OnRender) {
-            _options.OnRender(_renderer);
+            _options.OnRender(_renderer, _updateCtx);
         } else {
             // Default: clear with dark blue
             SDL_SetRenderDrawColor(_renderer, 30, 30, 80, 255);

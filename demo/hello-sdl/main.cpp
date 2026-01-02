@@ -52,11 +52,10 @@ int main(const int argc, const char* argv[])
                 .Width = 640,
                 .Height = 480,
             },
-            .OnRender = [](SDL_Renderer* renderer) {
-                // Animation state
-                static auto startTime = std::chrono::steady_clock::now();
-                auto now = std::chrono::steady_clock::now();
-                float elapsed = std::chrono::duration<float>(now - startTime).count();
+            .OnRender = [](SDL_Renderer* renderer, const App::Loop::UpdateCtx& ctx) {
+                // Accumulate elapsed time from frame deltas
+                static float elapsed = 0.0f;
+                elapsed += std::chrono::duration<float>(ctx.FrameDelta).count();
 
                 // Clear with dark blue
                 SDL_SetRenderDrawColor(renderer, 30, 30, 130, 255);
