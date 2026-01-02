@@ -1,6 +1,7 @@
 #include "Sdl/Loop/Sdl3Looper.h"
 #include "App/Domain.h"
 #include "Log/Log.h"
+#include "FpsCounter.h"
 #include <cmath>
 #include <memory>
 #include <boost/asio/experimental/awaitable_operators.hpp>
@@ -53,6 +54,10 @@ int main(const int argc, const char* argv[])
                 .Height = 480,
             },
             .OnRender = [](SDL_Renderer* renderer, const Sdl::Loop::UpdateCtx& ctx) {
+                // Static FPS counter
+                static FpsCounter fpsCounter;
+                fpsCounter.AddFrame(ctx.frame.deltaSeconds);
+
                 // Accumulate elapsed time from frame deltas
                 auto elapsed = ctx.session.passedSeconds;
 
@@ -82,6 +87,17 @@ int main(const int argc, const char* argv[])
                 SDL_SetRenderDrawColor(renderer, 100, 200, 100, 255);
                 SDL_FRect rect2 = {x2 - 25, y2 - 25, 50, 50};
                 SDL_RenderFillRect(renderer, &rect2);
+
+                // Render debug text with session and frame info
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                SDL_RenderDebugTextFormat(renderer, 10.0f, 10.0f,
+                    "Session Time: %.2f s", ctx.session.passedSeconds);
+                SDL_RenderDebugTextFormat(renderer, 10.0f, 20.0f,
+                    "Frame Index: %llu", static_cast<unsigned long long>(ctx.frame.index));
+                SDL_RenderDebugTextFormat(renderer, 10.0f, 30.0f,
+                    "Delta: %.2f ms", ctx.frame.deltaSeconds * 1000.0f);
+                SDL_RenderDebugTextFormat(renderer, 10.0f, 40.0f,
+                    "Avg FPS: %.1f", fpsCounter.GetAverageFps());
             },
             .OnEvent = [](const SDL_Event& event) {
                 if (event.type == SDL_EVENT_KEY_DOWN) {

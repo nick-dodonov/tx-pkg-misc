@@ -2,7 +2,11 @@ load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
 
 tx_binary(
     name = "hello-sdl",
-    srcs = ["main.cpp"],
+    srcs = [
+        "main.cpp",
+        "FpsCounter.cpp",
+        "FpsCounter.h",
+    ],
     deps = [
         "//src/pkg-sdl",
     ],
