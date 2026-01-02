@@ -33,6 +33,10 @@ namespace Sdl::Loop
             WindowConfig Window{};
             SDL_InitFlags InitFlags = SDL_INIT_VIDEO;
 
+            /// VSync setting (1 = enabled, 0 = disabled, -1 = adaptive)
+            /// Enabled by default
+            int VSync = 1;
+
             /// Optional render callback, called each frame with renderer and timing context
             std::function<void(SDL_Renderer*, const UpdateCtx&)> OnRender;
 

@@ -59,6 +59,14 @@ namespace Sdl::Loop
             return false;
         }
 
+        // Set VSync
+        if (!SDL_SetRenderVSync(_renderer, _options.VSync)) {
+            Log::Warn("SDL_SetRenderVSync({}) not supported, using disabled", _options.VSync);
+            SDL_SetRenderVSync(_renderer, SDL_RENDERER_VSYNC_DISABLED);
+        } else {
+            Log::Debug("VSync set to {}", _options.VSync);
+        }
+
         Log::Trace("window and renderer created successfully");
         return true;
     }
