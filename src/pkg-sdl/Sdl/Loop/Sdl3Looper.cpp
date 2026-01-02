@@ -84,7 +84,7 @@ namespace Sdl::Loop
     {
         Log::Debug("starting");
         _updateAction = std::move(updateAction);
-        _updateCtx.FrameStartTime = UpdateCtx::Clock::now();
+        _updateCtx.Initialize();
         _running = true;
 
         // Set thread-local for SDL callbacks to access 'this'
@@ -132,11 +132,7 @@ namespace Sdl::Loop
         }
 
         // Update timing
-        auto startTime = UpdateCtx::Clock::now();
-        self->_updateCtx.FrameDelta = std::chrono::duration_cast<std::chrono::microseconds>(
-            startTime - self->_updateCtx.FrameStartTime);
-        self->_updateCtx.FrameStartTime = startTime;
-        ++self->_updateCtx.FrameIndex;
+        self->_updateCtx.Tick();
 
         // Call update action (for io_context.poll())
         if (self->_updateAction && !self->_updateAction(self->_updateCtx)) {
