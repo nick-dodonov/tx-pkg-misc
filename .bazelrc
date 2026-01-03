@@ -3,6 +3,10 @@ common --registry=https://raw.githubusercontent.com/nick-dodonov/tx-kit-registry
 common --registry=https://bcr.bazel.build/
 common --enable_platform_specific_config
 
+# Local dependencies overrides (simplify mutual development)
+common:local-deps --override_module=tx-kit-ext=../tx-kit-ext
+common:local-deps --override_module=tx-pkg-aux=../tx-pkg-aux
+
 # C++ standard settings per platform (boost.asio w/ coroutines needs C++20 at least)
 build:linux --cxxopt="-std=c++23"
 build:macos --cxxopt="-std=c++23"
