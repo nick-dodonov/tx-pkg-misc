@@ -1,25 +1,24 @@
 #pragma once
 #include "CoroSyn.h"
 #include "Log/Log.h"
-#include <format>
 #include <gtest/gtest.h>
 
 struct CoroTest : testing::Test {
     void SetUp() override { 
         const auto* test_name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
-        Log::Debug(std::format("CoroTest: {}: SetUp", test_name));
+        Log::Debug("CoroTest: {}: SetUp", test_name);
     }
 
     void TearDown() override {
         const auto* test_name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
-        Log::Debug(std::format("CoroTest: {}: >>>>", test_name));
+        Log::Debug("CoroTest: {}: >>>>", test_name);
         while (!coroutineCompleted) {
             if (!synCtx.run_once()) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
         }
         ASSERT_TRUE(synCtx.empty());
-        Log::Debug(std::format("CoroTest: {}: <<<<", test_name));
+        Log::Debug("CoroTest: {}: <<<<", test_name);
     }
 
     QueueSynCtx synCtx;

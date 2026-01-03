@@ -44,36 +44,10 @@ git_override(
 
 bazel_dep(name = "boost.asio", version = "1.89.0.bcr.1.1-tx.1")  # private registry
 bazel_dep(name = "boringssl", version = "0.20251124.0")
-bazel_dep(name = "asio", version = "1.34.2-tx.1")  # private registry
-# bazel_dep(name = "asio", version = "1.34.2")
-# single_version_override(
-#     module_name = "asio",
-#     patch_strip = 1,
-#     patches = ["//patches:asio-add_pthreads_define.patch"],
-# )
-
 bazel_dep(name = "nghttp2", version = "1.65.0")
 bazel_dep(name = "openssl", version = "3.5.4.bcr.0")
 bazel_dep(name = "sdl3", version = "3.2.26-tx.1")  # private registry
-bazel_dep(name = "sdl3pp", version = "0.3.1-tx.1")  # private registry
 bazel_dep(name = "imgui", version = "1.92.2-tx.1")  # private registry
-
-# Legacy repository dep way
-# http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-# http_archive(
-#     name = "sdl3",
-#     build_file = "@//modules/sdl3:BUILD.bazel",
-#     sha256 = "dad488474a51a0b01d547cd2834893d6299328d2e30f479a3564088b5476bae2",
-#     strip_prefix = "SDL3-3.2.26",
-#     urls = ["https://github.com/libsdl-org/SDL/releases/download/release-3.2.26/SDL3-3.2.26.tar.gz"],
-# )
-# http_archive(
-#     name = "sdl3pp",
-#     build_file = "@//modules/sdl3pp:BUILD.bazel",
-#     sha256 = "320a0aaea43945991398c25a33b88ce90ee84b0dd00c48b63b1ad16c5f593abc",
-#     strip_prefix = "SDL3pp-0.3.1",
-#     urls = ["https://github.com/talesm/SDL3pp/archive/refs/tags/v0.3.1.tar.gz"],
-# )
 
 # test deps
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
