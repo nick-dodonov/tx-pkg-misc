@@ -67,6 +67,13 @@ namespace Sdl::Loop
             Log::Debug("VSync set to {}", _options.VSync);
         }
 
+        if (_options.OnInited) {
+            if (! _options.OnInited(*this)) {
+                Log::Error("OnInited callback failed");
+                return false;
+            }
+        }
+
         Log::Trace("window and renderer created successfully");
         return true;
     }
@@ -74,6 +81,10 @@ namespace Sdl::Loop
     void Sdl3Looper::Shutdown()
     {
         Log::Debug("shutting down...");
+
+        if (_options.OnQuitting) {
+            _options.OnQuitting(*this);
+        }
 
         if (_renderer) {
             SDL_DestroyRenderer(_renderer);
@@ -181,10 +192,10 @@ namespace Sdl::Loop
         return SDL_APP_CONTINUE;
     }
 
-    void SDLCALL Sdl3Looper::AppQuit(void* appstate, SDL_AppResult /*result*/)
+    void SDLCALL Sdl3Looper::AppQuit(void* appstate, SDL_AppResult result)
     {
+        Log::Trace("result={}", static_cast<int>(result)); //TODO: enum traits to string
         auto* self = static_cast<Sdl3Looper*>(appstate);
-        Log::Debug("AppQuit called");
         self->Shutdown();
     }
 

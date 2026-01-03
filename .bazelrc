@@ -7,10 +7,14 @@ common --enable_platform_specific_config
 common:local-deps --override_module=tx-kit-ext=../tx-kit-ext
 common:local-deps --override_module=tx-pkg-aux=../tx-pkg-aux
 
-# C++ standard settings per platform (boost.asio w/ coroutines needs C++20 at least)
-build:linux --cxxopt="-std=c++23"
-build:macos --cxxopt="-std=c++23"
+# C++ standard settings per platforms for external too (boost.asio w/ coroutines needs C++20 at least)
+# Prefer setting via env for rules_cc (BAZEL_CXXOPTS not via --cxxopt) to disable default C++17 applied
+build:linux --repo_env=BAZEL_CXXOPTS=-std=c++23
+build:macos --repo_env=BAZEL_CXXOPTS=-std=c++23
+# Emscripten has custom toolchain setup without defaults
 build:wasm --cxxopt="-std=c++23"
+# MSVC rules_cc for Windows defaults std flag (/std:c++17) that can be disabled by feature
+build:windows --features=-default_cpp_std
 build:windows --cxxopt="/std:c++latest"
 
 # Configure boost.asio to use BoringSSL for SSL support

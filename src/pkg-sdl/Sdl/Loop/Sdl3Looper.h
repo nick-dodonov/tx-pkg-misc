@@ -37,8 +37,14 @@ namespace Sdl::Loop
             /// Enabled by default
             int VSync = 1;
 
+            /// Optional initialized callback, called once after SDL initialization
+            std::function<bool(Sdl3Looper& looper)> OnInited;
+
+            /// Optional quitting callback, called once before shutdown
+            std::function<void(Sdl3Looper& looper)> OnQuitting;
+
             /// Optional render callback, called each frame with renderer and timing context
-            std::function<void(SDL_Renderer*, const UpdateCtx&)> OnRender;
+            std::function<void(SDL_Renderer* renderer, const UpdateCtx& ctx)> OnRender;
 
             /// Optional event callback, called for each SDL event
             std::function<void(const SDL_Event&)> OnEvent;

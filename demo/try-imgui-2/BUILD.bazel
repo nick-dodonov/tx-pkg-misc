@@ -1,0 +1,12 @@
+load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
+
+tx_binary(
+    name = "try-imgui-2",
+    srcs = glob(["*.cpp"]),
+    deps = [
+        "//src/pkg-sdl",
+        "@imgui//:imgui",
+        "@imgui//backends:platform-sdl3",
+        "@imgui//backends:renderer-sdlrenderer3",
+    ],
+)
