@@ -1,0 +1,10 @@
+load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
+
+tx_binary(
+    name = "try-imgui-1",
+    srcs = glob(["*.cpp"]),
+    deps = [
+        "@tx-pkg-aux//:pkg-boot",
+        "@imgui//:imgui",
+    ],
+)
