@@ -1,0 +1,12 @@
+load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
+
+tx_binary(
+    name = "try-imgui-1",
+    srcs = glob(["*.cpp", "*.h"]),
+    deps = [
+        "@tx-pkg-aux//:pkg-boot",
+        "@imgui//:imgui",
+        "@imgui//backends:platform-sdl3",
+        "@imgui//backends:renderer-sdlrenderer3",  #TODO: try SDL_GPU renderer as more modern and advanced
+    ],
+)
