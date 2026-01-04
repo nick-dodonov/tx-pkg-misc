@@ -16,18 +16,18 @@ namespace {
     bool show_demo_window = true;
 }
 
-static asio::awaitable<int> CoroMain()
-{
-    auto executor = co_await asio::this_coro::executor;
-    auto runner = domain->GetRunner<Sdl::Loop::Sdl3Runner>();
+// static asio::awaitable<int> CoroMain()
+// {
+//     auto executor = co_await asio::this_coro::executor;
+//     auto runner = domain->GetRunner<Sdl::Loop::Sdl3Runner>();
 
-    // Wait for EITHER quit event OR timer - whichever comes first
-    Log::Info("waiting for quit event");
-    co_await runner->WaitForQuit();
+//     // Wait for EITHER quit event OR timer - whichever comes first
+//     Log::Info("waiting for quit event");
+//     co_await runner->WaitQuit();
 
-    Log::Info("exiting");
-    co_return 0;
-}
+//     Log::Info("exiting");
+//     co_return 0;
+// }
 
 struct ImHandler : Sdl::Loop::Sdl3Handler
 {
@@ -135,15 +135,25 @@ struct ImHandler : Sdl::Loop::Sdl3Handler
         return true; 
     }
 
-    void Sdl3Event(Runner& runner, const SDL_Event& event) override
+    SDL_AppResult Sdl3Event(Runner& runner, const SDL_Event& event) override
     {
-        Log::Trace("type={}", static_cast<int>(event.type));
+        //Log::Trace("type={}", static_cast<int>(event.type));
+        if (event.type == SDL_EVENT_QUIT) {
+            Log::Debug("received SDL_EVENT_QUIT");
+            return SDL_APP_SUCCESS;
+        }
         if (event.type == SDL_EVENT_KEY_DOWN) {
-            Log::Debug("SDL_EVENT_KEY_DOWN: {}", static_cast<int>(event.key.key));
+            Log::Trace("Key pressed: {}", static_cast<int>(event.key.key));
+            if (event.key.key == SDLK_ESCAPE) {
+                Log::Debug("ESC pressed, quitting");
+                return SDL_APP_SUCCESS;
+            }
         }
 
         // ImGui input handling
         ImGui_ImplSDL3_ProcessEvent(&event);
+
+        return SDL_APP_CONTINUE;
     }
 };
 

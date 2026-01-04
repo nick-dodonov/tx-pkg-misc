@@ -18,7 +18,7 @@ namespace Sdl::Loop
         using Sdl3Runner = class Sdl3Runner;
 
         /// SDL3-specific event callback
-        virtual void Sdl3Event(Sdl3Runner& runner, const SDL_Event& event) {}
+        virtual SDL_AppResult Sdl3Event(Sdl3Runner& runner, const SDL_Event& event) { return SDL_APP_CONTINUE; }
     };
 
     /// SDL3-based runner that uses SDL_EnterAppMainCallbacks for cross-platform support
@@ -52,7 +52,7 @@ namespace Sdl::Loop
             std::function<void(SDL_Renderer* renderer, const App::Loop::UpdateCtx& ctx)> OnRender;
 
             /// Optional event callback, called for each SDL event
-            std::function<void(const SDL_Event&)> OnEvent;
+            std::function<SDL_AppResult(const SDL_Event&)> OnEvent;
         };
 
         explicit Sdl3Runner(Options options);
@@ -69,10 +69,7 @@ namespace Sdl::Loop
 
         /// Awaitable that completes when quit is requested
         /// Returns the exit code
-        boost::asio::awaitable<int> WaitForQuit();
-
-        /// Request quit from external code
-        void RequestQuit(int exitCode = 0);
+        boost::asio::awaitable<int> WaitQuit();
 
     private:
         Options _options;
@@ -89,6 +86,8 @@ namespace Sdl::Loop
         using QuitChannel = boost::asio::experimental::channel<void(boost::system::error_code, int)>;
         std::mutex _channelMutex;
         std::shared_ptr<QuitChannel> _quitChannel;
+
+        void SignalQuit();
 
         // SDL App callbacks (static, called by SDL)
         static SDL_AppResult SDLCALL AppInit(void** appstate, int argc, char** argv);

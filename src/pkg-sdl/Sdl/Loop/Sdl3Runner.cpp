@@ -3,6 +3,9 @@
 
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL_main.h>
+#if __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 // Thread-local for passing 'this' to SDL callbacks
 namespace { thread_local Sdl::Loop::Sdl3Runner* g_currentSdl3Runner = nullptr; }
@@ -18,17 +21,17 @@ namespace Sdl::Loop
 
     Sdl3Runner::~Sdl3Runner()
     {
-        Log::Trace("destroyed");
+        Log::Trace("destroy");
     }
 
     void Sdl3Runner::Start(HandlerPtr handler)
     {
-        Log::Debug("starting");
+        Log::Debug("...");
         _handler = std::move(handler);
         _updateCtx.Initialize();
         _running = true;
 
-        // Set thread-local for SDL callbacks to access 'this'
+        // Pass instance to setup appstate in AppInit
         g_currentSdl3Runner = this;
 
         // Use SDL's cross-platform main loop implementation
@@ -40,37 +43,32 @@ namespace Sdl::Loop
             AppEvent,
             AppQuit
         );
-
-        g_currentSdl3Runner = nullptr;
         Log::Trace("SDL_EnterAppMainCallbacks returned {}", result);
+
+#if __EMSCRIPTEN__
+        // SDL_EnterAppMainCallbacks exits immediately in Emscripten
+        //  but we need to wait for quit signal, so complete current execution flow
+        Log::Debug("emscripten_exit_with_live_runtime...");
+        emscripten_exit_with_live_runtime();
+#endif
     }
 
     void Sdl3Runner::Finish(const App::Loop::FinishData& finishData)
     {
-        Log::Debug("finish requested with exit code {}", finishData.ExitCode);
-        RequestQuit(finishData.ExitCode);
+        Log::Debug("requested: {}", finishData.ExitCode);
+        _exitCode.store(finishData.ExitCode);
+        SignalQuit();
     }
 
-    void Sdl3Runner::RequestQuit(int exitCode)
+    boost::asio::awaitable<int> Sdl3Runner::WaitQuit()
     {
-        Log::Debug("quit requested with exit code {}", exitCode);
-        _exitCode.store(exitCode);
-        _running = false;
-        
-        // Notify any waiters via channel (thread-safe access)
-        {
-            std::lock_guard lock(_channelMutex);
-            if (_quitChannel) {
-                _quitChannel->try_send(boost::system::error_code{}, exitCode);
-            }
-        }
-    }
+        Log::Trace("waiting for quit...");
 
-    boost::asio::awaitable<int> Sdl3Runner::WaitForQuit()
-    {
         // Already quit? Return immediately
         if (!_running) {
-            co_return _exitCode.load();
+            auto exitCode = _exitCode.load();
+            Log::Trace("complete immediately: {}", exitCode);
+            co_return exitCode;
         }
 
         // Lazy-create channel using executor from current coroutine
@@ -82,24 +80,56 @@ namespace Sdl::Loop
             }
         }
 
-        Log::Trace("waiting for quit...");
         auto [ec, exitCode] = co_await _quitChannel->async_receive(
             boost::asio::as_tuple(boost::asio::use_awaitable));
-        
-        if (ec) {
-            Log::Debug("WaitForQuit channel error: {}", ec.message());
-        }
-        
+        Log::Trace("complete on signal: {} ({})", exitCode, ec.message());
+
         co_return exitCode;
+    }
+
+    void Sdl3Runner::SignalQuit()
+    {
+        Log::Trace("exitting...");
+        auto exitCode = _exitCode.load();
+        _running = false;
+
+        // Notify any waiters via channel (thread-safe access)
+        {
+            std::lock_guard lock(_channelMutex);
+            if (_quitChannel) {
+                _quitChannel->try_send(boost::system::error_code{}, exitCode);
+            }
+        }
+
+#if __EMSCRIPTEN__
+        // pospone runtime exit 
+        // - allow application to handle quit event and cleanup
+        // - to avoid issues with calling from inside SDL main loop
+        // - allow runtime exit after inside SDL_AppQuit
+        // NOLINTBEGIN reinterpret_cast
+        emscripten_async_call(
+            [](void* state) {
+                auto exitCode = reinterpret_cast<int>(state);
+                Log::Trace("emscripten_force_exit: {}", exitCode);
+                emscripten_force_exit(exitCode);
+            },
+            reinterpret_cast<void*>(exitCode),
+            0
+        );
+        // NOLINTEND
+#endif
     }
 
     SDL_AppResult SDLCALL Sdl3Runner::AppInit(void** appstate, int /*argc*/, char** /*argv*/)
     {
         auto* self = g_currentSdl3Runner;
+        g_currentSdl3Runner = nullptr;
+
         if (!self) {
-            Log::Error("AppInit: no runner instance!");
+            Log::Fatal("internal error: no runner instance");
             return SDL_APP_FAILURE;
         }
+
         *appstate = self;
         return self->DoInit();
     }
@@ -129,14 +159,15 @@ namespace Sdl::Loop
         int major = SDL_VERSIONNUM_MAJOR(version);
         int minor = SDL_VERSIONNUM_MINOR(version);
         int patch = SDL_VERSIONNUM_MICRO(version);
-        Log::Debug("SDL3 version {}.{}.{}", major, minor, patch);
-
-        // Create window
-        Log::Trace("creating window '{}' ({}x{})",
+        Log::Debug("SDL3 {}.{}.{} '{}' {}x{} vsync={}", 
+            major, minor, patch,
             _options.Window.Title,
             _options.Window.Width,
-            _options.Window.Height);
+            _options.Window.Height,
+            _options.VSync
+        );
 
+        // Create window
         _window = SDL_CreateWindow(
             _options.Window.Title,
             _options.Window.Width,
@@ -162,8 +193,6 @@ namespace Sdl::Loop
         if (!SDL_SetRenderVSync(_renderer, _options.VSync)) {
             Log::Warn("SDL_SetRenderVSync({}) not supported, using disabled", _options.VSync);
             SDL_SetRenderVSync(_renderer, SDL_RENDERER_VSYNC_DISABLED);
-        } else {
-            Log::Debug("VSync set to {}", _options.VSync);
         }
 
         if (_options.OnInited) {
@@ -178,13 +207,14 @@ namespace Sdl::Loop
             return SDL_APP_FAILURE;
         }
 
-        Log::Trace("window and renderer created successfully");
+        Log::Trace("completed");
         return SDL_APP_CONTINUE;
     }
 
     void Sdl3Runner::DoQuit()
     {
         Log::Debug("shutting down...");
+        SignalQuit();
 
         _handler->Stopping(*this);
 
@@ -205,7 +235,7 @@ namespace Sdl::Loop
         _running = false;
         _handler.reset();
 
-        Log::Trace("SDL cleanup complete");
+        Log::Trace("shutdown complete");
     }
 
     SDL_AppResult Sdl3Runner::DoIterate()
@@ -231,7 +261,7 @@ namespace Sdl::Loop
         if (_options.OnRender) {
             _options.OnRender(_renderer, _updateCtx);
         } else {
-            //TODO: Default: clear with dark blue if handler Update did not render anything
+            // // Default: clear with dark blue if handler Update did not render anything
             // SDL_SetRenderDrawColor(_renderer, 30, 30, 80, 255);
             // SDL_RenderClear(_renderer);
         }
@@ -242,26 +272,17 @@ namespace Sdl::Loop
 
     SDL_AppResult Sdl3Runner::DoEvent(SDL_Event* event)
     {
-        // TODO: remove handing quit events from inner logic, let user handle them
-        if (event->type == SDL_EVENT_QUIT) {
-            Log::Debug("received SDL_EVENT_QUIT");
-            RequestQuit(0);
-            return SDL_APP_SUCCESS;
-        }
-
-        if (event->type == SDL_EVENT_KEY_DOWN) {
-            if (event->key.key == SDLK_ESCAPE) {
-                Log::Debug("ESC pressed, quitting");
-                RequestQuit(0);
-                return SDL_APP_SUCCESS;
-            }
-        }
-
         // Forward to user callback
-        _handler->Sdl3Event(*this, *event);
+        auto rc = _handler->Sdl3Event(*this, *event);
+        if (rc != SDL_APP_CONTINUE) {
+            return rc;
+        }
 
         if (_options.OnEvent) {
-            _options.OnEvent(*event);
+            rc = _options.OnEvent(*event);
+            if (rc != SDL_APP_CONTINUE) {
+                return rc;
+            }
         }
 
         return SDL_APP_CONTINUE;
