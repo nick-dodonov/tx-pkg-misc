@@ -2,7 +2,7 @@
 
 #include <SDL3/SDL.h>
 
-#include "App/Loop/ILooper.h"
+#include "App/Loop/IRunner.h"
 #include <boost/asio.hpp>
 #include <boost/asio/experimental/channel.hpp>
 #include <functional>
