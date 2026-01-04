@@ -12,12 +12,12 @@
 namespace Sdl::Loop
 {
     // Import types from App::Loop
-    using App::Loop::ILooper;
+    using App::Loop::IRunner;
     using App::Loop::UpdateCtx;
     using App::Loop::FinishData;
 
-    /// SDL3-based looper that uses SDL_EnterAppMainCallbacks for cross-platform support
-    class Sdl3Looper final : public ILooper
+    /// SDL3-based runner that uses SDL_EnterAppMainCallbacks for cross-platform support
+    class Sdl3Runner final : public IRunner
     {
     public:
         struct WindowConfig
@@ -38,10 +38,10 @@ namespace Sdl::Loop
             int VSync = 1;
 
             /// Optional initialized callback, called once after SDL initialization
-            std::function<bool(Sdl3Looper& looper)> OnInited;
+            std::function<bool(Sdl3Runner& runner)> OnInited;
 
             /// Optional quitting callback, called once before shutdown
-            std::function<void(Sdl3Looper& looper)> OnQuitting;
+            std::function<void(Sdl3Runner& runner)> OnQuitting;
 
             /// Optional render callback, called each frame with renderer and timing context
             std::function<void(SDL_Renderer* renderer, const UpdateCtx& ctx)> OnRender;
@@ -50,10 +50,10 @@ namespace Sdl::Loop
             std::function<void(const SDL_Event&)> OnEvent;
         };
 
-        explicit Sdl3Looper(Options options);
-        ~Sdl3Looper() override;
+        explicit Sdl3Runner(Options options);
+        ~Sdl3Runner() override;
 
-        // ILooper interface
+        // IRunner interface
         void Start(HandlerPtr handler) override;
         void Finish(const FinishData& finishData) override;
 

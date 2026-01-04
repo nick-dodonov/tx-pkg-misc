@@ -5,23 +5,23 @@
 #include <SDL3/SDL_main.h>
 
 // Thread-local for passing 'this' to SDL callbacks
-namespace { thread_local Sdl::Loop::Sdl3Looper* g_currentSdl3Looper = nullptr; }
+namespace { thread_local Sdl::Loop::Sdl3Runner* g_currentSdl3Runner = nullptr; }
 
 namespace Sdl::Loop
 {
-    Sdl3Looper::Sdl3Looper(Options options)
+    Sdl3Runner::Sdl3Runner(Options options)
         : _options{std::move(options)}
         , _updateCtx{*this}
     {
         Log::Trace("created");
     }
 
-    Sdl3Looper::~Sdl3Looper()
+    Sdl3Runner::~Sdl3Runner()
     {
         Log::Trace("destroyed");
     }
 
-    void Sdl3Looper::Start(HandlerPtr handler)
+    void Sdl3Runner::Start(HandlerPtr handler)
     {
         Log::Debug("starting");
         _handler = std::move(handler);
@@ -29,7 +29,7 @@ namespace Sdl::Loop
         _running = true;
 
         // Set thread-local for SDL callbacks to access 'this'
-        g_currentSdl3Looper = this;
+        g_currentSdl3Runner = this;
 
         // Use SDL's cross-platform main loop implementation
         // This handles platform-specific details (macOS app delegate, emscripten, etc.)
@@ -41,16 +41,16 @@ namespace Sdl::Loop
             AppQuit
         );
 
-        g_currentSdl3Looper = nullptr;
+        g_currentSdl3Runner = nullptr;
         Log::Trace("SDL_EnterAppMainCallbacks returned {}", result);
     }
 
     // SDL App Callbacks - called by SDL's cross-platform loop
-    SDL_AppResult SDLCALL Sdl3Looper::AppInit(void** appstate, int /*argc*/, char** /*argv*/)
+    SDL_AppResult SDLCALL Sdl3Runner::AppInit(void** appstate, int /*argc*/, char** /*argv*/)
     {
-        auto* self = g_currentSdl3Looper;
+        auto* self = g_currentSdl3Runner;
         if (!self) {
-            Log::Error("AppInit: no looper instance!");
+            Log::Error("AppInit: no runner instance!");
             return SDL_APP_FAILURE;
         }
 
@@ -58,15 +58,15 @@ namespace Sdl::Loop
         return self->DoInit();
     }
 
-    SDL_AppResult SDLCALL Sdl3Looper::AppIterate(void* appstate)
+    SDL_AppResult SDLCALL Sdl3Runner::AppIterate(void* appstate)
     {
-        auto* self = static_cast<Sdl3Looper*>(appstate);
+        auto* self = static_cast<Sdl3Runner*>(appstate);
         return self->DoIterate();
     }
 
-    SDL_AppResult SDLCALL Sdl3Looper::AppEvent(void* appstate, SDL_Event* event)
+    SDL_AppResult SDLCALL Sdl3Runner::AppEvent(void* appstate, SDL_Event* event)
     {
-        auto* self = static_cast<Sdl3Looper*>(appstate);
+        auto* self = static_cast<Sdl3Runner*>(appstate);
 
         // Handle quit events
         if (event->type == SDL_EVENT_QUIT) {
@@ -91,14 +91,14 @@ namespace Sdl::Loop
         return SDL_APP_CONTINUE;
     }
 
-    void SDLCALL Sdl3Looper::AppQuit(void* appstate, SDL_AppResult result)
+    void SDLCALL Sdl3Runner::AppQuit(void* appstate, SDL_AppResult result)
     {
         Log::Trace("result={}", static_cast<int>(result)); //TODO: enum traits to string
-        auto* self = static_cast<Sdl3Looper*>(appstate);
+        auto* self = static_cast<Sdl3Runner*>(appstate);
         self->DoQuit();
     }
 
-    SDL_AppResult Sdl3Looper::DoInit()
+    SDL_AppResult Sdl3Runner::DoInit()
     {
         Log::Debug("initializing SDL3...");
 
@@ -151,8 +151,8 @@ namespace Sdl::Loop
             }
         }
 
-        if (!_handler->AfterStart(*this)) {
-            Log::Error("AfterStart handler failed");
+        if (!_handler->Started(*this)) {
+            Log::Error("Started handler failed");
             return SDL_APP_FAILURE;
         }
 
@@ -160,11 +160,11 @@ namespace Sdl::Loop
         return SDL_APP_CONTINUE;
     }
 
-    void Sdl3Looper::DoQuit()
+    void Sdl3Runner::DoQuit()
     {
         Log::Debug("shutting down...");
 
-        _handler->BeforeFinish(*this);
+        _handler->Stopping(*this);
 
         if (_options.OnQuitting) {
             _options.OnQuitting(*this);
@@ -186,7 +186,7 @@ namespace Sdl::Loop
         Log::Trace("SDL cleanup complete");
     }
 
-    SDL_AppResult Sdl3Looper::DoIterate()
+    SDL_AppResult Sdl3Runner::DoIterate()
     {
         if (!_running) {
             return SDL_APP_SUCCESS;
@@ -214,13 +214,13 @@ namespace Sdl::Loop
         return SDL_APP_CONTINUE;
     }
 
-    void Sdl3Looper::Finish(const FinishData& finishData)
+    void Sdl3Runner::Finish(const FinishData& finishData)
     {
         Log::Debug("finish requested with exit code {}", finishData.ExitCode);
         RequestQuit(finishData.ExitCode);
     }
 
-    void Sdl3Looper::RequestQuit(int exitCode)
+    void Sdl3Runner::RequestQuit(int exitCode)
     {
         Log::Debug("quit requested with exit code {}", exitCode);
         _exitCode.store(exitCode);
@@ -235,7 +235,7 @@ namespace Sdl::Loop
         }
     }
 
-    boost::asio::awaitable<int> Sdl3Looper::WaitForQuit()
+    boost::asio::awaitable<int> Sdl3Runner::WaitForQuit()
     {
         // Already quit? Return immediately
         if (!_running) {

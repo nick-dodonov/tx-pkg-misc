@@ -16,14 +16,14 @@ static std::shared_ptr<App::Domain> domain;
 static asio::awaitable<int> CoroMain(int timeoutSeconds)
 {
     auto executor = co_await asio::this_coro::executor;
-    auto looper = domain->GetLooper<Sdl::Loop::Sdl3Looper>();
+    auto runner = domain->GetRunner<Sdl::Loop::Sdl3Runner>();
 
     // Wait for EITHER quit event OR timer - whichever comes first
     Log::Info("waiting for quit event or {}-second timeout...", timeoutSeconds);
     auto timer = asio::steady_timer(executor);
     timer.expires_after(std::chrono::seconds(timeoutSeconds));
     auto result = co_await (
-        looper->WaitForQuit() || 
+        runner->WaitForQuit() || 
         timer.async_wait(asio::use_awaitable)
     );
 
@@ -33,7 +33,7 @@ static asio::awaitable<int> CoroMain(int timeoutSeconds)
         Log::Info("window was closed by user");
     } else {
         Log::Info("{}-second timeout reached, requesting quit", timeoutSeconds);
-        looper->RequestQuit(0);
+        runner->RequestQuit(0);
     }
 
     Log::Info("exiting");
@@ -56,9 +56,9 @@ int main(const int argc, const char* argv[])
         }
     }
 
-    // Configure SDL3 looper
-    auto looper = std::make_shared<Sdl::Loop::Sdl3Looper>(
-        Sdl::Loop::Sdl3Looper::Options{
+    // Configure SDL3 runner
+    auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
+        Sdl::Loop::Sdl3Runner::Options{
             .Window = {
                 .Title = "Hello SDL3",
                 .Width = 640,
@@ -118,7 +118,7 @@ int main(const int argc, const char* argv[])
         }
     );
 
-    // Create domain with custom looper
-    domain = std::make_shared<App::Domain>(argc, argv, looper);
+    // Create domain with custom runner
+    domain = std::make_shared<App::Domain>(argc, argv, runner);
     return domain->RunCoroMain(CoroMain(timeoutSeconds));
 }

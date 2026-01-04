@@ -19,11 +19,11 @@ namespace {
 static asio::awaitable<int> CoroMain()
 {
     auto executor = co_await asio::this_coro::executor;
-    auto looper = domain->GetLooper<Sdl::Loop::Sdl3Looper>();
+    auto runner = domain->GetRunner<Sdl::Loop::Sdl3Runner>();
 
     // Wait for EITHER quit event OR timer - whichever comes first
     Log::Info("waiting for quit event");
-    co_await looper->WaitForQuit();
+    co_await runner->WaitForQuit();
 
     Log::Info("exiting");
     co_return 0;
@@ -31,15 +31,15 @@ static asio::awaitable<int> CoroMain()
 
 int main(const int argc, const char* argv[])
 {
-    auto looper = std::make_shared<Sdl::Loop::Sdl3Looper>(
-        Sdl::Loop::Sdl3Looper::Options{
+    auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
+        Sdl::Loop::Sdl3Runner::Options{
             .Window = {
                 .Title = "Hello ImGUI",
                 .Width = 1000,
                 .Height = 800,
             },
-            .OnInited = [](Sdl::Loop::Sdl3Looper& looper) {
-                Log::Info("SDL3 Looper initialized");
+            .OnInited = [](Sdl::Loop::Sdl3Runner& runner) {
+                Log::Info("SDL3 Runner initialized");
                 // Setup Dear ImGui context
                 IMGUI_CHECKVERSION();
                 ImGui::CreateContext();
@@ -57,12 +57,12 @@ int main(const int argc, const char* argv[])
                 style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
 
                 // Setup Platform/Renderer backends
-                ImGui_ImplSDL3_InitForSDLRenderer(looper.GetWindow(), looper.GetRenderer());
-                ImGui_ImplSDLRenderer3_Init(looper.GetRenderer());
+                ImGui_ImplSDL3_InitForSDLRenderer(runner.GetWindow(), runner.GetRenderer());
+                ImGui_ImplSDLRenderer3_Init(runner.GetRenderer());
                 return true;
             },
-            .OnQuitting = [](Sdl::Loop::Sdl3Looper& looper) {
-                Log::Info("SDL3 Looper quitting");
+            .OnQuitting = [](Sdl::Loop::Sdl3Runner& runner) {
+                Log::Info("SDL3 Runner quitting");
                 // Cleanup
                 ImGui_ImplSDLRenderer3_Shutdown();
                 ImGui_ImplSDL3_Shutdown();
@@ -147,7 +147,7 @@ int main(const int argc, const char* argv[])
         }
     );
 
-    // Create domain with custom looper
-    domain = std::make_shared<App::Domain>(argc, argv, looper);
+    // Create domain with custom runner
+    domain = std::make_shared<App::Domain>(argc, argv, runner);
     return domain->RunCoroMain(CoroMain());
 }
