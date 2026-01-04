@@ -54,7 +54,7 @@ namespace Sdl::Loop
         ~Sdl3Looper() override;
 
         // ILooper interface
-        void Start(UpdateAction updateAction) override;
+        void Start(HandlerPtr handler) override;
         void Finish(const FinishData& finishData) override;
 
         // SDL3-specific accessors
@@ -71,10 +71,11 @@ namespace Sdl::Loop
 
     private:
         Options _options;
+        HandlerPtr _handler;
+
         SDL_Window* _window = nullptr;
         SDL_Renderer* _renderer = nullptr;
 
-        UpdateAction _updateAction;
         UpdateCtx _updateCtx;
         std::atomic<bool> _running{false};
         std::atomic<int> _exitCode{0};
@@ -85,14 +86,15 @@ namespace Sdl::Loop
         std::shared_ptr<QuitChannel> _quitChannel;
 
         // SDL App callbacks (static, called by SDL)
-        static SDL_AppResult SDLCALL AppInit(void** appstate, int argc, char* argv[]);
+        static SDL_AppResult SDLCALL AppInit(void** appstate, int argc, char** argv);
         static SDL_AppResult SDLCALL AppIterate(void* appstate);
         static SDL_AppResult SDLCALL AppEvent(void* appstate, SDL_Event* event);
         static void SDLCALL AppQuit(void* appstate, SDL_AppResult result);
 
         // Internal helpers
-        bool Initialize();
-        void Shutdown();
-        void DoRender();
+        SDL_AppResult DoInit();
+        SDL_AppResult DoIterate();
+        SDL_AppResult DoEvent(SDL_Event* event);
+        void DoQuit();
     };
 }

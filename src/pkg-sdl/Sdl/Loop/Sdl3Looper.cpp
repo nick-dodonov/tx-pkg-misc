@@ -21,88 +21,10 @@ namespace Sdl::Loop
         Log::Trace("destroyed");
     }
 
-    bool Sdl3Looper::Initialize()
-    {
-        Log::Debug("initializing SDL3...");
-
-        // Log SDL version
-        int version = SDL_GetVersion();
-        int major = SDL_VERSIONNUM_MAJOR(version);
-        int minor = SDL_VERSIONNUM_MINOR(version);
-        int patch = SDL_VERSIONNUM_MICRO(version);
-        Log::Info("SDL version {}.{}.{}", major, minor, patch);
-
-        // Create window
-        Log::Debug("creating window '{}' ({}x{})",
-            _options.Window.Title,
-            _options.Window.Width,
-            _options.Window.Height);
-
-        _window = SDL_CreateWindow(
-            _options.Window.Title,
-            _options.Window.Width,
-            _options.Window.Height,
-            _options.Window.Flags
-        );
-
-        if (!_window) {
-            Log::Error("SDL_CreateWindow failed: {}", SDL_GetError());
-            return false;
-        }
-
-        // Create renderer
-        _renderer = SDL_CreateRenderer(_window, nullptr);
-        if (!_renderer) {
-            Log::Error("SDL_CreateRenderer failed: {}", SDL_GetError());
-            SDL_DestroyWindow(_window);
-            _window = nullptr;
-            return false;
-        }
-
-        // Set VSync
-        if (!SDL_SetRenderVSync(_renderer, _options.VSync)) {
-            Log::Warn("SDL_SetRenderVSync({}) not supported, using disabled", _options.VSync);
-            SDL_SetRenderVSync(_renderer, SDL_RENDERER_VSYNC_DISABLED);
-        } else {
-            Log::Debug("VSync set to {}", _options.VSync);
-        }
-
-        if (_options.OnInited) {
-            if (! _options.OnInited(*this)) {
-                Log::Error("OnInited callback failed");
-                return false;
-            }
-        }
-
-        Log::Trace("window and renderer created successfully");
-        return true;
-    }
-
-    void Sdl3Looper::Shutdown()
-    {
-        Log::Debug("shutting down...");
-
-        if (_options.OnQuitting) {
-            _options.OnQuitting(*this);
-        }
-
-        if (_renderer) {
-            SDL_DestroyRenderer(_renderer);
-            _renderer = nullptr;
-        }
-
-        if (_window) {
-            SDL_DestroyWindow(_window);
-            _window = nullptr;
-        }
-
-        Log::Trace("SDL cleanup complete");
-    }
-
-    void Sdl3Looper::Start(UpdateAction updateAction)
+    void Sdl3Looper::Start(HandlerPtr handler)
     {
         Log::Debug("starting");
-        _updateAction = std::move(updateAction);
+        _handler = std::move(handler);
         _updateCtx.Initialize();
         _running = true;
 
@@ -127,42 +49,19 @@ namespace Sdl::Loop
     SDL_AppResult SDLCALL Sdl3Looper::AppInit(void** appstate, int /*argc*/, char** /*argv*/)
     {
         auto* self = g_currentSdl3Looper;
-        
         if (!self) {
             Log::Error("AppInit: no looper instance!");
             return SDL_APP_FAILURE;
         }
-        
+
         *appstate = self;
-        
-        if (!self->Initialize()) {
-            return SDL_APP_FAILURE;
-        }
-        
-        return SDL_APP_CONTINUE;
+        return self->DoInit();
     }
 
     SDL_AppResult SDLCALL Sdl3Looper::AppIterate(void* appstate)
     {
         auto* self = static_cast<Sdl3Looper*>(appstate);
-        
-        if (!self->_running) {
-            return SDL_APP_SUCCESS;
-        }
-
-        // Update timing
-        self->_updateCtx.Tick();
-
-        // Call update action (for io_context.poll())
-        if (self->_updateAction && !self->_updateAction(self->_updateCtx)) {
-            Log::Debug("update action returned false, stopping");
-            return SDL_APP_SUCCESS;
-        }
-
-        // Render
-        self->DoRender();
-
-        return self->_running ? SDL_APP_CONTINUE : SDL_APP_SUCCESS;
+        return self->DoIterate();
     }
 
     SDL_AppResult SDLCALL Sdl3Looper::AppEvent(void* appstate, SDL_Event* event)
@@ -196,11 +95,108 @@ namespace Sdl::Loop
     {
         Log::Trace("result={}", static_cast<int>(result)); //TODO: enum traits to string
         auto* self = static_cast<Sdl3Looper*>(appstate);
-        self->Shutdown();
+        self->DoQuit();
     }
 
-    void Sdl3Looper::DoRender()
+    SDL_AppResult Sdl3Looper::DoInit()
     {
+        Log::Debug("initializing SDL3...");
+
+        // Log SDL version
+        int version = SDL_GetVersion();
+        int major = SDL_VERSIONNUM_MAJOR(version);
+        int minor = SDL_VERSIONNUM_MINOR(version);
+        int patch = SDL_VERSIONNUM_MICRO(version);
+        Log::Info("SDL version {}.{}.{}", major, minor, patch);
+
+        // Create window
+        Log::Debug("creating window '{}' ({}x{})",
+            _options.Window.Title,
+            _options.Window.Width,
+            _options.Window.Height);
+
+        _window = SDL_CreateWindow(
+            _options.Window.Title,
+            _options.Window.Width,
+            _options.Window.Height,
+            _options.Window.Flags
+        );
+
+        if (!_window) {
+            Log::Error("SDL_CreateWindow failed: {}", SDL_GetError());
+            return SDL_APP_FAILURE;
+        }
+
+        // Create renderer
+        _renderer = SDL_CreateRenderer(_window, nullptr);
+        if (!_renderer) {
+            Log::Error("SDL_CreateRenderer failed: {}", SDL_GetError());
+            SDL_DestroyWindow(_window);
+            _window = nullptr;
+            return SDL_APP_FAILURE;
+        }
+
+        // Set VSync
+        if (!SDL_SetRenderVSync(_renderer, _options.VSync)) {
+            Log::Warn("SDL_SetRenderVSync({}) not supported, using disabled", _options.VSync);
+            SDL_SetRenderVSync(_renderer, SDL_RENDERER_VSYNC_DISABLED);
+        } else {
+            Log::Debug("VSync set to {}", _options.VSync);
+        }
+
+        if (_options.OnInited) {
+            if (! _options.OnInited(*this)) {
+                Log::Error("OnInited callback failed");
+                return SDL_APP_FAILURE;
+            }
+        }
+
+        Log::Trace("window and renderer created successfully");
+        return SDL_APP_CONTINUE;
+    }
+
+    void Sdl3Looper::DoQuit()
+    {
+        Log::Debug("shutting down...");
+
+        if (_options.OnQuitting) {
+            _options.OnQuitting(*this);
+        }
+
+        if (_renderer) {
+            SDL_DestroyRenderer(_renderer);
+            _renderer = nullptr;
+        }
+
+        if (_window) {
+            SDL_DestroyWindow(_window);
+            _window = nullptr;
+        }
+
+        Log::Trace("SDL cleanup complete");
+    }
+
+    SDL_AppResult Sdl3Looper::DoIterate()
+    {
+        if (!_running) {
+            return SDL_APP_SUCCESS;
+        }
+
+        // Update timing
+        _updateCtx.Tick();
+
+        // Call update action (for io_context.poll())
+        if (_handler) {
+            if (!_handler->Update(*this, _updateCtx)) {
+                Log::Debug("update handler is stopping");
+                return SDL_APP_SUCCESS;
+            }
+        } else {
+            Log::Error("update handler not set, stopping with failure");
+            return SDL_APP_FAILURE;
+        }
+
+        // Call render callback
         if (_options.OnRender) {
             _options.OnRender(_renderer, _updateCtx);
         } else {
@@ -210,6 +206,7 @@ namespace Sdl::Loop
         }
 
         SDL_RenderPresent(_renderer);
+        return SDL_APP_CONTINUE;
     }
 
     void Sdl3Looper::Finish(const FinishData& finishData)
