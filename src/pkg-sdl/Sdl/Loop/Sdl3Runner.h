@@ -11,13 +11,18 @@
 
 namespace Sdl::Loop
 {
-    // Import types from App::Loop
-    using App::Loop::IRunner;
-    using App::Loop::UpdateCtx;
-    using App::Loop::FinishData;
+    /// SDL3 runner handler extending the base handler (Started/Stopping/Update)
+    class Sdl3Handler : public App::Loop::Handler<class Sdl3Runner>
+    {
+    public:
+        using Sdl3Runner = class Sdl3Runner;
+
+        /// SDL3-specific event callback
+        virtual void Sdl3Event(Sdl3Runner& runner, const SDL_Event& event) {}
+    };
 
     /// SDL3-based runner that uses SDL_EnterAppMainCallbacks for cross-platform support
-    class Sdl3Runner final : public IRunner
+    class Sdl3Runner final : public App::Loop::Runner<Sdl3Handler>
     {
     public:
         struct WindowConfig
@@ -44,7 +49,7 @@ namespace Sdl::Loop
             std::function<void(Sdl3Runner& runner)> OnQuitting;
 
             /// Optional render callback, called each frame with renderer and timing context
-            std::function<void(SDL_Renderer* renderer, const UpdateCtx& ctx)> OnRender;
+            std::function<void(SDL_Renderer* renderer, const App::Loop::UpdateCtx& ctx)> OnRender;
 
             /// Optional event callback, called for each SDL event
             std::function<void(const SDL_Event&)> OnEvent;
@@ -55,9 +60,9 @@ namespace Sdl::Loop
 
         // IRunner interface
         void Start(HandlerPtr handler) override;
-        void Finish(const FinishData& finishData) override;
+        void Finish(const App::Loop::FinishData& finishData) override;
 
-        // SDL3-specific accessors
+        // Sdl3-specific accessors
         [[nodiscard]] SDL_Window* GetWindow() const { return _window; }
         [[nodiscard]] SDL_Renderer* GetRenderer() const { return _renderer; }
         [[nodiscard]] bool IsRunning() const { return _running; }
@@ -76,7 +81,7 @@ namespace Sdl::Loop
         SDL_Window* _window = nullptr;
         SDL_Renderer* _renderer = nullptr;
 
-        UpdateCtx _updateCtx;
+        App::Loop::UpdateCtx _updateCtx;
         std::atomic<bool> _running{false};
         std::atomic<int> _exitCode{0};
 
@@ -87,14 +92,14 @@ namespace Sdl::Loop
 
         // SDL App callbacks (static, called by SDL)
         static SDL_AppResult SDLCALL AppInit(void** appstate, int argc, char** argv);
+        static void SDLCALL AppQuit(void* appstate, SDL_AppResult result);
         static SDL_AppResult SDLCALL AppIterate(void* appstate);
         static SDL_AppResult SDLCALL AppEvent(void* appstate, SDL_Event* event);
-        static void SDLCALL AppQuit(void* appstate, SDL_AppResult result);
 
         // Internal helpers
         SDL_AppResult DoInit();
+        void DoQuit();
         SDL_AppResult DoIterate();
         SDL_AppResult DoEvent(SDL_Event* event);
-        void DoQuit();
     };
 }

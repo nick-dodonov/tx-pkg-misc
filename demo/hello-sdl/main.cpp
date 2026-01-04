@@ -19,7 +19,7 @@ static asio::awaitable<int> CoroMain(int timeoutSeconds)
     auto runner = domain->GetRunner<Sdl::Loop::Sdl3Runner>();
 
     // Wait for EITHER quit event OR timer - whichever comes first
-    Log::Info("waiting for quit event or {}-second timeout...", timeoutSeconds);
+    Log::Info("waiting for quit event or timeout ({} sec)...", timeoutSeconds);
     auto timer = asio::steady_timer(executor);
     timer.expires_after(std::chrono::seconds(timeoutSeconds));
     auto result = co_await (
@@ -32,7 +32,7 @@ static asio::awaitable<int> CoroMain(int timeoutSeconds)
     if (result.index() == 0) {
         Log::Info("window was closed by user");
     } else {
-        Log::Info("{}-second timeout reached, requesting quit", timeoutSeconds);
+        Log::Info("timeout ({} sec) reached, requesting quit", timeoutSeconds);
         runner->RequestQuit(0);
     }
 
@@ -64,7 +64,7 @@ int main(const int argc, const char* argv[])
                 .Width = 640,
                 .Height = 480,
             },
-            .OnRender = [](SDL_Renderer* renderer, const Sdl::Loop::UpdateCtx& ctx) {
+            .OnRender = [](SDL_Renderer* renderer, const App::Loop::UpdateCtx& ctx) {
                 // Static FPS counter
                 static FpsCounter fpsCounter;
                 fpsCounter.AddFrame(ctx.frame.deltaSeconds);

@@ -45,7 +45,54 @@ namespace Sdl::Loop
         Log::Trace("SDL_EnterAppMainCallbacks returned {}", result);
     }
 
-    // SDL App Callbacks - called by SDL's cross-platform loop
+    void Sdl3Runner::Finish(const App::Loop::FinishData& finishData)
+    {
+        Log::Debug("finish requested with exit code {}", finishData.ExitCode);
+        RequestQuit(finishData.ExitCode);
+    }
+
+    void Sdl3Runner::RequestQuit(int exitCode)
+    {
+        Log::Debug("quit requested with exit code {}", exitCode);
+        _exitCode.store(exitCode);
+        _running = false;
+        
+        // Notify any waiters via channel (thread-safe access)
+        {
+            std::lock_guard lock(_channelMutex);
+            if (_quitChannel) {
+                _quitChannel->try_send(boost::system::error_code{}, exitCode);
+            }
+        }
+    }
+
+    boost::asio::awaitable<int> Sdl3Runner::WaitForQuit()
+    {
+        // Already quit? Return immediately
+        if (!_running) {
+            co_return _exitCode.load();
+        }
+
+        // Lazy-create channel using executor from current coroutine
+        auto executor = co_await boost::asio::this_coro::executor;
+        {
+            std::lock_guard lock(_channelMutex);
+            if (!_quitChannel) {
+                _quitChannel = std::make_shared<QuitChannel>(executor, 1);
+            }
+        }
+
+        Log::Trace("waiting for quit...");
+        auto [ec, exitCode] = co_await _quitChannel->async_receive(
+            boost::asio::as_tuple(boost::asio::use_awaitable));
+        
+        if (ec) {
+            Log::Debug("WaitForQuit channel error: {}", ec.message());
+        }
+        
+        co_return exitCode;
+    }
+
     SDL_AppResult SDLCALL Sdl3Runner::AppInit(void** appstate, int /*argc*/, char** /*argv*/)
     {
         auto* self = g_currentSdl3Runner;
@@ -53,9 +100,15 @@ namespace Sdl::Loop
             Log::Error("AppInit: no runner instance!");
             return SDL_APP_FAILURE;
         }
-
         *appstate = self;
         return self->DoInit();
+    }
+
+    void SDLCALL Sdl3Runner::AppQuit(void* appstate, SDL_AppResult result)
+    {
+        Log::Trace("result={}", static_cast<int>(result)); //TODO: enum traits to string
+        auto* self = static_cast<Sdl3Runner*>(appstate);
+        self->DoQuit();
     }
 
     SDL_AppResult SDLCALL Sdl3Runner::AppIterate(void* appstate)
@@ -67,50 +120,19 @@ namespace Sdl::Loop
     SDL_AppResult SDLCALL Sdl3Runner::AppEvent(void* appstate, SDL_Event* event)
     {
         auto* self = static_cast<Sdl3Runner*>(appstate);
-
-        // Handle quit events
-        if (event->type == SDL_EVENT_QUIT) {
-            Log::Debug("received SDL_EVENT_QUIT");
-            self->RequestQuit(0);
-            return SDL_APP_SUCCESS;
-        }
-
-        if (event->type == SDL_EVENT_KEY_DOWN) {
-            if (event->key.key == SDLK_ESCAPE) {
-                Log::Debug("ESC pressed, quitting");
-                self->RequestQuit(0);
-                return SDL_APP_SUCCESS;
-            }
-        }
-
-        // Forward to user callback
-        if (self->_options.OnEvent) {
-            self->_options.OnEvent(*event);
-        }
-
-        return SDL_APP_CONTINUE;
-    }
-
-    void SDLCALL Sdl3Runner::AppQuit(void* appstate, SDL_AppResult result)
-    {
-        Log::Trace("result={}", static_cast<int>(result)); //TODO: enum traits to string
-        auto* self = static_cast<Sdl3Runner*>(appstate);
-        self->DoQuit();
+        return self->DoEvent(event);
     }
 
     SDL_AppResult Sdl3Runner::DoInit()
     {
-        Log::Debug("initializing SDL3...");
-
-        // Log SDL version
         int version = SDL_GetVersion();
         int major = SDL_VERSIONNUM_MAJOR(version);
         int minor = SDL_VERSIONNUM_MINOR(version);
         int patch = SDL_VERSIONNUM_MICRO(version);
-        Log::Info("SDL version {}.{}.{}", major, minor, patch);
+        Log::Debug("SDL3 version {}.{}.{}", major, minor, patch);
 
         // Create window
-        Log::Debug("creating window '{}' ({}x{})",
+        Log::Trace("creating window '{}' ({}x{})",
             _options.Window.Title,
             _options.Window.Width,
             _options.Window.Height);
@@ -201,64 +223,47 @@ namespace Sdl::Loop
             return SDL_APP_SUCCESS;
         }
 
+        //TODO: if handler Update did not render anything - Default: clear with dark blue
+        // SDL_SetRenderDrawColor(_renderer, 30, 30, 80, 255);
+        // SDL_RenderClear(_renderer);
+
         // Call render callback
         if (_options.OnRender) {
             _options.OnRender(_renderer, _updateCtx);
         } else {
-            // Default: clear with dark blue
-            SDL_SetRenderDrawColor(_renderer, 30, 30, 80, 255);
-            SDL_RenderClear(_renderer);
+            //TODO: Default: clear with dark blue if handler Update did not render anything
+            // SDL_SetRenderDrawColor(_renderer, 30, 30, 80, 255);
+            // SDL_RenderClear(_renderer);
         }
 
         SDL_RenderPresent(_renderer);
         return SDL_APP_CONTINUE;
     }
 
-    void Sdl3Runner::Finish(const FinishData& finishData)
+    SDL_AppResult Sdl3Runner::DoEvent(SDL_Event* event)
     {
-        Log::Debug("finish requested with exit code {}", finishData.ExitCode);
-        RequestQuit(finishData.ExitCode);
-    }
-
-    void Sdl3Runner::RequestQuit(int exitCode)
-    {
-        Log::Debug("quit requested with exit code {}", exitCode);
-        _exitCode.store(exitCode);
-        _running = false;
-        
-        // Notify any waiters via channel (thread-safe access)
-        {
-            std::lock_guard lock(_channelMutex);
-            if (_quitChannel) {
-                _quitChannel->try_send(boost::system::error_code{}, exitCode);
-            }
-        }
-    }
-
-    boost::asio::awaitable<int> Sdl3Runner::WaitForQuit()
-    {
-        // Already quit? Return immediately
-        if (!_running) {
-            co_return _exitCode.load();
+        // TODO: remove handing quit events from inner logic, let user handle them
+        if (event->type == SDL_EVENT_QUIT) {
+            Log::Debug("received SDL_EVENT_QUIT");
+            RequestQuit(0);
+            return SDL_APP_SUCCESS;
         }
 
-        // Lazy-create channel using executor from current coroutine
-        auto executor = co_await boost::asio::this_coro::executor;
-        {
-            std::lock_guard lock(_channelMutex);
-            if (!_quitChannel) {
-                _quitChannel = std::make_shared<QuitChannel>(executor, 1);
+        if (event->type == SDL_EVENT_KEY_DOWN) {
+            if (event->key.key == SDLK_ESCAPE) {
+                Log::Debug("ESC pressed, quitting");
+                RequestQuit(0);
+                return SDL_APP_SUCCESS;
             }
         }
 
-        Log::Trace("waiting for quit...");
-        auto [ec, exitCode] = co_await _quitChannel->async_receive(
-            boost::asio::as_tuple(boost::asio::use_awaitable));
-        
-        if (ec) {
-            Log::Debug("WaitForQuit channel error: {}", ec.message());
+        // Forward to user callback
+        _handler->Sdl3Event(*this, *event);
+
+        if (_options.OnEvent) {
+            _options.OnEvent(*event);
         }
-        
-        co_return exitCode;
+
+        return SDL_APP_CONTINUE;
     }
 }
