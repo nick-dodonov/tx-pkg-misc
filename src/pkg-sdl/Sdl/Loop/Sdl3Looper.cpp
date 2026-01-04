@@ -151,6 +151,11 @@ namespace Sdl::Loop
             }
         }
 
+        if (!_handler->AfterStart(*this)) {
+            Log::Error("AfterStart handler failed");
+            return SDL_APP_FAILURE;
+        }
+
         Log::Trace("window and renderer created successfully");
         return SDL_APP_CONTINUE;
     }
@@ -158,6 +163,8 @@ namespace Sdl::Loop
     void Sdl3Looper::DoQuit()
     {
         Log::Debug("shutting down...");
+
+        _handler->BeforeFinish(*this);
 
         if (_options.OnQuitting) {
             _options.OnQuitting(*this);
@@ -173,6 +180,9 @@ namespace Sdl::Loop
             _window = nullptr;
         }
 
+        _running = false;
+        _handler.reset();
+
         Log::Trace("SDL cleanup complete");
     }
 
@@ -185,15 +195,10 @@ namespace Sdl::Loop
         // Update timing
         _updateCtx.Tick();
 
-        // Call update action (for io_context.poll())
-        if (_handler) {
-            if (!_handler->Update(*this, _updateCtx)) {
-                Log::Debug("update handler is stopping");
-                return SDL_APP_SUCCESS;
-            }
-        } else {
-            Log::Error("update handler not set, stopping with failure");
-            return SDL_APP_FAILURE;
+        // Call update action
+        if (!_handler->Update(*this, _updateCtx)) {
+            Log::Debug("update handler is stopping");
+            return SDL_APP_SUCCESS;
         }
 
         // Call render callback
