@@ -1,0 +1,98 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+AccessModifierOffset: -4
+NamespaceIndentation: All
+IndentRequires: false # for C++20 requires clauses
+IndentCaseLabels: true
+IndentPPDirectives: None # BeforeHash
+IndentExternBlock: Indent
+ColumnLimit: 160
+
+# pointer and reference alignment
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+# arguments formatting
+AlignAfterOpenBracket: BlockIndent
+BinPackArguments: false
+BinPackParameters: false
+ExperimentalAutoDetectBinPacking: false
+AllowAllArgumentsOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+# close bracket control
+#BreakBeforeCloseBracketBracedList: false
+#BreakBeforeCloseBracketFunction: false
+#BreakBeforeCloseBracketIf: false
+
+# penalties for line breaking
+# PenaltyBreakBeforeFirstCallParameter: 1
+# PenaltyBreakAssignment: 2
+# PenaltyBreakOpenParenthesis: 0
+# PenaltyExcessCharacter: 100
+# PenaltyBreakString: 1000
+# PenaltyBreakComment: 300
+
+# template declarations
+AlwaysBreakTemplateDeclarations: Yes
+#BUG w/ usual params: BreakBeforeTemplateCloser: true
+
+# constructor initializer formatting
+PackConstructorInitializers: Never
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma
+
+# brace wrapping
+# BreakBeforeBraces: Linux
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterNamespace: true
+  AfterClass: true
+  AfterStruct: true
+  AfterEnum: true
+  AfterFunction: true
+  SplitEmptyFunction: false
+#   AfterControlStatement: false
+#   AfterControlStatement: MultiLine
+#   AfterControlStatement: Never
+#   AfterUnion: false
+#   BeforeCatch: false
+  BeforeElse: false
+#   AfterCaseLabel: false
+#   AfterExternBlock: false
+#   BeforeLambdaBody: false
+#   BeforeWhile: false
+#   IndentBraces: false
+#   SplitEmptyFunction: false
+#   SplitEmptyRecord: false
+#   SplitEmptyNamespace: false
+#   AfterCaseLabel: false
+#   AfterCaseLabel: false
+#   AfterCaseLabel: false
+
+# inline function formatting
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortLambdasOnASingleLine: All
+
+# other settings
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignOperands: true
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+SpaceAfterCStyleCast: false
+SpaceBeforeParens: ControlStatements
+SpaceBeforeInheritanceColon: false
+FixNamespaceComments: false
+InsertNewlineAtEOF: true
+
+# https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html#calling-javascript-from-c-c
+WhitespaceSensitiveMacros: ['EM_ASM', 'EM_JS', 'EM_ASM_INT', 'EM_ASM_DOUBLE', 'EM_ASM_PTR', 'MAIN_THREAD_EM_ASM', 'MAIN_THREAD_EM_ASM_INT', 'MAIN_THREAD_EM_ASM_DOUBLE', 'MAIN_THREAD_EM_ASM_DOUBLE', 'MAIN_THREAD_ASYNC_EM_ASM']
+

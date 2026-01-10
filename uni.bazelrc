@@ -1,0 +1,33 @@
+common --registry=https://raw.githubusercontent.com/nick-dodonov/tx-kit-registry/main
+common --registry=https://bcr.bazel.build/
+common --enable_platform_specific_config
+
+#TODO: split shared clang / msvc copt
+build --copt=-Werror=return-type                # Функции без return
+#build --copt=-Werror=unused-variable            # Неиспользуемые переменные
+#build --copt=-Werror=unused-parameter           # Неиспользуемые параметры
+build --copt=-Werror=uninitialized              # Неинициализированные переменные
+build --copt=-Werror=delete-non-virtual-dtor    # Удаление через базовый класс без виртуального деструктора
+
+# C++ standard settings per platforms for external too (boost.asio w/ coroutines needs C++20 at least)
+# Prefer setting via env for rules_cc (BAZEL_CXXOPTS not via --cxxopt) to disable default C++17 applied
+build:linux --repo_env=BAZEL_CXXOPTS=-std=c++23
+build:macos --repo_env=BAZEL_CXXOPTS=-std=c++23
+# Emscripten has custom toolchain setup without defaults
+build:wasm --cxxopt="-std=c++23"
+# MSVC rules_cc for Windows defaults std flag (/std:c++17) that can be disabled by feature
+build:windows --features=-default_cpp_std
+build:windows --cxxopt="/std:c++latest"
+
+# Configure boost.asio to use BoringSSL for SSL support
+build --@boost.asio//:ssl=boringssl
+build:wasm --@boost.asio//:ssl=no_ssl
+
+# WASM threading support w/ boost
+#TODO: custom toolchain (tx-kit-ext) for WASM support w/ boost
+#TODO: benchmark https://github.com/WebAssembly/design/issues/1271 (-Wpthreads-mem-growth)
+build:wasm --copt="-pthread"
+#build:wasm --copt="-DBOOST_HAS_PTHREADS"
+#build:wasm --linkopt="-sALLOW_MEMORY_GROWTH=1"
+#build:wasm --linkopt="-sUSE_PTHREADS=1"
+#build:wasm --linkopt="-sWASM_BIGINT=1"
