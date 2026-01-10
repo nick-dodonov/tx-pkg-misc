@@ -109,19 +109,9 @@ struct MainHandler : Sdl::Loop::Sdl3Handler
 
 int main(const int argc, const char* argv[])
 {
-    // Parse command line arguments
-    Boot::CliArgs args(argc, argv);
-    
     // Get timeout from first argument (default 3 seconds)
-    int timeoutSeconds = 3;
-    if (args.size() > 1) {
-        std::string_view timeoutStr = args[1];
-        auto result = std::from_chars(timeoutStr.data(), timeoutStr.data() + timeoutStr.size(), timeoutSeconds);
-        if (result.ec == std::errc::invalid_argument) {
-            Log::Warn("Invalid timeout argument '{}', using default 3 seconds", timeoutStr);
-            timeoutSeconds = 3;
-        }
-    }
+    Boot::CliArgs args(argc, argv);
+    //auto timeoutResult = args.GetIntArg(1).value_or(3);
 
     // Configure SDL3 runner
     auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
