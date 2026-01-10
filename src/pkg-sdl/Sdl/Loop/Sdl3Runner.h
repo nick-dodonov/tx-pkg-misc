@@ -14,15 +14,17 @@ namespace Sdl::Loop
     class Sdl3Runner;
 
     /// SDL3 runner handler extending the base handler (Started/Stopping/Update)
-    class Sdl3Handler : public App::Loop::IHandler
+    class Sdl3Handler
     {
     public:
+        virtual ~Sdl3Handler() = default;
+
         /// SDL3-specific event callback
         virtual SDL_AppResult Sdl3Event(Sdl3Runner& runner, const SDL_Event& event) { return SDL_APP_CONTINUE; }
     };
 
     /// SDL3-based runner that uses SDL_EnterAppMainCallbacks for cross-platform support
-    class Sdl3Runner final : public App::Loop::Runner<Sdl3Handler>
+    class Sdl3Runner final : public App::Loop::Runner<App::Loop::IHandler>
     {
     public:
         struct WindowConfig
@@ -43,7 +45,9 @@ namespace Sdl::Loop
             int VSync = 1;
         };
 
-        explicit Sdl3Runner(HandlerPtr handler, Options options);
+        using Sdl3HandlerPtr = std::shared_ptr<Sdl3Handler>;
+
+        explicit Sdl3Runner(HandlerPtr handler, Sdl3HandlerPtr sdlHandler, Options options);
         ~Sdl3Runner() override;
 
         // IRunner interface
@@ -60,6 +64,7 @@ namespace Sdl::Loop
         boost::asio::awaitable<int> WaitQuit();
 
     private:
+        Sdl3HandlerPtr _sdlHandler;
         Options _options;
 
         SDL_Window* _window = nullptr;

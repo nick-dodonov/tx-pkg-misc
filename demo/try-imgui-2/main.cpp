@@ -30,7 +30,9 @@ namespace {
 //     co_return 0;
 // }
 
-struct ImHandler : Sdl::Loop::Sdl3Handler
+struct ImHandler 
+    : App::Loop::IHandler
+    , Sdl::Loop::Sdl3Handler
 {
     bool Started(App::Loop::IRunner& runner) override
     { 
@@ -162,8 +164,10 @@ struct ImHandler : Sdl::Loop::Sdl3Handler
 
 int main(const int argc, const char* argv[])
 {
+    auto handler = std::make_shared<ImHandler>();
     auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
-        std::make_shared<ImHandler>(),
+        handler,
+        handler,
         Sdl::Loop::Sdl3Runner::Options{
             .Window = {
                 .Title = "Hello ImGUI",

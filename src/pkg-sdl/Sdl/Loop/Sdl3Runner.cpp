@@ -12,8 +12,9 @@ namespace { thread_local Sdl::Loop::Sdl3Runner* g_currentSdl3Runner = nullptr; }
 
 namespace Sdl::Loop
 {
-    Sdl3Runner::Sdl3Runner(HandlerPtr handler, Options options)
+    Sdl3Runner::Sdl3Runner(HandlerPtr handler, Sdl3HandlerPtr sdlHandler, Options options)
         : Runner{std::move(handler)}
+        , _sdlHandler{std::move(sdlHandler)}
         , _options{std::move(options)}
         , _updateCtx{*this}
     {
@@ -252,7 +253,7 @@ namespace Sdl::Loop
     SDL_AppResult Sdl3Runner::DoEvent(SDL_Event* event)
     {
         // Forward to user callback
-        auto rc = GetHandler()->Sdl3Event(*this, *event);
+        auto rc = _sdlHandler->Sdl3Event(*this, *event);
         if (rc != SDL_APP_CONTINUE) {
             return rc;
         }
