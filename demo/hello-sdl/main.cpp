@@ -37,7 +37,7 @@ static std::shared_ptr<App::Domain> domain;
     co_return 0;
 }
 
-struct MainHandler : Sdl::Loop::Sdl3Handler
+struct MyHandler : Sdl::Loop::Sdl3Handler
 {
     bool Update(Sdl::Loop::Sdl3Runner& runner, const App::Loop::UpdateCtx& ctx) override
     {
@@ -115,7 +115,7 @@ int main(const int argc, const char* argv[])
 
     // Configure SDL3 runner
     auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
-        std::make_shared<MainHandler>(),
+        std::make_shared<MyHandler>(),
         Sdl::Loop::Sdl3Runner::Options{
             .Window = {
                 .Title = "Hello SDL3",

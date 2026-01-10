@@ -45,20 +45,6 @@
             "presentation": {
                 "focus": true,
             },
-            "problemMatcher": "$gcc",
-        },
-        {
-            "type": "shell",
-            "label": "build demo <relative>",
-            "command": "bazel build ${relativeFileDirname}",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "presentation": {
-                "focus": true,
-                //"clear": true,
-            },
             // https://code.visualstudio.com/docs/debugtest/tasks#_processing-task-output-with-problem-matchers
             "problemMatcher": "$gcc",
             // https://code.visualstudio.com/docs/debugtest/tasks#_defining-a-problem-matcher

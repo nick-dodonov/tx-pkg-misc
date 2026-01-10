@@ -14,20 +14,7 @@
                 "command source ${workspaceFolder}/.lldbinit",
             ],
             "preLaunchTask": "build demo <user>",
-        },
-        {
-            "name": "demo <relative> (LLDB)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/bazel-bin/${relativeFileDirname}",
-            "cwd": "${workspaceFolder}",
-            "initCommands": [
-                "platform setting -w ${workspaceFolder}",
-                "command source ${env:HOME}/.lldbinit",
-                "command source ${workspaceFolder}/.lldbinit",
-            ],
-            "preLaunchTask": "build demo <relative>",
-        },
+        }
         // ================ debug experiments configurations
         // Useful links/commands to investigate source mapping issues.
         //  - https://github.com/bazelbuild/apple_support?tab=readme-ov-file
