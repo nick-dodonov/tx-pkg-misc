@@ -169,12 +169,12 @@ namespace Sdl::Loop
         );
 
         // Create window
-        _window = SDL_CreateWindow(
+        _window = Window{SDL_CreateWindow(
             _options.Window.Title.c_str(),
             _options.Window.Width,
             _options.Window.Height,
             _options.Window.Flags
-        );
+        )};
 
         if (!_window) {
             Log::Error("SDL_CreateWindow failed: {}", SDL_GetError());
@@ -182,22 +182,23 @@ namespace Sdl::Loop
         }
 
         // Create renderer
-        _renderer = SDL_CreateRenderer(_window, nullptr);
+        _renderer = Renderer{SDL_CreateRenderer(_window.get(), nullptr)};
         if (!_renderer) {
             Log::Error("SDL_CreateRenderer failed: {}", SDL_GetError());
-            SDL_DestroyWindow(_window);
-            _window = nullptr;
+            _window.reset();
             return SDL_APP_FAILURE;
         }
 
         // Set VSync
-        if (!SDL_SetRenderVSync(_renderer, _options.VSync)) {
+        if (!SDL_SetRenderVSync(_renderer.get(), _options.VSync)) {
             Log::Warn("SDL_SetRenderVSync({}) not supported, using disabled", _options.VSync);
-            SDL_SetRenderVSync(_renderer, SDL_RENDERER_VSYNC_DISABLED);
+            SDL_SetRenderVSync(_renderer.get(), SDL_RENDERER_VSYNC_DISABLED);
         }
 
         if (!InvokeStarted()) {
             Log::Error("Started handler failed");
+            _renderer.reset();
+            _window.reset();
             return SDL_APP_FAILURE;
         }
 
@@ -212,15 +213,8 @@ namespace Sdl::Loop
 
         InvokeStopping();
 
-        if (_renderer) {
-            SDL_DestroyRenderer(_renderer);
-            _renderer = nullptr;
-        }
-
-        if (_window) {
-            SDL_DestroyWindow(_window);
-            _window = nullptr;
-        }
+        _renderer.reset();
+        _window.reset();
 
         _running = false;
 
@@ -246,7 +240,7 @@ namespace Sdl::Loop
         // SDL_SetRenderDrawColor(_renderer, 30, 30, 80, 255);
         // SDL_RenderClear(_renderer);
 
-        SDL_RenderPresent(_renderer);
+        SDL_RenderPresent(_renderer.get());
         return SDL_APP_CONTINUE;
     }
 

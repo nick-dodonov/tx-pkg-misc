@@ -1,6 +1,7 @@
 #pragma once
 #include "App/Loop/Handler.h"
 #include "App/Loop/Runner.h"
+#include "Sdl/Sdl3Ptr.h"
 
 #include <SDL3/SDL.h>
 
@@ -13,7 +14,7 @@ namespace Sdl::Loop
 {
     class Sdl3Runner;
 
-    /// SDL3 runner handler extending the base handler (Started/Stopping/Update)
+    /// SDL3 runner handler w/ event except base (Started/Stopping/Update)
     class Sdl3Handler
     {
     public:
@@ -23,7 +24,7 @@ namespace Sdl::Loop
         virtual SDL_AppResult Sdl3Event(Sdl3Runner& runner, const SDL_Event& event) { return SDL_APP_CONTINUE; }
     };
 
-    /// SDL3-based runner that uses SDL_EnterAppMainCallbacks for cross-platform support
+    /// SDL3-based runner that uses SDL events for cross-platform support
     class Sdl3Runner final : public App::Loop::Runner<App::Loop::IHandler>
     {
     public:
@@ -55,8 +56,8 @@ namespace Sdl::Loop
         void Finish(const App::Loop::FinishData& finishData) override;
 
         // Sdl3-specific accessors
-        [[nodiscard]] SDL_Window* GetWindow() const { return _window; }
-        [[nodiscard]] SDL_Renderer* GetRenderer() const { return _renderer; }
+        [[nodiscard]] SDL_Window* GetWindow() const { return _window.get(); }
+        [[nodiscard]] SDL_Renderer* GetRenderer() const { return _renderer.get(); }
         [[nodiscard]] bool IsRunning() const { return _running; }
 
         /// Awaitable that completes when quit is requested
@@ -67,8 +68,8 @@ namespace Sdl::Loop
         Sdl3HandlerPtr _sdlHandler;
         Options _options;
 
-        SDL_Window* _window = nullptr;
-        SDL_Renderer* _renderer = nullptr;
+        Window _window;
+        Renderer _renderer;
 
         App::Loop::UpdateCtx _updateCtx;
         std::atomic<bool> _running{false};
