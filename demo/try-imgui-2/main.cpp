@@ -160,6 +160,7 @@ struct ImHandler : Sdl::Loop::Sdl3Handler
 int main(const int argc, const char* argv[])
 {
     auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
+        std::make_shared<ImHandler>(),
         Sdl::Loop::Sdl3Runner::Options{
             .Window = {
                 .Title = "Hello ImGUI",
@@ -168,9 +169,9 @@ int main(const int argc, const char* argv[])
             },
         }
     );
-    runner->Start(std::make_shared<ImHandler>());
+    runner->Start();
 
     // // Create domain with custom runner
     // domain = std::make_shared<App::Domain>(argc, argv, runner);
-    // return domain->RunCoroMain(CoroMain());
+    // return domain->RunCoroMain(runner, CoroMain());
 }

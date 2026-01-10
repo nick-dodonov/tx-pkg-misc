@@ -12,8 +12,9 @@ namespace { thread_local Sdl::Loop::Sdl3Runner* g_currentSdl3Runner = nullptr; }
 
 namespace Sdl::Loop
 {
-    Sdl3Runner::Sdl3Runner(Options options)
-        : _options{std::move(options)}
+    Sdl3Runner::Sdl3Runner(HandlerPtr handler, Options options)
+        : Runner{std::move(handler)}
+        , _options{std::move(options)}
         , _updateCtx{*this}
     {
         Log::Trace("created");
@@ -24,10 +25,9 @@ namespace Sdl::Loop
         Log::Trace("destroy");
     }
 
-    void Sdl3Runner::Start(HandlerPtr handler)
+    void Sdl3Runner::Start()
     {
         Log::Debug("...");
-        _handler = std::move(handler);
         _updateCtx.Initialize();
         _running = true;
 

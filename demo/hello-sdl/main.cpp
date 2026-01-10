@@ -13,10 +13,9 @@ using namespace asio::experimental::awaitable_operators;
 
 static std::shared_ptr<App::Domain> domain;
 
-static asio::awaitable<int> CoroMain(int timeoutSeconds)
+[[maybe_unused]] static asio::awaitable<int> CoroMain(std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
 {
     auto executor = co_await asio::this_coro::executor;
-    auto runner = domain->GetRunner<Sdl::Loop::Sdl3Runner>();
 
     // Wait for EITHER quit event OR timer - whichever comes first
     Log::Info("waiting for quit event or timeout ({} sec)...", timeoutSeconds);
@@ -38,7 +37,7 @@ static asio::awaitable<int> CoroMain(int timeoutSeconds)
     co_return 0;
 }
 
-struct ImHandler : Sdl::Loop::Sdl3Handler
+struct MainHandler : Sdl::Loop::Sdl3Handler
 {
     bool Update(Sdl::Loop::Sdl3Runner& runner, const App::Loop::UpdateCtx& ctx) override
     {
@@ -126,6 +125,7 @@ int main(const int argc, const char* argv[])
 
     // Configure SDL3 runner
     auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
+        std::make_shared<MainHandler>(),
         Sdl::Loop::Sdl3Runner::Options{
             .Window = {
                 .Title = "Hello SDL3",
@@ -141,9 +141,9 @@ int main(const int argc, const char* argv[])
         }
     );
 
-    runner->Start(std::make_shared<ImHandler>());
+    runner->Start();
 
     // // Create domain with custom runner
     // domain = std::make_shared<App::Domain>(argc, argv, runner);
-    // return domain->RunCoroMain(CoroMain(timeoutSeconds));
+    // return domain->RunCoroMain(runner, CoroMain(timeoutSeconds));
 }

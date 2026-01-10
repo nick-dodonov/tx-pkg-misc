@@ -55,11 +55,11 @@ namespace Sdl::Loop
             std::function<SDL_AppResult(const SDL_Event&)> OnEvent;
         };
 
-        explicit Sdl3Runner(Options options);
+        explicit Sdl3Runner(HandlerPtr handler, Options options);
         ~Sdl3Runner() override;
 
         // IRunner interface
-        void Start(HandlerPtr handler) override;
+        void Start() override;
         void Finish(const App::Loop::FinishData& finishData) override;
 
         // Sdl3-specific accessors
@@ -73,7 +73,6 @@ namespace Sdl::Loop
 
     private:
         Options _options;
-        HandlerPtr _handler;
 
         SDL_Window* _window = nullptr;
         SDL_Renderer* _renderer = nullptr;
