@@ -202,7 +202,7 @@ namespace Sdl::Loop
             }
         }
 
-        if (!_handler->Started(*this)) {
+        if (!InvokeStarted()) {
             Log::Error("Started handler failed");
             return SDL_APP_FAILURE;
         }
@@ -216,7 +216,7 @@ namespace Sdl::Loop
         Log::Debug("shutting down...");
         SignalQuit();
 
-        _handler->Stopping(*this);
+        InvokeStopping();
 
         if (_options.OnQuitting) {
             _options.OnQuitting(*this);
@@ -233,7 +233,6 @@ namespace Sdl::Loop
         }
 
         _running = false;
-        _handler.reset();
 
         Log::Trace("shutdown complete");
     }
@@ -248,7 +247,7 @@ namespace Sdl::Loop
         _updateCtx.Tick();
 
         // Call update action
-        if (!_handler->Update(*this, _updateCtx)) {
+        if (!InvokeUpdate(_updateCtx)) {
             Log::Debug("update handler is stopping");
             return SDL_APP_SUCCESS;
         }
@@ -273,7 +272,7 @@ namespace Sdl::Loop
     SDL_AppResult Sdl3Runner::DoEvent(SDL_Event* event)
     {
         // Forward to user callback
-        auto rc = _handler->Sdl3Event(*this, *event);
+        auto rc = GetHandler()->Sdl3Event(*this, *event);
         if (rc != SDL_APP_CONTINUE) {
             return rc;
         }
