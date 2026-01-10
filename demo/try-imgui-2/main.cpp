@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
+#include "src/pkg-sdl/Sdl/Loop/Sdl3Runner.h"
 
 namespace asio = boost::asio;
 
@@ -31,8 +32,9 @@ namespace {
 
 struct ImHandler : Sdl::Loop::Sdl3Handler
 {
-    bool Started(Sdl::Loop::Sdl3Runner& runner) override
+    bool Started(App::Loop::IRunner& runner) override
     { 
+        auto& sdlRunner = static_cast<Sdl::Loop::Sdl3Runner&>(runner);
         Log::Info("SDL3 Runner initialized");
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
@@ -51,12 +53,12 @@ struct ImHandler : Sdl::Loop::Sdl3Handler
         style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
 
         // Setup Platform/Renderer backends
-        ImGui_ImplSDL3_InitForSDLRenderer(runner.GetWindow(), runner.GetRenderer());
-        ImGui_ImplSDLRenderer3_Init(runner.GetRenderer());
+        ImGui_ImplSDL3_InitForSDLRenderer(sdlRunner.GetWindow(), sdlRunner.GetRenderer());
+        ImGui_ImplSDLRenderer3_Init(sdlRunner.GetRenderer());
         return true;
     }
 
-    void Stopping(Sdl::Loop::Sdl3Runner& runner) override
+    void Stopping(App::Loop::IRunner& runner) override
     {
         Log::Info("SDL3 Runner quitting");
         // Cleanup
@@ -67,9 +69,10 @@ struct ImHandler : Sdl::Loop::Sdl3Handler
         imGuiIO = nullptr;
     }
 
-    bool Update(Sdl::Loop::Sdl3Runner& runner, const App::Loop::UpdateCtx& ctx) override
+    bool Update(App::Loop::IRunner& runner, const App::Loop::UpdateCtx& ctx) override
     {
-        auto* renderer = runner.GetRenderer();
+        auto& sdlRunner = static_cast<Sdl::Loop::Sdl3Runner&>(runner);
+        auto* renderer = sdlRunner.GetRenderer();
         auto elapsed = ctx.session.passedSeconds;
 
         // Clear with dark blue
@@ -135,7 +138,7 @@ struct ImHandler : Sdl::Loop::Sdl3Handler
         return true; 
     }
 
-    SDL_AppResult Sdl3Event(Runner& runner, const SDL_Event& event) override
+    SDL_AppResult Sdl3Event(Sdl::Loop::Sdl3Runner& runner, const SDL_Event& event) override
     {
         //Log::Trace("type={}", static_cast<int>(event.type));
         if (event.type == SDL_EVENT_QUIT) {

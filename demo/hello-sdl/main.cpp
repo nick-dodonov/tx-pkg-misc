@@ -38,9 +38,9 @@ static std::shared_ptr<App::Domain> domain;
 
 struct MyHandler : Sdl::Loop::Sdl3Handler
 {
-    bool Update(Sdl::Loop::Sdl3Runner& runner, const App::Loop::UpdateCtx& ctx) override
+    bool Update(App::Loop::IRunner& runner, const App::Loop::UpdateCtx& ctx) override
     {
-        auto* renderer = runner.GetRenderer();
+        auto* renderer = (dynamic_cast<Sdl::Loop::Sdl3Runner&>(runner)).GetRenderer();
 
         // FPS counter
         static FpsCounter fpsCounter;
@@ -89,7 +89,8 @@ struct MyHandler : Sdl::Loop::Sdl3Handler
 
         return true;
     }
-    SDL_AppResult Sdl3Event(Runner& runner, const SDL_Event& event) override
+
+    SDL_AppResult Sdl3Event(Sdl::Loop::Sdl3Runner& runner, const SDL_Event& event) override
     {
         if (event.type == SDL_EVENT_QUIT) {
             Log::Debug("received SDL_EVENT_QUIT");
@@ -113,19 +114,14 @@ int main(const int argc, const char* argv[])
     //auto timeoutResult = args.GetIntArg(1).value_or(3);
 
     // Configure SDL3 runner
+    auto handler = std::make_shared<MyHandler>();
     auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
-        std::make_shared<MyHandler>(),
+        handler,
         Sdl::Loop::Sdl3Runner::Options{
             .Window = {
                 .Title = "Hello SDL3",
                 .Width = 640,
                 .Height = 480,
-            },
-            .OnRender = [](SDL_Renderer* renderer, const App::Loop::UpdateCtx& ctx) {
-                return true;
-            },
-            .OnEvent = [](const SDL_Event& event) {
-                return SDL_APP_CONTINUE;
             },
         }
     );

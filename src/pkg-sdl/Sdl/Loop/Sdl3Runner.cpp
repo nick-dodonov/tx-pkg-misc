@@ -169,7 +169,7 @@ namespace Sdl::Loop
 
         // Create window
         _window = SDL_CreateWindow(
-            _options.Window.Title,
+            _options.Window.Title.c_str(),
             _options.Window.Width,
             _options.Window.Height,
             _options.Window.Flags
@@ -195,13 +195,6 @@ namespace Sdl::Loop
             SDL_SetRenderVSync(_renderer, SDL_RENDERER_VSYNC_DISABLED);
         }
 
-        if (_options.OnInited) {
-            if (! _options.OnInited(*this)) {
-                Log::Error("OnInited callback failed");
-                return SDL_APP_FAILURE;
-            }
-        }
-
         if (!InvokeStarted()) {
             Log::Error("Started handler failed");
             return SDL_APP_FAILURE;
@@ -217,10 +210,6 @@ namespace Sdl::Loop
         SignalQuit();
 
         InvokeStopping();
-
-        if (_options.OnQuitting) {
-            _options.OnQuitting(*this);
-        }
 
         if (_renderer) {
             SDL_DestroyRenderer(_renderer);
@@ -256,15 +245,6 @@ namespace Sdl::Loop
         // SDL_SetRenderDrawColor(_renderer, 30, 30, 80, 255);
         // SDL_RenderClear(_renderer);
 
-        // Call render callback
-        if (_options.OnRender) {
-            _options.OnRender(_renderer, _updateCtx);
-        } else {
-            // // Default: clear with dark blue if handler Update did not render anything
-            // SDL_SetRenderDrawColor(_renderer, 30, 30, 80, 255);
-            // SDL_RenderClear(_renderer);
-        }
-
         SDL_RenderPresent(_renderer);
         return SDL_APP_CONTINUE;
     }
@@ -275,13 +255,6 @@ namespace Sdl::Loop
         auto rc = GetHandler()->Sdl3Event(*this, *event);
         if (rc != SDL_APP_CONTINUE) {
             return rc;
-        }
-
-        if (_options.OnEvent) {
-            rc = _options.OnEvent(*event);
-            if (rc != SDL_APP_CONTINUE) {
-                return rc;
-            }
         }
 
         return SDL_APP_CONTINUE;

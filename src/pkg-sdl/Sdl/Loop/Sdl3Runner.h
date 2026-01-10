@@ -7,17 +7,16 @@
 #include <atomic>
 #include <boost/asio.hpp>
 #include <boost/asio/experimental/channel.hpp>
-#include <functional>
 #include <mutex>
 
 namespace Sdl::Loop
 {
+    class Sdl3Runner;
+
     /// SDL3 runner handler extending the base handler (Started/Stopping/Update)
-    class Sdl3Handler : public App::Loop::Handler<class Sdl3Runner>
+    class Sdl3Handler : public App::Loop::IHandler
     {
     public:
-        using Sdl3Runner = class Sdl3Runner;
-
         /// SDL3-specific event callback
         virtual SDL_AppResult Sdl3Event(Sdl3Runner& runner, const SDL_Event& event) { return SDL_APP_CONTINUE; }
     };
@@ -28,7 +27,7 @@ namespace Sdl::Loop
     public:
         struct WindowConfig
         {
-            const char* Title = "SDL3 App";
+            std::string Title = "SDL3 App";
             int Width = 800;
             int Height = 600;
             SDL_WindowFlags Flags = SDL_WINDOW_RESIZABLE;
@@ -42,18 +41,6 @@ namespace Sdl::Loop
             /// VSync setting (1 = enabled, 0 = disabled, -1 = adaptive)
             /// Enabled by default
             int VSync = 1;
-
-            /// Optional initialized callback, called once after SDL initialization
-            std::function<bool(Sdl3Runner& runner)> OnInited;
-
-            /// Optional quitting callback, called once before shutdown
-            std::function<void(Sdl3Runner& runner)> OnQuitting;
-
-            /// Optional render callback, called each frame with renderer and timing context
-            std::function<void(SDL_Renderer* renderer, const App::Loop::UpdateCtx& ctx)> OnRender;
-
-            /// Optional event callback, called for each SDL event
-            std::function<SDL_AppResult(const SDL_Event&)> OnEvent;
         };
 
         explicit Sdl3Runner(HandlerPtr handler, Options options);
