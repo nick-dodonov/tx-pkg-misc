@@ -1,0 +1,58 @@
+---
+Checks: >
+  clang-diagnostic-*,
+  clang-analyzer-*,
+  -clang-analyzer-alpha.*,
+  bugprone-*,
+  -bugprone-exception-escape,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  performance-*,
+  readability-*,
+  -readability-magic-numbers,
+  -readability-convert-member-functions-to-static,
+  -readability-identifier-length,
+  -readability-static-definition-in-anonymous-namespace,
+  -readability-uppercase-literal-suffix,
+  -readability-math-missing-parentheses
+
+# Disabled checks explanation:
+# - alpha.*: Experimental checks, too many false positives
+# - cppcoreguidelines-avoid-const-or-ref-data-members: Needed for coroutine promises
+# - cppcoreguidelines-avoid-magic-numbers: Acceptable in test code
+# - cppcoreguidelines-pro-bounds-*: Sometimes needed for C interop
+# - modernize-use-trailing-return-type: Verbose for simple functions
+# - readability-magic-numbers: Acceptable in test code
+# - readability-convert-member-functions-to-static: Breaks coroutine awaiter protocol
+# - readability-identifier-length: Conflicts with naming conventions (variable i/j/n are common)
+# -bugprone-exception-escape - False positives in codebases that do not use exceptions at all
+
+CheckOptions:
+  - key: readability-identifier-naming.VariableCase
+    value: camelCase
+  - key: readability-identifier-naming.FunctionCase
+    value: camelCase
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.MemberCase
+    value: camelCase
+  - key: readability-implicit-bool-conversion.AllowIntegerConditions
+    value: 'true'
+  - key: readability-implicit-bool-conversion.AllowPointerConditions
+    value: 'true'
+  # https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables.html
+  - key: cppcoreguidelines-avoid-non-const-global-variables.AllowInternalLinkage
+    value: 'true'
+  - key: cppcoreguidelines-avoid-non-const-global-variables.AllowThreadLocal
+    value: 'true'
+  # https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/special-member-functions.html
+  - key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor
+    value: 'true'
+
+HeaderFilterRegex: '.*'
+FormatStyle: file
