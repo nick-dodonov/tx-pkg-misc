@@ -71,9 +71,9 @@ struct ImHandler
         imGuiIO = nullptr;
     }
 
-    bool Update(App::Loop::IRunner& runner, const App::Loop::UpdateCtx& ctx) override
+    void Update(const App::Loop::UpdateCtx& ctx) override
     {
-        auto& sdlRunner = static_cast<Sdl::Loop::Sdl3Runner&>(runner);
+        auto& sdlRunner = static_cast<Sdl::Loop::Sdl3Runner&>(ctx.Runner);
         auto* renderer = sdlRunner.GetRenderer();
         auto elapsed = ctx.session.passedSeconds;
 
@@ -137,7 +137,6 @@ struct ImHandler
             SDL_SetRenderScale(renderer, imGuiIO->DisplayFramebufferScale.x, imGuiIO->DisplayFramebufferScale.y);
             ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
         }
-        return true; 
     }
 
     SDL_AppResult Sdl3Event(Sdl::Loop::Sdl3Runner& runner, const SDL_Event& event) override

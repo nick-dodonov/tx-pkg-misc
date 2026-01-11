@@ -233,10 +233,7 @@ namespace Sdl::Loop
         _updateCtx.Tick();
 
         // Call update action
-        if (!InvokeUpdate(_updateCtx)) {
-            Log::Debug("update handler is stopping");
-            return SDL_APP_SUCCESS;
-        }
+        InvokeUpdate(_updateCtx);
 
         //TODO: if handler Update did not render anything - Default: clear with dark blue
         // SDL_SetRenderDrawColor(_renderer, 30, 30, 80, 255);

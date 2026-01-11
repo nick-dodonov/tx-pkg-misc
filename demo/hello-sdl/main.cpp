@@ -40,9 +40,9 @@ struct MyHandler
     : App::Loop::Handler
     , Sdl::Loop::Sdl3Handler
 {
-    bool Update(App::Loop::IRunner& runner, const App::Loop::UpdateCtx& ctx) override
+    void Update(const App::Loop::UpdateCtx& ctx) override
     {
-        auto* renderer = (dynamic_cast<Sdl::Loop::Sdl3Runner&>(runner)).GetRenderer();
+        auto* renderer = (dynamic_cast<Sdl::Loop::Sdl3Runner&>(ctx.Runner)).GetRenderer();
 
         // FPS counter
         static FpsCounter fpsCounter;
@@ -88,8 +88,6 @@ struct MyHandler
             "Delta: %.2f ms", ctx.frame.deltaSeconds * 1000.0f);
         SDL_RenderDebugTextFormat(renderer, 10.0f, 40.0f,
             "Avg FPS: %.1f", fpsCounter.GetAverageFps());
-
-        return true;
     }
 
     SDL_AppResult Sdl3Event(Sdl::Loop::Sdl3Runner& runner, const SDL_Event& event) override
