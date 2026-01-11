@@ -25,7 +25,7 @@ namespace Sdl::Loop
     };
 
     /// SDL3-based runner that uses SDL events for cross-platform support
-    class Sdl3Runner final : public App::Loop::Runner<App::Loop::IHandler>
+    class Sdl3Runner final : public App::Loop::Runner
     {
     public:
         struct WindowConfig
@@ -52,8 +52,8 @@ namespace Sdl::Loop
         ~Sdl3Runner() override;
 
         // IRunner interface
-        void Start() override;
-        void Finish(const App::Loop::FinishData& finishData) override;
+        int Run() override;
+        void Exit(int exitCode) override;
 
         // Sdl3-specific accessors
         [[nodiscard]] SDL_Window* GetWindow() const { return _window.get(); }
@@ -73,7 +73,6 @@ namespace Sdl::Loop
 
         App::Loop::UpdateCtx _updateCtx;
         std::atomic<bool> _running{false};
-        std::atomic<int> _exitCode{0};
 
         // For async quit notification (created lazily in WaitForQuit)
         using QuitChannel = boost::asio::experimental::channel<void(boost::system::error_code, int)>;

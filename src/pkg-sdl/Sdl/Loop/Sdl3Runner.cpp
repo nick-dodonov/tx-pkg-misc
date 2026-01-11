@@ -26,7 +26,7 @@ namespace Sdl::Loop
         Log::Trace("destroy");
     }
 
-    void Sdl3Runner::Start()
+    int Sdl3Runner::Run()
     {
         Log::Debug("...");
         _updateCtx.Initialize();
@@ -51,13 +51,15 @@ namespace Sdl::Loop
         //  but we need to wait for quit signal, so complete current execution flow
         Log::Debug("emscripten_exit_with_live_runtime...");
         emscripten_exit_with_live_runtime();
+        __builtin_unreachable();
 #endif
+        return GetExitCode().value_or(SuccessExitCode);
     }
 
-    void Sdl3Runner::Finish(const App::Loop::FinishData& finishData)
+    void Sdl3Runner::Exit(int exitCode)
     {
-        Log::Debug("requested: {}", finishData.ExitCode);
-        _exitCode.store(finishData.ExitCode);
+        Log::Debug("requested: {}", exitCode);
+        SetExitCode(exitCode);
         SignalQuit();
     }
 
@@ -67,7 +69,7 @@ namespace Sdl::Loop
 
         // Already quit? Return immediately
         if (!_running) {
-            auto exitCode = _exitCode.load();
+            auto exitCode = GetExitCode().value_or(SuccessExitCode);
             Log::Trace("complete immediately: {}", exitCode);
             co_return exitCode;
         }
@@ -91,7 +93,7 @@ namespace Sdl::Loop
     void Sdl3Runner::SignalQuit()
     {
         Log::Trace("exitting...");
-        auto exitCode = _exitCode.load();
+        auto exitCode = GetExitCode().value_or(SuccessExitCode);
         _running = false;
 
         // Notify any waiters via channel (thread-safe access)

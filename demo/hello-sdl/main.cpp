@@ -37,7 +37,7 @@ static std::shared_ptr<App::Domain> domain;
 }
 
 struct MyHandler 
-    : App::Loop::IHandler
+    : App::Loop::Handler
     , Sdl::Loop::Sdl3Handler
 {
     bool Update(App::Loop::IRunner& runner, const App::Loop::UpdateCtx& ctx) override
@@ -129,9 +129,9 @@ int main(const int argc, const char* argv[])
         }
     );
 
-    runner->Start();
-
     // // Create domain with custom runner
     // domain = std::make_shared<App::Domain>(argc, argv, runner);
     // return domain->RunCoroMain(runner, CoroMain(timeoutSeconds));
+
+    return runner->Run();
 }

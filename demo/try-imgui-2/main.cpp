@@ -31,7 +31,7 @@ namespace {
 // }
 
 struct ImHandler 
-    : App::Loop::IHandler
+    : App::Loop::Handler
     , Sdl::Loop::Sdl3Handler
 {
     bool Started(App::Loop::IRunner& runner) override
@@ -176,9 +176,9 @@ int main(const int argc, const char* argv[])
             },
         }
     );
-    runner->Start();
-
     // // Create domain with custom runner
     // domain = std::make_shared<App::Domain>(argc, argv, runner);
     // return domain->RunCoroMain(runner, CoroMain());
+
+    return runner->Run();
 }
