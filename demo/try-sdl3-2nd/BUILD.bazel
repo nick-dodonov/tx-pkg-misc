@@ -15,7 +15,7 @@ tx_binary(
     ],
     deps = [
         "@tx-pkg-aux//:pkg-boot",
-        "@sdl3//:sdl3_static",
+        "@sdl3",
     ],
     linkopts = select({
         "//conditions:default": [],
