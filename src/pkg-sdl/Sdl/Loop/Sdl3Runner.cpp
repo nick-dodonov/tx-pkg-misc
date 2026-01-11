@@ -8,13 +8,22 @@
 #include <emscripten.h>
 #endif
 
-// Thread-local for passing 'this' to SDL callbacks
-namespace { thread_local Sdl::Loop::Sdl3Runner* g_currentSdl3Runner = nullptr; }
-
 BOOST_DESCRIBE_ENUM(SDL_AppResult, SDL_APP_CONTINUE, SDL_APP_SUCCESS, SDL_APP_FAILURE)
+
+namespace
+{
+    // Thread-local for passing 'this' to SDL callbacks
+    thread_local Sdl::Loop::Sdl3Runner* g_currentSdl3Runner = nullptr;
+}
 
 namespace Sdl::Loop
 {
+    template<auto MemberFunc>
+    static auto SDLCALL MakeStatic(void* appstate, auto... args)
+    {
+        return (static_cast<Sdl::Loop::Sdl3Runner*>(appstate)->*MemberFunc)(args...);
+    }
+
     Sdl3Runner::Sdl3Runner(HandlerPtr handler, Sdl3HandlerPtr sdlHandler, Options options)
         : Runner{std::move(handler)}
         , _sdlHandler{std::move(sdlHandler)}
@@ -43,16 +52,16 @@ namespace Sdl::Loop
         int result = SDL_EnterAppMainCallbacks(
             0, nullptr,  // argc/argv not needed, we already have them in Domain
             AppInit,
-            AppIterate,
-            AppEvent,
-            AppQuit
+            MakeStatic<&Sdl3Runner::DoIterate>,
+            MakeStatic<&Sdl3Runner::DoEvent>,
+            MakeStatic<&Sdl3Runner::DoQuit>
         );
-        Log::Trace("SDL_EnterAppMainCallbacks returned {}", result);
+        Log::Trace("SDL_EnterAppMainCallbacks result {}", result);
 
 #if __EMSCRIPTEN__
         // SDL_EnterAppMainCallbacks exits immediately in Emscripten
         //  but we need to wait for quit signal, so complete current execution flow
-        Log::Debug("emscripten_exit_with_live_runtime...");
+        Log::Debug("emscripten_exit_with_live_runtime()");
         emscripten_exit_with_live_runtime();
         __builtin_unreachable();
 #endif
@@ -107,24 +116,6 @@ namespace Sdl::Loop
 
         *appstate = self;
         return self->DoInit();
-    }
-
-    void SDLCALL Sdl3Runner::AppQuit(void* appstate, SDL_AppResult result)
-    {
-        auto* self = static_cast<Sdl3Runner*>(appstate);
-        self->DoQuit(result);
-    }
-
-    SDL_AppResult SDLCALL Sdl3Runner::AppIterate(void* appstate)
-    {
-        auto* self = static_cast<Sdl3Runner*>(appstate);
-        return self->DoIterate();
-    }
-
-    SDL_AppResult SDLCALL Sdl3Runner::AppEvent(void* appstate, SDL_Event* event)
-    {
-        auto* self = static_cast<Sdl3Runner*>(appstate);
-        return self->DoEvent(event);
     }
 
     SDL_AppResult Sdl3Runner::DoInit()
@@ -185,8 +176,8 @@ namespace Sdl::Loop
         int exitCode{};
         if (!exitResult) {
             // No exit code set yet - set based on SDL_AppResult
-            const char* name = boost::describe::enum_to_string(result, "Unknown");
-            Log::Debug("quit result {}({})", name, static_cast<int>(result));
+            const char* resultStr = boost::describe::enum_to_string(result, "Unknown");
+            Log::Debug("quit result {}({})", resultStr, static_cast<int>(result));
             if (result == SDL_APP_SUCCESS) {
                 exitCode = SuccessExitCode;
             } else {
@@ -206,7 +197,7 @@ namespace Sdl::Loop
             if (_quitChannel) {
                 _quitChannel->try_send(boost::system::error_code{}, exitCode);
                 _quitChannel.reset();
-            }            
+            }
         }
 
         InvokeStop();
@@ -223,7 +214,7 @@ namespace Sdl::Loop
         emscripten_async_call(
             [](void* state) {
                 auto exitCode = reinterpret_cast<int>(state);
-                Log::Trace("emscripten_force_exit: {}", exitCode);
+                Log::Trace("emscripten_force_exit({})", exitCode);
                 emscripten_force_exit(exitCode);
             },
             reinterpret_cast<void*>(exitCode),

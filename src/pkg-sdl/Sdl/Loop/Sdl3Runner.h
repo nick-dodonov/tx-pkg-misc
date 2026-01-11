@@ -79,13 +79,7 @@ namespace Sdl::Loop
         std::mutex _channelMutex;
         std::shared_ptr<QuitChannel> _quitChannel;
 
-        void SignalQuit();
-
-        // SDL App callbacks (static, called by SDL)
         static SDL_AppResult SDLCALL AppInit(void** appstate, int argc, char** argv);
-        static void SDLCALL AppQuit(void* appstate, SDL_AppResult result);
-        static SDL_AppResult SDLCALL AppIterate(void* appstate);
-        static SDL_AppResult SDLCALL AppEvent(void* appstate, SDL_Event* event);
 
         // Internal helpers
         SDL_AppResult DoInit();
