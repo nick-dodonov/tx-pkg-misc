@@ -80,35 +80,6 @@ namespace Sdl::Loop
         _running = false;
     }
 
-    boost::asio::awaitable<int> Sdl3Runner::WaitQuit()
-    {
-        Log::Trace("waiting for quit...");
-
-        // Already quit? Return immediately
-        if (!_running) {
-            auto exitCode = GetExitCode().value_or(SuccessExitCode);
-            Log::Trace("complete immediately: {}", exitCode);
-            co_return exitCode;
-        }
-
-        // Lazy-create channel using executor from current coroutine
-        auto executor = co_await boost::asio::this_coro::executor;
-        decltype(_quitChannel) quitChannel;
-        {
-            std::lock_guard lock(_channelMutex);
-            if (!_quitChannel) {
-                _quitChannel = std::make_shared<QuitChannel>(executor, 1);
-            }
-            quitChannel = _quitChannel;
-        }
-
-        auto [ec, exitCode] = co_await quitChannel->async_receive(
-            boost::asio::as_tuple(boost::asio::use_awaitable));
-        Log::Trace("complete on signal: {} ({})", exitCode, ec.message());
-
-        co_return exitCode;
-    }
-
     SDL_AppResult SDLCALL Sdl3Runner::AppInit(void** appstate, int /*argc*/, char** /*argv*/)
     {
         auto* self = g_currentSdl3Runner;
@@ -195,16 +166,6 @@ namespace Sdl::Loop
         }
 
         _running = false;
-
-        // Notify waiters
-        {
-            std::lock_guard lock(_channelMutex);
-            if (_quitChannel) {
-                _quitChannel->try_send(boost::system::error_code{}, exitCode);
-                _quitChannel.reset();
-            }
-        }
-
         InvokeStop();
 
         _renderer.reset();

@@ -2,13 +2,7 @@
 #include "App/Loop/Handler.h"
 #include "App/Loop/Runner.h"
 #include "Sdl/Sdl3Ptr.h"
-
-#include <SDL3/SDL.h>
-
 #include <atomic>
-#include <boost/asio.hpp>
-#include <boost/asio/experimental/channel.hpp>
-#include <mutex>
 
 namespace Sdl::Loop
 {
@@ -60,10 +54,6 @@ namespace Sdl::Loop
         [[nodiscard]] SDL_Renderer* GetRenderer() const { return _renderer.get(); }
         [[nodiscard]] bool IsRunning() const { return _running; }
 
-        /// Awaitable that completes when quit is requested
-        /// Returns the exit code
-        boost::asio::awaitable<int> WaitQuit();
-
     private:
         Sdl3HandlerPtr _sdlHandler;
         Options _options;
@@ -76,11 +66,6 @@ namespace Sdl::Loop
 
         App::Loop::UpdateCtx _updateCtx;
         std::atomic<bool> _running{false};
-
-        // For async quit notification (created lazily in WaitForQuit)
-        using QuitChannel = boost::asio::experimental::channel<void(boost::system::error_code, int)>;
-        std::mutex _channelMutex;
-        std::shared_ptr<QuitChannel> _quitChannel;
 
         static SDL_AppResult SDLCALL AppInit(void** appstate, int argc, char** argv);
 

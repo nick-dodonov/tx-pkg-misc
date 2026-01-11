@@ -93,14 +93,15 @@ struct MyHandler
     SDL_AppResult Sdl3Event(Sdl::Loop::Sdl3Runner& runner, const SDL_Event& event) override
     {
         if (event.type == SDL_EVENT_QUIT) {
-            Log::Debug("received SDL_EVENT_QUIT");
+            Log::Info("received SDL_EVENT_QUIT");
             return SDL_APP_SUCCESS;
         }
         if (event.type == SDL_EVENT_KEY_DOWN) {
-            Log::Trace("Key pressed: {}", static_cast<int>(event.key.key));
             if (event.key.key == SDLK_ESCAPE) {
-                Log::Debug("ESC pressed, quitting");
+                Log::Info("ESC({}) pressed, quitting by event", static_cast<int>(event.key.key));
                 return SDL_APP_SUCCESS;
+            } else {
+                Log::Trace("Key({}) pressed", static_cast<int>(event.key.key));
             }
         }
         return SDL_APP_CONTINUE;
