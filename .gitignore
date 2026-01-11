@@ -8,9 +8,6 @@ MODULE.bazel.lock
 /.idea/
 /.clwb/
 
-# Native debugging customizations
-/.lldb*
-
 # Artifacts and temp
 /.*
 
