@@ -37,7 +37,8 @@
         {
             "type": "shell",
             "label": "build demo <user>",
-            "command": "bazel build ${config:tx.debugTaskName}",
+            // --platform_suffix to differ CLI and VSCode debug builds (minimize incremental build issue)
+            "command": "bazel build ${config:tx.debugTaskName} --platform_suffix=vs",
             "group": {
                 "kind": "build",
                 "isDefault": true

@@ -6,7 +6,7 @@
 
 namespace
 {
-    static constexpr int DefaultTimeoutSeconds = 3;
+    static constexpr int DefaultTimeoutSeconds = 2;
     std::shared_ptr<App::Domain> domain;
 }
 
