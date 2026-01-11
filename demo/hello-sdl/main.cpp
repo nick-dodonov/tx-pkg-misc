@@ -124,5 +124,5 @@ int main(const int argc, const char* argv[])
     // Create domain with custom runner
     domain = std::make_shared<App::Domain>(args);
     composite->Add(*domain);
-    domain->RunCoroMain(runner, CoroMain(runner, timeoutSeconds));
+    return domain->RunCoroMain(runner, CoroMain(runner, timeoutSeconds));
 }

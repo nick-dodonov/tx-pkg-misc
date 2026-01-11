@@ -14,7 +14,7 @@ namespace Sdl::Loop
 {
     class Sdl3Runner;
 
-    /// SDL3 runner handler w/ event except base (Started/Stopping/Update)
+    /// SDL3 runner handler w/ event except base (Start/Stop/Update)
     class Sdl3Handler
     {
     public:
@@ -89,7 +89,7 @@ namespace Sdl::Loop
 
         // Internal helpers
         SDL_AppResult DoInit();
-        void DoQuit();
+        void DoQuit(SDL_AppResult result);
         SDL_AppResult DoIterate();
         SDL_AppResult DoEvent(SDL_Event* event);
     };

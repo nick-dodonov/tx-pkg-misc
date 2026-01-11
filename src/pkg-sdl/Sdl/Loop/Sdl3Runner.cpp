@@ -1,5 +1,6 @@
 #include "Sdl3Runner.h"
 #include "Log/Log.h"
+#include <boost/describe.hpp>
 
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL_main.h>
@@ -9,6 +10,8 @@
 
 // Thread-local for passing 'this' to SDL callbacks
 namespace { thread_local Sdl::Loop::Sdl3Runner* g_currentSdl3Runner = nullptr; }
+
+BOOST_DESCRIBE_ENUM(SDL_AppResult, SDL_APP_CONTINUE, SDL_APP_SUCCESS, SDL_APP_FAILURE)
 
 namespace Sdl::Loop
 {
@@ -28,7 +31,7 @@ namespace Sdl::Loop
 
     int Sdl3Runner::Run()
     {
-        Log::Debug("...");
+        Log::Debug(".");
         _updateCtx.Initialize();
         _running = true;
 
@@ -60,7 +63,7 @@ namespace Sdl::Loop
     {
         Log::Debug("requested: {}", exitCode);
         SetExitCode(exitCode);
-        SignalQuit();
+        _running = false;
     }
 
     boost::asio::awaitable<int> Sdl3Runner::WaitQuit()
@@ -76,51 +79,20 @@ namespace Sdl::Loop
 
         // Lazy-create channel using executor from current coroutine
         auto executor = co_await boost::asio::this_coro::executor;
+        decltype(_quitChannel) quitChannel;
         {
             std::lock_guard lock(_channelMutex);
             if (!_quitChannel) {
                 _quitChannel = std::make_shared<QuitChannel>(executor, 1);
             }
+            quitChannel = _quitChannel;
         }
 
-        auto [ec, exitCode] = co_await _quitChannel->async_receive(
+        auto [ec, exitCode] = co_await quitChannel->async_receive(
             boost::asio::as_tuple(boost::asio::use_awaitable));
         Log::Trace("complete on signal: {} ({})", exitCode, ec.message());
 
         co_return exitCode;
-    }
-
-    void Sdl3Runner::SignalQuit()
-    {
-        Log::Trace("exitting...");
-        auto exitCode = GetExitCode().value_or(SuccessExitCode);
-        _running = false;
-
-        // Notify any waiters via channel (thread-safe access)
-        {
-            std::lock_guard lock(_channelMutex);
-            if (_quitChannel) {
-                _quitChannel->try_send(boost::system::error_code{}, exitCode);
-            }
-        }
-
-#if __EMSCRIPTEN__
-        // pospone runtime exit 
-        // - allow application to handle quit event and cleanup
-        // - to avoid issues with calling from inside SDL main loop
-        // - allow runtime exit after inside SDL_AppQuit
-        // NOLINTBEGIN reinterpret_cast
-        emscripten_async_call(
-            [](void* state) {
-                auto exitCode = reinterpret_cast<int>(state);
-                Log::Trace("emscripten_force_exit: {}", exitCode);
-                emscripten_force_exit(exitCode);
-            },
-            reinterpret_cast<void*>(exitCode),
-            0
-        );
-        // NOLINTEND
-#endif
     }
 
     SDL_AppResult SDLCALL Sdl3Runner::AppInit(void** appstate, int /*argc*/, char** /*argv*/)
@@ -139,9 +111,8 @@ namespace Sdl::Loop
 
     void SDLCALL Sdl3Runner::AppQuit(void* appstate, SDL_AppResult result)
     {
-        Log::Trace("result={}", static_cast<int>(result)); //TODO: enum traits to string
         auto* self = static_cast<Sdl3Runner*>(appstate);
-        self->DoQuit();
+        self->DoQuit(result);
     }
 
     SDL_AppResult SDLCALL Sdl3Runner::AppIterate(void* appstate)
@@ -208,18 +179,58 @@ namespace Sdl::Loop
         return SDL_APP_CONTINUE;
     }
 
-    void Sdl3Runner::DoQuit()
+    void Sdl3Runner::DoQuit(SDL_AppResult result)
     {
-        Log::Debug("shutting down...");
-        SignalQuit();
+        auto exitResult = GetExitCode();
+        int exitCode{};
+        if (!exitResult) {
+            // No exit code set yet - set based on SDL_AppResult
+            const char* name = boost::describe::enum_to_string(result, "Unknown");
+            Log::Debug("quit result {}({})", name, static_cast<int>(result));
+            if (result == SDL_APP_SUCCESS) {
+                exitCode = SuccessExitCode;
+            } else {
+                exitCode = FailureExitCode;
+            }
+            SetExitCode(exitCode);
+        } else {
+            exitCode = exitResult.value();
+            Log::Debug("exit code {}", exitCode);
+        }
+
+        _running = false;
+
+        // Notify waiters
+        {
+            std::lock_guard lock(_channelMutex);
+            if (_quitChannel) {
+                _quitChannel->try_send(boost::system::error_code{}, exitCode);
+                _quitChannel.reset();
+            }            
+        }
 
         InvokeStop();
 
         _renderer.reset();
         _window.reset();
 
-        _running = false;
-
+#if __EMSCRIPTEN__
+        // pospone runtime exit 
+        // - allow application to handle quit event and cleanup
+        // - to avoid issues with calling from inside SDL main loop
+        // - allow runtime exit after inside SDL_AppQuit
+        // NOLINTBEGIN reinterpret_cast
+        emscripten_async_call(
+            [](void* state) {
+                auto exitCode = reinterpret_cast<int>(state);
+                Log::Trace("emscripten_force_exit: {}", exitCode);
+                emscripten_force_exit(exitCode);
+            },
+            reinterpret_cast<void*>(exitCode),
+            0
+        );
+        // NOLINTEND
+#endif
         Log::Trace("shutdown complete");
     }
 
