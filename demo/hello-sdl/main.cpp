@@ -12,22 +12,30 @@ namespace
 
 [[maybe_unused]] static boost::asio::awaitable<int> CoroMain(std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
 {
-    namespace asio = boost::asio;
-    using namespace asio::experimental::awaitable_operators;
-
-    auto executor = co_await asio::this_coro::executor;
-
-    // Wait for EITHER quit event OR timer - whichever comes first
-    Log::Info("WAITING: quit event or {} seconds timeout...", timeoutSeconds);
-    auto timer = asio::steady_timer(executor);
-    timer.expires_after(std::chrono::seconds(timeoutSeconds));
-    auto result = co_await (runner->WaitQuit() || timer.async_wait(asio::use_awaitable));
-
-    // result.index() tells us which completed first: 0 = quit event, 1 = timer
-    if (result.index() == 0) {
-        Log::Info("EXITING: window was closed by user");
+    if (timeoutSeconds <= 0) {
+        Log::Info("WAITING: stop signal...");
+        co_await domain->AsyncStopped();
+        Log::Info("EXITING: stop signal received");
     } else {
-        Log::Info("EXITING: {} seconds timeout is reached", timeoutSeconds);
+        namespace asio = boost::asio;
+        using namespace asio::experimental::awaitable_operators;
+
+        auto executor = co_await asio::this_coro::executor;
+
+        // Wait for EITHER quit event OR timer - whichever comes first
+        Log::Info("WAITING: quit event or timeout ({} seconds)...", timeoutSeconds);
+
+        auto timer = asio::steady_timer(executor);
+        timer.expires_after(std::chrono::seconds(timeoutSeconds));
+        auto result = co_await (domain->AsyncStopped() || timer.async_wait(asio::as_tuple(asio::use_awaitable)));
+
+        if (result.index() == 0) {
+            auto ec = std::get<0>(result);
+            Log::Info("EXITING: window was closed by user: {}", ec ? ec.what() : "<success>");
+        } else {
+            auto [ec] = std::get<1>(result);
+            Log::Info("EXITING: timeout is reached: {}", ec ? ec.what() : "<success>");
+        }
     }
     co_return timeoutSeconds;
 }

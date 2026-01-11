@@ -68,6 +68,9 @@ namespace Sdl::Loop
         Sdl3HandlerPtr _sdlHandler;
         Options _options;
 
+        // Keep-alive for emscripten async callbacks
+        std::shared_ptr<Sdl3Runner> _selfRef;
+
         Window _window;
         Renderer _renderer;
 

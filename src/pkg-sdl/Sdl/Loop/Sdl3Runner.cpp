@@ -45,6 +45,7 @@ namespace Sdl::Loop
         _running = true;
 
         // Pass instance to setup appstate in AppInit
+        _selfRef = std::static_pointer_cast<Sdl3Runner>(shared_from_this());
         g_currentSdl3Runner = this;
 
         // Use SDL's cross-platform main loop implementation
@@ -61,11 +62,15 @@ namespace Sdl::Loop
 #if __EMSCRIPTEN__
         // SDL_EnterAppMainCallbacks exits immediately in Emscripten
         //  but we need to wait for quit signal, so complete current execution flow
-        Log::Debug("emscripten_exit_with_live_runtime()");
+        Log::Trace("emscripten_exit_with_live_runtime()");
         emscripten_exit_with_live_runtime();
         __builtin_unreachable();
 #endif
-        return GetExitCode().value_or(SuccessExitCode);
+
+        auto exitResult = GetExitCode();
+        auto exitCode = exitResult.value_or(SuccessExitCode);
+        Log::Debug("exiting: {}", exitCode);
+        return exitCode;
     }
 
     void Sdl3Runner::Exit(int exitCode)
@@ -209,18 +214,21 @@ namespace Sdl::Loop
         // pospone runtime exit 
         // - allow application to handle quit event and cleanup
         // - to avoid issues with calling from inside SDL main loop
-        // - allow runtime exit after inside SDL_AppQuit
-        // NOLINTBEGIN reinterpret_cast
+        // - allow runtime exit after SDL_AppQuit
+        // Keep self alive during async callback by storing shared_ptr
         emscripten_async_call(
             [](void* state) {
-                auto exitCode = reinterpret_cast<int>(state);
+                auto* runner = static_cast<Sdl3Runner*>(state);
+                auto exitCode = runner->GetExitCode().value_or(SuccessExitCode);
                 Log::Trace("emscripten_force_exit({})", exitCode);
+                runner->_selfRef.reset(); // Release self-reference
                 emscripten_force_exit(exitCode);
             },
-            reinterpret_cast<void*>(exitCode),
+            this,
             0
         );
-        // NOLINTEND
+#else
+        _selfRef.reset();
 #endif
         Log::Trace("shutdown complete");
     }
