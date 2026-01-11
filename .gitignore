@@ -10,6 +10,8 @@ MODULE.bazel.lock
 
 # Artifacts and temp
 /.*
+# Native debugging customizations
+!/.lldb
 
 # OS/caches/temp files
 .DS_Store
