@@ -34,10 +34,11 @@ struct ImHandler
     : App::Loop::Handler
     , Sdl::Loop::Sdl3Handler
 {
-    bool Started() override
+    bool Start() override
     { 
-        auto& sdlRunner = *static_cast<Sdl::Loop::Sdl3Runner*>(GetRunner());
         Log::Info("SDL3 Runner initialized");
+        auto& sdlRunner = *static_cast<Sdl::Loop::Sdl3Runner*>(GetRunner());
+
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -60,9 +61,10 @@ struct ImHandler
         return true;
     }
 
-    void Stopping() override
+    void Stop() override
     {
         Log::Info("SDL3 Runner quitting");
+
         // Cleanup
         ImGui_ImplSDLRenderer3_Shutdown();
         ImGui_ImplSDL3_Shutdown();

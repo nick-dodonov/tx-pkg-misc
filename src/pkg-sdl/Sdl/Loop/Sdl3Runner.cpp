@@ -197,7 +197,7 @@ namespace Sdl::Loop
             SDL_SetRenderVSync(_renderer.get(), SDL_RENDERER_VSYNC_DISABLED);
         }
 
-        if (!InvokeStarted()) {
+        if (!InvokeStart()) {
             Log::Error("Started handler failed");
             _renderer.reset();
             _window.reset();
@@ -213,7 +213,7 @@ namespace Sdl::Loop
         Log::Debug("shutting down...");
         SignalQuit();
 
-        InvokeStopping();
+        InvokeStop();
 
         _renderer.reset();
         _window.reset();
