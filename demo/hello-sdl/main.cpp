@@ -1,42 +1,38 @@
-#include "Sdl/Loop/Sdl3Runner.h"
 #include "App/Domain.h"
-#include "Log/Log.h"
-#include "Boot/CliArgs.h"
 #include "FpsCounter.h"
-#include <cmath>
-#include <memory>
+#include "Log/Log.h"
+#include "Sdl/Loop/Sdl3Runner.h"
 #include <boost/asio/experimental/awaitable_operators.hpp>
 
-namespace asio = boost::asio;
-using namespace asio::experimental::awaitable_operators;
-
-static std::shared_ptr<App::Domain> domain;
-
-[[maybe_unused]] static asio::awaitable<int> CoroMain(std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
+namespace
 {
+    static constexpr int DefaultTimeoutSeconds = 3;
+    std::shared_ptr<App::Domain> domain;
+}
+
+[[maybe_unused]] static boost::asio::awaitable<int> CoroMain(std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
+{
+    namespace asio = boost::asio;
+    using namespace asio::experimental::awaitable_operators;
+
     auto executor = co_await asio::this_coro::executor;
 
     // Wait for EITHER quit event OR timer - whichever comes first
-    Log::Info("waiting for quit event or timeout ({} sec)...", timeoutSeconds);
+    Log::Info("WAITING: quit event or {} seconds timeout...", timeoutSeconds);
     auto timer = asio::steady_timer(executor);
     timer.expires_after(std::chrono::seconds(timeoutSeconds));
-    auto result = co_await (
-        runner->WaitQuit() || 
-        timer.async_wait(asio::use_awaitable)
-    );
+    auto result = co_await (runner->WaitQuit() || timer.async_wait(asio::use_awaitable));
 
-    // result.index() tells us which completed first:
-    // 0 = quit event, 1 = timer
+    // result.index() tells us which completed first: 0 = quit event, 1 = timer
     if (result.index() == 0) {
-        Log::Info("exiting: window was closed by user");
+        Log::Info("EXITING: window was closed by user");
     } else {
-        Log::Info("exiting: timeout ({} sec) reached", timeoutSeconds);
+        Log::Info("EXITING: {} seconds timeout is reached", timeoutSeconds);
     }
-
-    co_return 0;
+    co_return timeoutSeconds;
 }
 
-struct MyHandler 
+struct MyHandler
     : App::Loop::Handler
     , Sdl::Loop::Sdl3Handler
 {
@@ -66,9 +62,9 @@ struct MyHandler
         // Color cycles through red/orange
         auto r = static_cast<Uint8>(200 + 55 * std::sinf(elapsed * 3.0f));
         auto g = static_cast<Uint8>(80 + 40 * std::sinf(elapsed * 2.0f));
-        
+
         SDL_SetRenderDrawColor(renderer, r, g, 50, 255);
-        SDL_FRect rect = {x - size/2, y - size/2, size, size};
+        SDL_FRect rect = {x - size / 2, y - size / 2, size, size};
         SDL_RenderFillRect(renderer, &rect);
 
         // Second rectangle rotating opposite direction
@@ -80,14 +76,10 @@ struct MyHandler
 
         // Render debug text with session and frame info
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderDebugTextFormat(renderer, 10.0f, 10.0f,
-            "Session Time: %.2f s", ctx.session.passedSeconds);
-        SDL_RenderDebugTextFormat(renderer, 10.0f, 20.0f,
-            "Frame Index: %llu", static_cast<unsigned long long>(ctx.frame.index));
-        SDL_RenderDebugTextFormat(renderer, 10.0f, 30.0f,
-            "Delta: %.2f ms", ctx.frame.deltaSeconds * 1000.0f);
-        SDL_RenderDebugTextFormat(renderer, 10.0f, 40.0f,
-            "Avg FPS: %.1f", fpsCounter.GetAverageFps());
+        SDL_RenderDebugTextFormat(renderer, 10.0f, 10.0f, "Session Time: %.2f s", ctx.session.passedSeconds);
+        SDL_RenderDebugTextFormat(renderer, 10.0f, 20.0f, "Frame Index: %llu", static_cast<unsigned long long>(ctx.frame.index));
+        SDL_RenderDebugTextFormat(renderer, 10.0f, 30.0f, "Delta: %.2f ms", ctx.frame.deltaSeconds * 1000.0f);
+        SDL_RenderDebugTextFormat(renderer, 10.0f, 40.0f, "Avg FPS: %.1f", fpsCounter.GetAverageFps());
     }
 
     SDL_AppResult Sdl3Event(Sdl::Loop::Sdl3Runner& runner, const SDL_Event& event) override
@@ -109,14 +101,16 @@ struct MyHandler
 
 int main(const int argc, const char* argv[])
 {
-    // Get timeout from first argument (default 3 seconds)
+    // Get timeout from first argument
     Boot::CliArgs args(argc, argv);
-    //auto timeoutResult = args.GetIntArg(1).value_or(3);
+    auto timeoutSeconds = args.GetIntArg(1).value_or(DefaultTimeoutSeconds);
 
     // Configure SDL3 runner
+    auto composite = std::make_shared<App::Loop::CompositeHandler>();
     auto handler = std::make_shared<MyHandler>();
+    composite->Add(*handler);
     auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
-        handler,
+        composite,
         handler,
         Sdl::Loop::Sdl3Runner::Options{
             .Window = {
@@ -127,9 +121,8 @@ int main(const int argc, const char* argv[])
         }
     );
 
-    // // Create domain with custom runner
-    // domain = std::make_shared<App::Domain>(argc, argv, runner);
-    // return domain->RunCoroMain(runner, CoroMain(timeoutSeconds));
-
-    return runner->Run();
+    // Create domain with custom runner
+    domain = std::make_shared<App::Domain>(args);
+    composite->Add(*domain);
+    domain->RunCoroMain(runner, CoroMain(runner, timeoutSeconds));
 }

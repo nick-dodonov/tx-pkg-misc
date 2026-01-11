@@ -1,41 +1,22 @@
-#include "Sdl/Loop/Sdl3Runner.h"
-#include "App/Domain.h"
 #include "Log/Log.h"
-#include <cmath>
-#include <memory>
+#include "Sdl/Loop/Sdl3Runner.h"
 
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
-#include "src/pkg-sdl/Sdl/Loop/Sdl3Runner.h"
 
-namespace asio = boost::asio;
-
-namespace {
-    std::shared_ptr<App::Domain> domain;
+namespace
+{
     ImGuiIO* imGuiIO = nullptr;
     bool show_demo_window = true;
 }
 
-// static asio::awaitable<int> CoroMain()
-// {
-//     auto executor = co_await asio::this_coro::executor;
-//     auto runner = domain->GetRunner<Sdl::Loop::Sdl3Runner>();
-
-//     // Wait for EITHER quit event OR timer - whichever comes first
-//     Log::Info("waiting for quit event");
-//     co_await runner->WaitQuit();
-
-//     Log::Info("exiting");
-//     co_return 0;
-// }
-
-struct ImHandler 
+struct ImHandler
     : App::Loop::Handler
     , Sdl::Loop::Sdl3Handler
 {
     bool Start() override
-    { 
+    {
         Log::Info("SDL3 Runner initialized");
         auto& sdlRunner = *static_cast<Sdl::Loop::Sdl3Runner*>(GetRunner());
 
@@ -52,8 +33,11 @@ struct ImHandler
         // Setup scaling
         float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
         ImGuiStyle& style = ImGui::GetStyle();
-        style.ScaleAllSizes(main_scale);        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
-        style.FontScaleDpi = main_scale;        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+        style.ScaleAllSizes(
+            main_scale
+        ); // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+        style.FontScaleDpi =
+            main_scale; // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
 
         // Setup Platform/Renderer backends
         ImGui_ImplSDL3_InitForSDLRenderer(sdlRunner.GetWindow(), sdlRunner.GetRenderer());
@@ -94,9 +78,9 @@ struct ImHandler
         // Color cycles through red/orange
         auto r = static_cast<Uint8>(200 + 55 * std::sinf(elapsed * 3.0f));
         auto g = static_cast<Uint8>(80 + 40 * std::sinf(elapsed * 2.0f));
-        
+
         SDL_SetRenderDrawColor(renderer, r, g, 50, 255);
-        SDL_FRect rect = {x - size/2, y - size/2, size, size};
+        SDL_FRect rect = {x - size / 2, y - size / 2, size, size};
         SDL_RenderFillRect(renderer, &rect);
 
         // Second rectangle rotating opposite direction
@@ -143,7 +127,7 @@ struct ImHandler
 
     SDL_AppResult Sdl3Event(Sdl::Loop::Sdl3Runner& runner, const SDL_Event& event) override
     {
-        //Log::Trace("type={}", static_cast<int>(event.type));
+        // Log::Trace("type={}", static_cast<int>(event.type));
         if (event.type == SDL_EVENT_QUIT) {
             Log::Debug("received SDL_EVENT_QUIT");
             return SDL_APP_SUCCESS;
@@ -177,9 +161,5 @@ int main(const int argc, const char* argv[])
             },
         }
     );
-    // // Create domain with custom runner
-    // domain = std::make_shared<App::Domain>(argc, argv, runner);
-    // return domain->RunCoroMain(runner, CoroMain());
-
     return runner->Run();
 }
