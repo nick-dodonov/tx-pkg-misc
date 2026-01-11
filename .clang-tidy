@@ -10,6 +10,7 @@ Checks: >
   -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-type-vararg,
   modernize-*,
   -modernize-use-trailing-return-type,
   performance-*,
@@ -26,11 +27,12 @@ Checks: >
 # - cppcoreguidelines-avoid-const-or-ref-data-members: Needed for coroutine promises
 # - cppcoreguidelines-avoid-magic-numbers: Acceptable in test code
 # - cppcoreguidelines-pro-bounds-*: Sometimes needed for C interop
+# - cppcoreguidelines-pro-type-vararg - Do not call c-style vararg functions (printf, etc)
 # - modernize-use-trailing-return-type: Verbose for simple functions
 # - readability-magic-numbers: Acceptable in test code
 # - readability-convert-member-functions-to-static: Breaks coroutine awaiter protocol
 # - readability-identifier-length: Conflicts with naming conventions (variable i/j/n are common)
-# -bugprone-exception-escape - False positives in codebases that do not use exceptions at all
+# - bugprone-exception-escape - False positives in codebases that do not use exceptions at all
 
 CheckOptions:
   - key: readability-identifier-naming.VariableCase

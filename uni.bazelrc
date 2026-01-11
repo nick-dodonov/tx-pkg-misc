@@ -3,11 +3,11 @@ common --registry=https://bcr.bazel.build/
 common --enable_platform_specific_config
 
 #TODO: split shared clang / msvc copt
-build --copt=-Werror=return-type                # Функции без return
-#build --copt=-Werror=unused-variable            # Неиспользуемые переменные
-#build --copt=-Werror=unused-parameter           # Неиспользуемые параметры
-build --copt=-Werror=uninitialized              # Неинициализированные переменные
-build --copt=-Werror=delete-non-virtual-dtor    # Удаление через базовый класс без виртуального деструктора
+build --copt=-Werror=return-type                # Functions without return
+#build --copt=-Werror=unused-variable            # Unused variables
+#build --copt=-Werror=unused-parameter           # Unused parameters
+build --copt=-Werror=uninitialized              # Uninitialized variables
+build --copt=-Werror=delete-non-virtual-dtor    # Deletion through base class without virtual destructor
 
 # C++ standard settings per platforms for external too (boost.asio w/ coroutines needs C++20 at least)
 # Prefer setting via env for rules_cc (BAZEL_CXXOPTS not via --cxxopt) to disable default C++17 applied
@@ -31,3 +31,9 @@ build:wasm --copt="-pthread"
 #build:wasm --linkopt="-sALLOW_MEMORY_GROWTH=1"
 #build:wasm --linkopt="-sUSE_PTHREADS=1"
 #build:wasm --linkopt="-sWASM_BIGINT=1"
+
+#TODO: make tx-kit-ext tool for verbose output foreign rules (cmake) during build
+#   (py watchdog can be used to capture .log files created during build)
+# Current workaround example for sdl3:
+#   tail -F bazel-out/darwin_arm64-dbg/bin/external/sdl3+/sdl3_static_base_foreign_cc/CMake.log & ; bazel build @sdl3//:sdl3_static_base
+#   tail -F bazel-out/darwin_arm64-dbg-wasm/bin/external/sdl3+/sdl3_static_base_foreign_cc/CMake.log & ; bazel run demo/try-sdl3-2nd --config=wasm -- -s
