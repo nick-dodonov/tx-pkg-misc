@@ -8,11 +8,6 @@ MODULE.bazel.lock
 /.idea/
 /.clwb/
 
-# Artifacts and temp
-/.*
-# Native debugging customizations
-!/.lldb
-
 # OS/caches/temp files
 .DS_Store
 Thumbs.db
