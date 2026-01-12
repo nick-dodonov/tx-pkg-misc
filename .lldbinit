@@ -1,0 +1,12 @@
+script import os, datetime; print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] === Load {os.getcwd()}/.lldbinit")
+
+# Bazel target helper (sets up source maps, etc)
+command script import .lldb/init_bazel_target.py
+
+# Reload helper (simplify development of lldb dev features): rel
+command alias reload command source .lldbinit
+
+#TODO: include in init_bazel_target.py for macOS builds
+settings append target.source-map /PLACEHOLDER_DEVELOPER_DIR /Applications/Xcode.app/Contents/Developer
+
+script print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] === Finish .lldbinit")
