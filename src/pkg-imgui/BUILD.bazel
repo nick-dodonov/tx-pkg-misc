@@ -1,0 +1,12 @@
+load("@tx-kit-ext//rules/build:tx_library.bzl", "tx_library")
+
+tx_library(
+    name = "pkg-imgui",
+    deps = [
+        "//src/pkg-sdl",
+        "@imgui//:imgui",
+        "@imgui//backends:platform-sdl3",
+        "@imgui//backends:renderer-sdlrenderer3",  #TODO: try SDL_GPU renderer as more modern and advanced
+    ],
+    visibility = ["//visibility:public"],
+)
