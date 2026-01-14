@@ -3,6 +3,7 @@ load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
 tx_binary(
     name = "try-sdl3-1st",
     srcs = glob(["*.cpp"]),
+    data = [".env"],
     deps = [
         "@tx-pkg-aux//:pkg-boot",
         "@sdl3",

@@ -7,6 +7,7 @@ tx_binary(
         "FpsCounter.cpp",
         "FpsCounter.h",
     ],
+    data = [".env"],
     deps = [
         "//src/pkg-sdl",
     ],

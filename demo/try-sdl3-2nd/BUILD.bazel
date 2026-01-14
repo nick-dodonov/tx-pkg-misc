@@ -11,6 +11,7 @@ tx_binary(
     name = "try-sdl3-2nd",
     srcs = glob(["*.cpp"]),
     data = [
+        ".env",
         ":copy_data",
     ],
     deps = [
