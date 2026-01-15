@@ -46,7 +46,7 @@ bazel_dep(name = "boost.asio", version = "1.89.0.bcr.1.1-tx.1")  # private regis
 bazel_dep(name = "boringssl", version = "0.20251124.0")
 bazel_dep(name = "nghttp2", version = "1.65.0")
 bazel_dep(name = "openssl", version = "3.5.4.bcr.0")
-bazel_dep(name = "sdl3", version = "3.2.26-tx.1")  # private registry
+bazel_dep(name = "sdl3", version = "3.4.0-tx.1")  # private registry
 bazel_dep(name = "imgui", version = "1.92.2-tx.1")  # private registry
 
 # test deps
