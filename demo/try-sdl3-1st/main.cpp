@@ -55,7 +55,7 @@ void mainLoop(void* arg)
 
 int main(int argc, const char** argv)
 {
-    Boot::LogHeader(argc, argv);
+    Boot::LogHeader({argc, argv});
     Log::Info("SDL3 try demo 1st");
     int version = SDL_GetVersion();
     int major = SDL_VERSIONNUM_MAJOR(version);

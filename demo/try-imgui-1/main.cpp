@@ -19,7 +19,7 @@
 
 int main(int argc, const char** argv)
 {
-    Boot::LogHeader(argc, argv);
+    Boot::LogHeader({argc, argv});
     Log::Info("ImGUI 1st try demo, ImGUI version: {}", ImGui::GetVersion());
 
     // Setup SDL

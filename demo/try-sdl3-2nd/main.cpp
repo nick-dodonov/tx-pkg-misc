@@ -43,7 +43,7 @@ static int texture_height = 0;
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
 {
-    Boot::LogHeader(argc, argv);
+    Boot::LogHeader({argc, argv});
     Log::Info("SDL3 try demo 1st");
     int version = SDL_GetVersion();
     int major = SDL_VERSIONNUM_MAJOR(version);

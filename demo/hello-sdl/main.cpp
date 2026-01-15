@@ -1,3 +1,4 @@
+#include "Boot/Boot.h"
 #include "App/Domain.h"
 #include "FpsCounter.h"
 #include "Log/Log.h"
@@ -111,7 +112,7 @@ struct MyHandler
 int main(const int argc, const char* argv[])
 {
     // Get timeout from first argument
-    Boot::CliArgs args(argc, argv);
+    auto args = Boot::DefaultInit(argc, argv);
     auto timeoutSeconds = args.GetIntArg(1).value_or(DefaultTimeoutSeconds);
 
     // Configure SDL3 runner
@@ -131,7 +132,7 @@ int main(const int argc, const char* argv[])
     );
 
     // Create domain with custom runner
-    domain = std::make_shared<App::Domain>(args);
+    domain = std::make_shared<App::Domain>();
     composite->Add(*domain);
     return domain->RunCoroMain(runner, CoroMain(runner, timeoutSeconds));
 }

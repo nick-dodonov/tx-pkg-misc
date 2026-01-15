@@ -2,6 +2,6 @@
 
 int main(int argc, const char** argv)
 {
-    Boot::LogHeader(argc, argv);
+    Boot::LogHeader({argc, argv});
     return argc - 1;
 }

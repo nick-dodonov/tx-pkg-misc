@@ -213,7 +213,7 @@ HttpResponse makeHttpRequest(const std::string& host, int port, const std::strin
 
 int main(int argc, const char** argv)
 {
-    Boot::LogHeader(argc, argv);
+    Boot::LogHeader({argc, argv});
 
     // Display nghttp2 version
     nghttp2_info* info = nghttp2_version(0);

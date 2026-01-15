@@ -1,3 +1,4 @@
+#include "Boot/Boot.h"
 #include "Log/Log.h"
 #include "Sdl/Loop/Sdl3Runner.h"
 
@@ -149,6 +150,7 @@ struct ImHandler
 
 int main(const int argc, const char* argv[])
 {
+    Boot::DefaultInit(argc, argv);
     auto handler = std::make_shared<ImHandler>();
     auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
         handler,
