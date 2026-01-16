@@ -1,6 +1,7 @@
 #include "Boot/Boot.h"
 #include "Log/Log.h"
 #include "Sdl/Loop/Sdl3Runner.h"
+#include "Im/Deputy.h"
 
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
