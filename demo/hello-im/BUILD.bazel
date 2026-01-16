@@ -2,7 +2,7 @@ load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
 
 tx_binary(
     name = "hello-im",
-    srcs = glob(["*.cpp", "*.h"]),
+    srcs = glob(["*.cpp", "Console/**/*.cpp", "Console/**/*.h"]),
     data = [".env"],
     deps = [
         "//src/pkg-imgui",

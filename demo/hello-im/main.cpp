@@ -2,7 +2,7 @@
 #include "Log/Log.h"
 #include "Sdl/Loop/Sdl3Runner.h"
 #include "Im/Deputy.h"
-#include "Console.h"
+#include "Console/QuakeConsole.h"
 
 namespace
 {
@@ -14,7 +14,7 @@ struct ImHandler
     , Sdl::Loop::Sdl3Handler
 {
     std::shared_ptr<Im::Deputy> _imDeputy;
-    std::unique_ptr<QuakeConsole> _console;
+    std::unique_ptr<Im::QuakeConsole> _console;
     bool Start() override
     {
         Log::Info("SDL3 Runner initialized");
@@ -22,7 +22,7 @@ struct ImHandler
         _imDeputy = std::make_shared<Im::Deputy>(sdlRunner.GetWindow(), sdlRunner.GetRenderer());
         
         // Initialize Quake-style console (visible by default)
-        _console = std::make_unique<QuakeConsole>(true);
+        _console = std::make_unique<Im::QuakeConsole>(true);
         _console->Initialize();
         
         return true;
@@ -103,6 +103,14 @@ struct ImHandler
         if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_GRAVE) {
             _console->Toggle();
             return SDL_APP_CONTINUE;
+        }
+        
+        // Block text input for ` character always (to prevent it from appearing anywhere)
+        if (event.type == SDL_EVENT_TEXT_INPUT) {
+            const char* text = event.text.text;
+            if (text && (text[0] == '`' || text[0] == '~')) {
+                return SDL_APP_CONTINUE;
+            }
         }
 
         _imDeputy->ProcessSdlEvent(event);
