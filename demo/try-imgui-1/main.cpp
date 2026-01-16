@@ -11,6 +11,8 @@
 
 #include <SDL3/SDL.h>
 
+#include <filesystem>
+
 #ifdef __EMSCRIPTEN__
 //** patch for local
 //#include "../libs/emscripten/emscripten_mainloop_stub.h"
@@ -19,12 +21,12 @@
 
 int main(int argc, const char** argv)
 {
-    Boot::LogHeader({argc, argv});
+    Boot::DefaultInit(argc, argv);
     Log::Info("ImGUI 1st try demo, ImGUI version: {}", ImGui::GetVersion());
 
     // Setup SDL
     // [If using SDL_MAIN_USE_CALLBACKS: all code below until the main loop starts would likely be your SDL_AppInit() function]
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
+    if (!SDL_Init(SDL_INIT_VIDEO)) //| SDL_INIT_GAMEPAD))
     {
         printf("Error: SDL_Init(): %s\n", SDL_GetError());
         return 1;
@@ -54,7 +56,7 @@ int main(int argc, const char** argv)
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -77,14 +79,19 @@ int main(int argc, const char** argv)
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Use '#define IMGUI_ENABLE_FREETYPE' in your imconfig file to use FreeType for higher quality font rendering.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    //style.FontSizeBase = 20.0f;
-    //io.Fonts->AddFontDefaultVector();
-    //io.Fonts->AddFontDefaultBitmap();
-    //io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\segoeui.ttf");
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf");
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf");
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf");
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf");
+    //style.FontSizeBase = 60.0f;
+    //io.Fonts->AddFontDefault(&font_cfg);
+    auto size_pixels = 15.0f * main_scale;
+    const auto fonts_dir = 
+        std::filesystem::current_path()
+        //std::filesystem::path(argv[0]).parent_path()
+        / "data" / "fonts";
+    const auto* font_name =
+        "Roboto-Medium.ttf"
+    ;
+    const auto font_path = fonts_dir / font_name;
+    Log::Debug("Loading font: {}", font_path.c_str());
+    io.Fonts->AddFontFromFileTTF(font_path.c_str(), size_pixels);
     //IM_ASSERT(font != nullptr);
 
     // Our state
