@@ -31,7 +31,7 @@ namespace Sdl::Loop
                 SDL_WINDOW_RESIZABLE
                 //| SDL_WINDOW_HIDDEN
                 | SDL_WINDOW_HIGH_PIXEL_DENSITY
-                | SDL_WINDOW_FILL_DOCUMENT
+                //| SDL_WINDOW_FILL_DOCUMENT
                 ;
         };
 

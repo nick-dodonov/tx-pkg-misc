@@ -118,6 +118,10 @@ int main(const int argc, const char* argv[])
                 .Title = "Hello ImGUI",
                 .Width = 1000,
                 .Height = 800,
+                .Flags = 
+                    SDL_WINDOW_RESIZABLE 
+                    | SDL_WINDOW_HIGH_PIXEL_DENSITY 
+                    | SDL_WINDOW_FILL_DOCUMENT,
             },
         }
     );

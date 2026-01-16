@@ -1,7 +1,7 @@
 load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
 
 tx_binary(
-    name = "try-imgui-2",
+    name = "hello-im",
     srcs = glob(["*.cpp"]),
     data = [".env"],
     deps = [
