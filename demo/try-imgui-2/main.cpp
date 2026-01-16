@@ -6,6 +6,8 @@
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
 
+#include <filesystem>
+
 namespace
 {
     ImGuiIO* imGuiIO = nullptr;
@@ -27,6 +29,7 @@ struct ImHandler
         ImGuiIO& io = ImGui::GetIO();
         imGuiIO = &io;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();
@@ -34,15 +37,21 @@ struct ImHandler
         // Setup scaling
         float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
         ImGuiStyle& style = ImGui::GetStyle();
-        style.ScaleAllSizes(
-            main_scale
-        ); // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
-        style.FontScaleDpi =
-            main_scale; // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+        // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+        style.ScaleAllSizes(main_scale);
+        // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
+        style.FontScaleDpi = main_scale;
+
+        // Load font
+        auto size_pixels = 15.0f * main_scale;
+        const auto font_path = std::filesystem::current_path() / "data" / "fonts" / "Roboto-Medium.ttf";
+        Log::Debug("Loading font: {}", font_path.c_str());
+        io.Fonts->AddFontFromFileTTF(font_path.c_str(), size_pixels);
 
         // Setup Platform/Renderer backends
         ImGui_ImplSDL3_InitForSDLRenderer(sdlRunner.GetWindow(), sdlRunner.GetRenderer());
         ImGui_ImplSDLRenderer3_Init(sdlRunner.GetRenderer());
+
         return true;
     }
 
@@ -96,6 +105,9 @@ struct ImHandler
             ImGui_ImplSDLRenderer3_NewFrame();
             ImGui_ImplSDL3_NewFrame();
             ImGui::NewFrame();
+
+            // Docking space on main viewport
+            ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
         }
 
         // ImGui sample windows

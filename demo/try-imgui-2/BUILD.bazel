@@ -3,8 +3,18 @@ load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
 tx_binary(
     name = "try-imgui-2",
     srcs = glob(["*.cpp"]),
-    data = [".env"],
+    data = [
+        ".env",
+        "//data:copy_fonts",
+    ],
     deps = [
         "//src/pkg-imgui",
     ],
+    linkopts = select({
+        "//conditions:default": [],
+        "@platforms//cpu:wasm32": [
+            "-sALLOW_MEMORY_GROWTH",  # SDL_WINDOW_FILL_DOCUMENT requires 25161728 bytes initially (default 16777216), -sINITIAL_MEMORY=X can be used instead
+            "--preload-file", "$(location //data:copy_fonts)@/data/fonts",
+        ],
+    }),
 )
