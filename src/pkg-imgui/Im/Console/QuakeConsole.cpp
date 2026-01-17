@@ -6,6 +6,9 @@
 
 namespace Im
 {
+    static constexpr float ANIMATION_SPEED = 16.0f;  // Units per second
+    static constexpr float CONSOLE_HEIGHT_RATIO = 0.7f;  // 50% of window height
+
     QuakeConsole::QuakeConsole(bool initiallyVisible)
         : _buffer(std::make_shared<Detail::ConsoleBuffer>(1000))
         , _sink(std::make_shared<Detail::ConsoleSinkMt>(_buffer))

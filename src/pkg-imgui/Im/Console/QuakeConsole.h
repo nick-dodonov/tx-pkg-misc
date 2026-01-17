@@ -46,9 +46,6 @@ namespace Im
         bool _filterWarn = true;
         bool _filterError = true;
         bool _filterCritical = true;
-        
-        static constexpr float ANIMATION_SPEED = 16.0f;  // Units per second
-        static constexpr float CONSOLE_HEIGHT_RATIO = 0.5f;  // 50% of window height
     };
 
 } // namespace Im

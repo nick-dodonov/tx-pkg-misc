@@ -2,7 +2,7 @@
 #include "Log/Log.h"
 #include "Sdl/Loop/Sdl3Runner.h"
 #include "Im/Deputy.h"
-#include "Console/QuakeConsole.h"
+#include "Im/Console/QuakeConsole.h"
 
 namespace
 {
