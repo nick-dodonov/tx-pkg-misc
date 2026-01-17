@@ -1,5 +1,5 @@
 #pragma once
-#include "../ConsoleBuffer.h"
+#include "ConsoleBuffer.h"
 #include <spdlog/sinks/base_sink.h>
 #include <memory>
 
@@ -10,7 +10,7 @@ namespace Im::Detail
     class ConsoleSink : public spdlog::sinks::base_sink<Mutex>
     {
     public:
-        explicit ConsoleSink(std::shared_ptr<Im::ConsoleBuffer> buffer)
+        explicit ConsoleSink(std::shared_ptr<ConsoleBuffer> buffer)
             : _buffer(std::move(buffer))
         {
         }
@@ -37,7 +37,7 @@ namespace Im::Detail
         }
 
     private:
-        std::shared_ptr<Im::ConsoleBuffer> _buffer;
+        std::shared_ptr<ConsoleBuffer> _buffer;
     };
 
     using ConsoleSinkMt = ConsoleSink<std::mutex>;

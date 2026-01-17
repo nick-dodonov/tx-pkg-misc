@@ -7,7 +7,7 @@
 namespace Im
 {
     QuakeConsole::QuakeConsole(bool initiallyVisible)
-        : _buffer(std::make_shared<ConsoleBuffer>(1000))
+        : _buffer(std::make_shared<Detail::ConsoleBuffer>(1000))
         , _sink(std::make_shared<Detail::ConsoleSinkMt>(_buffer))
         , _visible(initiallyVisible)
         , _animationProgress(initiallyVisible ? 1.0f : 0.0f)
@@ -105,7 +105,7 @@ namespace Im
             ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_None);
             
             // Display log entries
-            _buffer->ForEach([](const ConsoleBuffer::LogEntry& entry) {
+            _buffer->ForEach([](const Detail::ConsoleBuffer::LogEntry& entry) {
                 // Color based on log level
                 ImVec4 color;
                 switch (entry.level) {

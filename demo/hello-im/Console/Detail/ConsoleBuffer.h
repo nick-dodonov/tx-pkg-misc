@@ -4,7 +4,7 @@
 #include <mutex>
 #include <string>
 
-namespace Im
+namespace Im::Detail
 {
     // Ring buffer for storing log entries
     class ConsoleBuffer
@@ -60,4 +60,4 @@ namespace Im
         mutable std::mutex _mutex;
     };
 
-} // namespace Im
+} // namespace Im::Detail
