@@ -69,12 +69,18 @@ namespace Im
         // Get window dimensions
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
         const float windowWidth = viewport->WorkSize.x;
-        const float maxHeight = viewport->WorkSize.y * CONSOLE_HEIGHT_RATIO;
+        
+        // Use saved height or default to 50% of screen
+        if (_consoleHeight == 0.0f) {
+            _consoleHeight = viewport->WorkSize.y * CONSOLE_HEIGHT_RATIO;
+        }
+        const float maxHeight = _consoleHeight;
         const float currentHeight = maxHeight * _animationProgress;
         
         // Position at top of screen
         ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x, viewport->WorkPos.y), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(windowWidth, currentHeight), ImGuiCond_Always);
+        ImGui::SetNextWindowSizeConstraints(ImVec2(windowWidth, 100.0f), ImVec2(windowWidth, viewport->WorkSize.y * 0.9f));
         
         // Console window style
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
@@ -84,8 +90,6 @@ namespace Im
         
         const ImGuiWindowFlags windowFlags = 
             ImGuiWindowFlags_NoTitleBar |
-            ImGuiWindowFlags_NoResize |
-            ImGuiWindowFlags_NoMove |
             ImGuiWindowFlags_NoCollapse |
             ImGuiWindowFlags_NoSavedSettings;
         
@@ -173,6 +177,15 @@ namespace Im
                 _shouldFocusInput = false;
             }
         }
+        
+        // Save user-defined height when fully visible
+        if (_visible && _animationProgress >= 1.0f) {
+            const auto windowSize = ImGui::GetWindowSize();
+            if (windowSize.y > 0.0f) {
+                _consoleHeight = windowSize.y;
+            }
+        }
+        
         ImGui::End();
         
         ImGui::PopStyleColor();
