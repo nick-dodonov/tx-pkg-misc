@@ -24,10 +24,7 @@ namespace Im
         auto logger = spdlog::default_logger();
         if (logger) {
             auto& sinks = logger->sinks();
-            sinks.erase(
-                std::remove(sinks.begin(), sinks.end(), _sink),
-                sinks.end()
-            );
+            std::erase(sinks, _sink);
         }
     }
 
