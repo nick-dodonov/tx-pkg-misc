@@ -27,7 +27,12 @@ namespace Sdl::Loop
             std::string Title = "SDL3 App";
             int Width = 800;
             int Height = 600;
-            SDL_WindowFlags Flags = SDL_WINDOW_RESIZABLE;
+            SDL_WindowFlags Flags = 
+                SDL_WINDOW_RESIZABLE
+                //| SDL_WINDOW_HIDDEN
+                | SDL_WINDOW_HIGH_PIXEL_DENSITY
+                //| SDL_WINDOW_FILL_DOCUMENT
+                ;
         };
 
         struct Options

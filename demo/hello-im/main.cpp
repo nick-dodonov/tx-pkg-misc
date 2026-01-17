@@ -1,14 +1,11 @@
 #include "Boot/Boot.h"
 #include "Log/Log.h"
 #include "Sdl/Loop/Sdl3Runner.h"
-
-#include "imgui.h"
-#include "imgui_impl_sdl3.h"
-#include "imgui_impl_sdlrenderer3.h"
+#include "Im/Deputy.h"
+#include "Im/Console/QuakeConsole.h"
 
 namespace
 {
-    ImGuiIO* imGuiIO = nullptr;
     bool show_demo_window = true;
 }
 
@@ -16,46 +13,26 @@ struct ImHandler
     : App::Loop::Handler
     , Sdl::Loop::Sdl3Handler
 {
+    std::shared_ptr<Im::Deputy> _imDeputy;
+    std::unique_ptr<Im::QuakeConsole> _console;
     bool Start() override
     {
         Log::Info("SDL3 Runner initialized");
         auto& sdlRunner = *static_cast<Sdl::Loop::Sdl3Runner*>(GetRunner());
-
-        // Setup Dear ImGui context
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
-        imGuiIO = &io;
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-
-        // Setup Dear ImGui style
-        ImGui::StyleColorsDark();
-
-        // Setup scaling
-        float main_scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
-        ImGuiStyle& style = ImGui::GetStyle();
-        style.ScaleAllSizes(
-            main_scale
-        ); // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
-        style.FontScaleDpi =
-            main_scale; // Set initial font scale. (using io.ConfigDpiScaleFonts=true makes this unnecessary. We leave both here for documentation purpose)
-
-        // Setup Platform/Renderer backends
-        ImGui_ImplSDL3_InitForSDLRenderer(sdlRunner.GetWindow(), sdlRunner.GetRenderer());
-        ImGui_ImplSDLRenderer3_Init(sdlRunner.GetRenderer());
+        _imDeputy = std::make_shared<Im::Deputy>(sdlRunner.GetWindow(), sdlRunner.GetRenderer());
+        
+        // Initialize Quake-style console (visible by default)
+        _console = std::make_unique<Im::QuakeConsole>(true);
+        _console->Initialize();
+        
         return true;
     }
 
     void Stop() override
     {
         Log::Info("SDL3 Runner quitting");
-
-        // Cleanup
-        ImGui_ImplSDLRenderer3_Shutdown();
-        ImGui_ImplSDL3_Shutdown();
-        ImGui::DestroyContext();
-
-        imGuiIO = nullptr;
+        _console.reset();
+        _imDeputy.reset();
     }
 
     void Update(const App::Loop::UpdateCtx& ctx) override
@@ -91,12 +68,7 @@ struct ImHandler
         SDL_FRect rect2 = {x2 - 25, y2 - 25, 50, 50};
         SDL_RenderFillRect(renderer, &rect2);
 
-        // ImGui start frame
-        {
-            ImGui_ImplSDLRenderer3_NewFrame();
-            ImGui_ImplSDL3_NewFrame();
-            ImGui::NewFrame();
-        }
+        _imDeputy->UpdateBegin();
 
         // ImGui sample windows
         {
@@ -108,7 +80,8 @@ struct ImHandler
             ImGui::Text("Frame Index: %llu", static_cast<unsigned long long>(ctx.frame.index));
             ImGui::Text("Delta: %.3f ms", ctx.frame.deltaSeconds * 1000.0f);
 
-            ImGui::Text("ImGUI FPS: %.3f ms/frame (%.1f FPS)", 1000.0f / imGuiIO->Framerate, imGuiIO->Framerate);
+            auto framerate = _imDeputy->GetImGuiIO().Framerate;
+            ImGui::Text("ImGUI FPS: %.3f ms/frame (%.1f FPS)", 1000.0f / framerate, framerate);
             ImGui::End();
 
             // default demo window
@@ -118,16 +91,30 @@ struct ImHandler
             }
         }
 
-        // ImGui rendering
-        {
-            ImGui::Render();
-            SDL_SetRenderScale(renderer, imGuiIO->DisplayFramebufferScale.x, imGuiIO->DisplayFramebufferScale.y);
-            ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
-        }
+        // Quake-style console
+        _console->Render();
+
+        _imDeputy->UpdateEnd();
     }
 
     SDL_AppResult Sdl3Event(Sdl::Loop::Sdl3Runner& runner, const SDL_Event& event) override
     {
+        // Handle console toggle before ImGui to prevent ` from appearing in input
+        if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_GRAVE) {
+            _console->Toggle();
+            return SDL_APP_CONTINUE;
+        }
+        
+        // Block text input for ` character always (to prevent it from appearing anywhere)
+        if (event.type == SDL_EVENT_TEXT_INPUT) {
+            const char* text = event.text.text;
+            if (text && (text[0] == '`' || text[0] == '~')) {
+                return SDL_APP_CONTINUE;
+            }
+        }
+
+        _imDeputy->ProcessSdlEvent(event);
+
         // Log::Trace("type={}", static_cast<int>(event.type));
         if (event.type == SDL_EVENT_QUIT) {
             Log::Debug("received SDL_EVENT_QUIT");
@@ -140,10 +127,6 @@ struct ImHandler
                 return SDL_APP_SUCCESS;
             }
         }
-
-        // ImGui input handling
-        ImGui_ImplSDL3_ProcessEvent(&event);
-
         return SDL_APP_CONTINUE;
     }
 };
@@ -160,6 +143,10 @@ int main(const int argc, const char* argv[])
                 .Title = "Hello ImGUI",
                 .Width = 1000,
                 .Height = 800,
+                .Flags = 
+                    SDL_WINDOW_RESIZABLE 
+                    | SDL_WINDOW_HIGH_PIXEL_DENSITY 
+                    | SDL_WINDOW_FILL_DOCUMENT,
             },
         }
     );

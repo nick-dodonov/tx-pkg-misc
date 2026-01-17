@@ -1,0 +1,11 @@
+load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
+
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+copy_directory(
+    name = "copy_fonts",
+    src = "fonts",
+    out = "fonts",
+)
