@@ -94,12 +94,23 @@ namespace Im
             ImGuiWindowFlags_NoSavedSettings;
         
         if (ImGui::Begin("QuakeConsole", nullptr, windowFlags)) {
-            // Console header
-            ImGui::Text("Console");
+            // Log level filters
+            ImGui::Text("Filter:");
             ImGui::SameLine();
-            
-            // Filter buttons
-            ImGui::SameLine(windowWidth - 250);
+            ImGui::Checkbox("Trace", &_filterTrace);
+            ImGui::SameLine();
+            ImGui::Checkbox("Debug", &_filterDebug);
+            ImGui::SameLine();
+            ImGui::Checkbox("Info", &_filterInfo);
+            ImGui::SameLine();
+            ImGui::Checkbox("Warn", &_filterWarn);
+            ImGui::SameLine();
+            ImGui::Checkbox("Error", &_filterError);
+            ImGui::SameLine();
+            ImGui::Checkbox("Critical", &_filterCritical);
+            ImGui::SameLine();
+            ImGui::Dummy(ImVec2(20, 0));
+            ImGui::SameLine();
             if (ImGui::SmallButton("Clear")) {
                 Clear();
             }
@@ -112,8 +123,24 @@ namespace Im
             const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
             ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_None);
             
-            // Display log entries
-            _buffer->ForEach([](const Detail::ConsoleBuffer::LogEntry& entry) {
+            // Display log entries with filter
+            _buffer->ForEach([this](const Detail::ConsoleBuffer::LogEntry& entry) {
+                // Check if this log level should be displayed
+                bool shouldDisplay = false;
+                switch (entry.level) {
+                    case spdlog::level::trace:    shouldDisplay = _filterTrace; break;
+                    case spdlog::level::debug:    shouldDisplay = _filterDebug; break;
+                    case spdlog::level::info:     shouldDisplay = _filterInfo; break;
+                    case spdlog::level::warn:     shouldDisplay = _filterWarn; break;
+                    case spdlog::level::err:      shouldDisplay = _filterError; break;
+                    case spdlog::level::critical: shouldDisplay = _filterCritical; break;
+                    default: shouldDisplay = true; break;
+                }
+                
+                if (!shouldDisplay) {
+                    return;
+                }
+                
                 // Color based on log level
                 ImVec4 color;
                 switch (entry.level) {

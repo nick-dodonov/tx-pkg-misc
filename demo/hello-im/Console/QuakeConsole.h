@@ -39,6 +39,14 @@ namespace Im
         bool _shouldFocusInput = false;
         float _consoleHeight = 0.0f;  // User-defined height, 0 = use default
         
+        // Log level filters
+        bool _filterTrace = true;
+        bool _filterDebug = true;
+        bool _filterInfo = true;
+        bool _filterWarn = true;
+        bool _filterError = true;
+        bool _filterCritical = true;
+        
         static constexpr float ANIMATION_SPEED = 16.0f;  // Units per second
         static constexpr float CONSOLE_HEIGHT_RATIO = 0.5f;  // 50% of window height
     };
