@@ -11,6 +11,7 @@ namespace Im
         , _sink(std::make_shared<Detail::ConsoleSinkMt>(_buffer))
         , _visible(initiallyVisible)
         , _animationProgress(initiallyVisible ? 1.0f : 0.0f)
+        , _shouldFocusInput(initiallyVisible)
     {
     }
 
@@ -39,6 +40,9 @@ namespace Im
     void QuakeConsole::Toggle()
     {
         _visible = !_visible;
+        if (_visible) {
+            _shouldFocusInput = true;
+        }
     }
 
     void QuakeConsole::Clear()
@@ -158,8 +162,16 @@ namespace Im
                     ExecuteCommand(command);
                     inputBuf[0] = '\0';
                 }
+                // Keep focus on input after executing command
+                ImGui::SetKeyboardFocusHere(-1);
             }
             ImGui::PopItemWidth();
+            
+            // Set focus to input when console opens
+            if (_shouldFocusInput && _animationProgress > 0.95f) {
+                ImGui::SetKeyboardFocusHere(-1);
+                _shouldFocusInput = false;
+            }
         }
         ImGui::End();
         

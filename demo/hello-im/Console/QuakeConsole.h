@@ -36,6 +36,7 @@ namespace Im
         bool _visible = false;
         float _animationProgress = 0.0f;  // 0.0 = hidden, 1.0 = fully visible
         bool _autoScroll = true;
+        bool _shouldFocusInput = false;
         
         static constexpr float ANIMATION_SPEED = 16.0f;  // Units per second
         static constexpr float CONSOLE_HEIGHT_RATIO = 0.5f;  // 50% of window height
