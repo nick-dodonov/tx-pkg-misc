@@ -4,17 +4,14 @@
 #include "Im/Deputy.h"
 #include "Im/Console/QuakeConsole.h"
 
-namespace
-{
-    bool show_demo_window = true;
-}
-
 struct ImHandler
     : App::Loop::Handler
     , Sdl::Loop::Sdl3Handler
 {
     std::shared_ptr<Im::Deputy> _imDeputy;
     std::unique_ptr<Im::QuakeConsole> _console;
+    bool _show_demo_window = true;
+
     bool Start() override
     {
         Log::Info("SDL3 Runner initialized");
@@ -75,7 +72,7 @@ struct ImHandler
             // sample window
             ImGui::Begin("Hello, world!");
 
-            ImGui::Checkbox("Demo Window", &show_demo_window);
+            ImGui::Checkbox("Demo Window", &_show_demo_window);
             ImGui::Text("Session Time: %.2f s", ctx.session.passedSeconds);
             ImGui::Text("Frame Index: %llu", static_cast<unsigned long long>(ctx.frame.index));
             ImGui::Text("Delta: %.3f ms", ctx.frame.deltaSeconds * 1000.0f);
@@ -85,9 +82,9 @@ struct ImHandler
             ImGui::End();
 
             // default demo window
-            if (show_demo_window) {
+            if (_show_demo_window) {
                 ImGui::SetNextWindowPos(ImVec2(50, 20), ImGuiCond_FirstUseEver);
-                ImGui::ShowDemoWindow(&show_demo_window);
+                ImGui::ShowDemoWindow(&_show_demo_window);
             }
         }
 
