@@ -91,8 +91,9 @@ int main(int argc, const char** argv)
         "Roboto-Medium.ttf"
     ;
     const auto font_path = fonts_dir / font_name;
-    Log::Debug("Loading font: {}", font_path.c_str());
-    io.Fonts->AddFontFromFileTTF(font_path.c_str(), size_pixels);
+    const auto font_path_str = font_path.string();
+    Log::Debug("Loading font: {}", font_path_str);
+    io.Fonts->AddFontFromFileTTF(font_path_str.c_str(), size_pixels);
     //IM_ASSERT(font != nullptr);
 
     // Our state

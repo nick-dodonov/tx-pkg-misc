@@ -38,7 +38,7 @@ bazel_dep(name = "tx-pkg-aux")  # not published in private registry yet
 git_override(
     module_name = "tx-pkg-aux",
     remote = "https://github.com/nick-dodonov/tx-pkg-aux.git",
-    tag = "v/0.3.0",
+    tag = "v/0.3.2",
     verbose = True,
 )
 

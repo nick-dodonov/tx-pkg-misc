@@ -37,8 +37,9 @@ namespace Im
 
         // font
         auto size_pixels = DefaultFontSize * scale;
-        Log::Debug("Loading font: {}", DefaultFontPath.c_str());
-        io.Fonts->AddFontFromFileTTF(DefaultFontPath.c_str(), size_pixels);
+        const auto font_path_str = DefaultFontPath.string();
+        Log::Debug("Loading font: {}", font_path_str);
+        io.Fonts->AddFontFromFileTTF(font_path_str.c_str(), size_pixels);
 
         // backend/renderer
         ImGui_ImplSDL3_InitForSDLRenderer(_window, _renderer);
