@@ -6,7 +6,7 @@ module(
 )
 
 #TODO: setup Renovate to auto-update https://github.com/renovatebot/renovate
-bazel_dep(name = "apple_support", version = "2.1.0")
+bazel_dep(name = "apple_support", version = "2.2.0")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_cc", version = "0.2.16")
 bazel_dep(name = "rules_foreign_cc", version = "0.15.1")
@@ -30,7 +30,7 @@ bazel_dep(name = "tx-kit-ext")  # not published in private registry yet
 git_override(
     module_name = "tx-kit-ext",
     remote = "https://github.com/nick-dodonov/tx-kit-ext.git",
-    tag = "v/0.2.1",
+    tag = "v/0.2.3",
 )
 
 # demo/test deps
@@ -38,7 +38,7 @@ bazel_dep(name = "tx-pkg-aux")  # not published in private registry yet
 git_override(
     module_name = "tx-pkg-aux",
     remote = "https://github.com/nick-dodonov/tx-pkg-aux.git",
-    tag = "v/0.2.0",
+    tag = "v/0.3.0",
     verbose = True,
 )
 
