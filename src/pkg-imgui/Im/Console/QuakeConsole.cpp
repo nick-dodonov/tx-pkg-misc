@@ -90,6 +90,84 @@ namespace Im
         }
     }
 
+    void QuakeConsole::RenderFilters()
+    {
+        ImGui::Text("Filter:");
+        ImGui::SameLine();
+        ImGui::Checkbox("Trace", &_filterTrace);
+        ImGui::SameLine();
+        ImGui::Checkbox("Debug", &_filterDebug);
+        ImGui::SameLine();
+        ImGui::Checkbox("Info", &_filterInfo);
+        ImGui::SameLine();
+        ImGui::Checkbox("Warn", &_filterWarn);
+        ImGui::SameLine();
+        ImGui::Checkbox("Error", &_filterError);
+        ImGui::SameLine();
+        ImGui::Checkbox("Critical", &_filterCritical);
+        ImGui::SameLine();
+        ImGui::Dummy(ImVec2(20, 0));
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Clear")) {
+            Clear();
+        }
+        ImGui::SameLine();
+        ImGui::Checkbox("Auto-scroll", &_autoScroll);
+    }
+
+    void QuakeConsole::RenderLogOutput()
+    {
+        const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+        ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_None);
+
+        // Use monospace font for log output
+        if (_monoFont) {
+            ImGui::PushFont(_monoFont);
+        }
+
+        // Display log entries with filter
+        _buffer->ForEach([this](const Detail::ConsoleBuffer::LogEntry& entry) {
+            if (!IsLogLevelEnabled(entry.level)) {
+                return;
+            }
+
+            const ImVec4 color = GetColorForLogLevel(entry.level);
+            ImGui::PushStyleColor(ImGuiCol_Text, color);
+            ImGui::TextUnformatted(entry.message.c_str());
+            ImGui::PopStyleColor();
+        });
+
+        // Auto-scroll to bottom
+        if (_autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+            ImGui::SetScrollHereY(1.0f);
+        }
+
+        if (_monoFont) {
+            ImGui::PopFont();
+        }
+
+        ImGui::EndChild();
+    }
+
+    void QuakeConsole::RenderCommandInput()
+    {
+        static std::array<char, 256> inputBuf{};
+        const ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_EnterReturnsTrue;
+
+        ImGui::PushItemWidth(-1);
+        if (ImGui::InputText("##ConsoleInput", inputBuf.data(), inputBuf.size(), inputFlags)) {
+            // Handle command input
+            if (inputBuf[0] != '\0') {
+                std::string command(inputBuf.data());
+                ExecuteCommand(command);
+                inputBuf[0] = '\0';
+            }
+            // Keep focus on input after executing command
+            ImGui::SetKeyboardFocusHere(-1);
+        }
+        ImGui::PopItemWidth();
+    }
+
     void QuakeConsole::Render()
     {
         const float deltaTime = ImGui::GetIO().DeltaTime;
@@ -131,84 +209,9 @@ namespace Im
         const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
 
         if (ImGui::Begin("QuakeConsole", nullptr, windowFlags)) {
-            // Log optiona and filters
-            {
-                ImGui::Text("Filter:");
-                ImGui::SameLine();
-                ImGui::Checkbox("Trace", &_filterTrace);
-                ImGui::SameLine();
-                ImGui::Checkbox("Debug", &_filterDebug);
-                ImGui::SameLine();
-                ImGui::Checkbox("Info", &_filterInfo);
-                ImGui::SameLine();
-                ImGui::Checkbox("Warn", &_filterWarn);
-                ImGui::SameLine();
-                ImGui::Checkbox("Error", &_filterError);
-                ImGui::SameLine();
-                ImGui::Checkbox("Critical", &_filterCritical);
-                ImGui::SameLine();
-                ImGui::Dummy(ImVec2(20, 0));
-                ImGui::SameLine();
-                if (ImGui::SmallButton("Clear")) {
-                    Clear();
-                }
-                ImGui::SameLine();
-                ImGui::Checkbox("Auto-scroll", &_autoScroll);
-                // ImGui::Separator();
-            }
-
-            // Log output area
-            {
-                const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-                ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_None);
-
-                // Use monospace font for log output
-                if (_monoFont) {
-                    ImGui::PushFont(_monoFont);
-                }
-
-                // Display log entries with filter
-                _buffer->ForEach([this](const Detail::ConsoleBuffer::LogEntry& entry) {
-                    if (!IsLogLevelEnabled(entry.level)) {
-                        return;
-                    }
-
-                    const ImVec4 color = GetColorForLogLevel(entry.level);
-                    ImGui::PushStyleColor(ImGuiCol_Text, color);
-                    ImGui::TextUnformatted(entry.message.c_str());
-                    ImGui::PopStyleColor();
-                });
-
-                // Auto-scroll to bottom
-                if (_autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
-                    ImGui::SetScrollHereY(1.0f);
-                }
-
-                if (_monoFont) {
-                    ImGui::PopFont();
-                }
-
-                ImGui::EndChild();
-            }
-
-            // Command input area
-            {
-                static std::array<char, 256> inputBuf{};
-                const ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_EnterReturnsTrue;
-
-                ImGui::PushItemWidth(-1);
-                if (ImGui::InputText("##ConsoleInput", inputBuf.data(), inputBuf.size(), inputFlags)) {
-                    // Handle command input
-                    if (inputBuf[0] != '\0') {
-                        std::string command(inputBuf.data());
-                        ExecuteCommand(command);
-                        inputBuf[0] = '\0';
-                    }
-                    // Keep focus on input after executing command
-                    ImGui::SetKeyboardFocusHere(-1);
-                }
-                ImGui::PopItemWidth();
-            }
+            RenderFilters();
+            RenderLogOutput();
+            RenderCommandInput();
 
             // Set focus to input when console opens
             if (_shouldFocusInput && _animationProgress > 0.95f) {

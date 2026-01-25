@@ -32,6 +32,9 @@ namespace Im
 
     private:
         void ExecuteCommand(const std::string& command);
+        void RenderFilters();
+        void RenderLogOutput();
+        void RenderCommandInput();
         static ImVec4 GetColorForLogLevel(spdlog::level::level_enum level);
         [[nodiscard]] bool IsLogLevelEnabled(spdlog::level::level_enum level) const;
         
