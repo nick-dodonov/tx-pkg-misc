@@ -118,7 +118,7 @@ struct ImHandler
             return SDL_APP_SUCCESS;
         }
         if (event.type == SDL_EVENT_KEY_DOWN) {
-            Log::Trace("Key pressed: {}", static_cast<int>(event.key.key));
+            // Log::Trace("Key pressed: {}", static_cast<int>(event.key.key));
             if (event.key.key == SDLK_ESCAPE) {
                 Log::Debug("ESC pressed, quitting");
                 return SDL_APP_SUCCESS;

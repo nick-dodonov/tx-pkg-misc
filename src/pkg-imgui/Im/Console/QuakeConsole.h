@@ -3,6 +3,8 @@
 #include "Detail/ConsoleSink.h"
 #include <memory>
 
+struct ImVec4;
+
 namespace Im
 {
     // Quake-style console widget for ImGui
@@ -29,6 +31,8 @@ namespace Im
 
     private:
         void ExecuteCommand(const std::string& command);
+        static ImVec4 GetColorForLogLevel(spdlog::level::level_enum level);
+        [[nodiscard]] bool IsLogLevelEnabled(spdlog::level::level_enum level) const;
         
         std::shared_ptr<Detail::ConsoleBuffer> _buffer;
         std::shared_ptr<Detail::ConsoleSinkMt> _sink;

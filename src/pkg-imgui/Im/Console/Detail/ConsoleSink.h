@@ -1,13 +1,12 @@
 #pragma once
 #include "ConsoleBuffer.h"
-#include <spdlog/sinks/base_sink.h>
-#include <memory>
+#include "Log/Sink.h"
 
 namespace Im::Detail
 {
-    // Custom spdlog sink that writes to ConsoleBuffer
+    // Custom sink that writes to ConsoleBuffer
     template<typename Mutex>
-    class ConsoleSink : public spdlog::sinks::base_sink<Mutex>
+    class ConsoleSink : public Log::Detail::BaseSink<Mutex>
     {
     public:
         explicit ConsoleSink(std::shared_ptr<ConsoleBuffer> buffer)
@@ -28,7 +27,11 @@ namespace Im::Detail
                 message.pop_back();
             }
             
-            _buffer->AddEntry(msg.level, std::move(message), std::string(msg.logger_name.data(), msg.logger_name.size()));
+            _buffer->AddEntry(
+                msg.level, 
+                std::move(message), 
+                std::string(msg.logger_name.data(), 
+                msg.logger_name.size()));
         }
 
         void flush_() override

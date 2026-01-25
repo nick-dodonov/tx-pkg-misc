@@ -1,16 +1,18 @@
 #include "QuakeConsole.h"
 #include "imgui.h"
-#include <spdlog/spdlog.h>
+#include <Log/Log.h>
+#include <Log/Sink.h>
 #include <array>
 #include <string>
 
 namespace Im
 {
+    static constexpr size_t MAX_BUFFER_SIZE = 1000;
     static constexpr float ANIMATION_SPEED = 16.0f;  // Units per second
-    static constexpr float CONSOLE_HEIGHT_RATIO = 0.7f;  // 50% of window height
+    static constexpr float CONSOLE_HEIGHT_RATIO = 0.7f;  // % of window height
 
     QuakeConsole::QuakeConsole(bool initiallyVisible)
-        : _buffer(std::make_shared<Detail::ConsoleBuffer>(1000))
+        : _buffer(std::make_shared<Detail::ConsoleBuffer>(MAX_BUFFER_SIZE))
         , _sink(std::make_shared<Detail::ConsoleSinkMt>(_buffer))
         , _visible(initiallyVisible)
         , _animationProgress(initiallyVisible ? 1.0f : 0.0f)
@@ -20,21 +22,12 @@ namespace Im
 
     QuakeConsole::~QuakeConsole()
     {
-        // Remove sink from spdlog
-        auto logger = spdlog::default_logger();
-        if (logger) {
-            auto& sinks = logger->sinks();
-            std::erase(sinks, _sink);
-        }
+        Log::Detail::RemoveSink(_sink);
     }
 
     void QuakeConsole::Initialize()
     {
-        // Add our sink to the default logger
-        auto logger = spdlog::default_logger();
-        if (logger) {
-            logger->sinks().push_back(_sink);
-        }
+        Log::Detail::AddSink(_sink);
     }
 
     void QuakeConsole::Toggle()
@@ -48,6 +41,41 @@ namespace Im
     void QuakeConsole::Clear()
     {
         _buffer->Clear();
+    }
+
+    ImVec4 QuakeConsole::GetColorForLogLevel(const spdlog::level::level_enum level)
+    {
+        switch (level) {
+            case spdlog::level::trace:
+                return {0.5f, 0.5f, 0.5f, 1.0f};  // Gray
+            case spdlog::level::debug:
+                //return {0.4f, 0.8f, 1.0f, 1.0f};  // Cyan
+                return {0.3f, 0.65f, 0.79f, 1.0f};  // Darker cyan
+            case spdlog::level::info:
+                //return {0.8f, 0.8f, 0.8f, 1.0f};  // Light gray
+                return {0.34f, 0.72f, 0.50f, 1.0f};  // Light green
+            case spdlog::level::warn:
+                return {1.0f, 1.0f, 0.0f, 1.0f};  // Yellow
+            case spdlog::level::err:
+                return {1.0f, 0.4f, 0.4f, 1.0f};  // Red
+            case spdlog::level::critical:
+                return {1.0f, 0.0f, 0.0f, 1.0f};  // Bright red
+            default:
+                return {1.0f, 1.0f, 1.0f, 1.0f};  // White
+        }
+    }
+
+    bool QuakeConsole::IsLogLevelEnabled(const spdlog::level::level_enum level) const
+    {
+        switch (level) {
+            case spdlog::level::trace:    return _filterTrace;
+            case spdlog::level::debug:    return _filterDebug;
+            case spdlog::level::info:     return _filterInfo;
+            case spdlog::level::warn:     return _filterWarn;
+            case spdlog::level::err:      return _filterError;
+            case spdlog::level::critical: return _filterCritical;
+            default:                      return true;
+        }
     }
 
     void QuakeConsole::Render()
@@ -126,46 +154,12 @@ namespace Im
             // Display log entries with filter
             _buffer->ForEach([this](const Detail::ConsoleBuffer::LogEntry& entry) {
                 // Check if this log level should be displayed
-                bool shouldDisplay = false;
-                switch (entry.level) {
-                    case spdlog::level::trace:    shouldDisplay = _filterTrace; break;
-                    case spdlog::level::debug:    shouldDisplay = _filterDebug; break;
-                    case spdlog::level::info:     shouldDisplay = _filterInfo; break;
-                    case spdlog::level::warn:     shouldDisplay = _filterWarn; break;
-                    case spdlog::level::err:      shouldDisplay = _filterError; break;
-                    case spdlog::level::critical: shouldDisplay = _filterCritical; break;
-                    default: shouldDisplay = true; break;
-                }
-                
-                if (!shouldDisplay) {
+                if (!IsLogLevelEnabled(entry.level)) {
                     return;
                 }
                 
                 // Color based on log level
-                ImVec4 color;
-                switch (entry.level) {
-                    case spdlog::level::trace:
-                        color = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);  // Gray
-                        break;
-                    case spdlog::level::debug:
-                        color = ImVec4(0.4f, 0.8f, 1.0f, 1.0f);  // Cyan
-                        break;
-                    case spdlog::level::info:
-                        color = ImVec4(0.8f, 0.8f, 0.8f, 1.0f);  // Light gray
-                        break;
-                    case spdlog::level::warn:
-                        color = ImVec4(1.0f, 1.0f, 0.0f, 1.0f);  // Yellow
-                        break;
-                    case spdlog::level::err:
-                        color = ImVec4(1.0f, 0.4f, 0.4f, 1.0f);  // Red
-                        break;
-                    case spdlog::level::critical:
-                        color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);  // Bright red
-                        break;
-                    default:
-                        color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);  // White
-                        break;
-                }
+                const ImVec4 color = GetColorForLogLevel(entry.level);
                 
                 ImGui::PushStyleColor(ImGuiCol_Text, color);
                 ImGui::TextUnformatted(entry.message.c_str());
@@ -223,28 +217,28 @@ namespace Im
     void QuakeConsole::ExecuteCommand(const std::string& command)
     {
         // Log the command
-        spdlog::info("> {}", command);
+        Log::Info("> {}", command);
         
         // Process commands
         if (command == "clear") {
             Clear();
         }
         else if (command == "help") {
-            spdlog::info("Available commands:");
-            spdlog::info("  help  - Show this help message");
-            spdlog::info("  clear - Clear console output");
-            spdlog::info("  test  - Test all log levels");
+            Log::Info("Available commands:");
+            Log::Info("  help  - Show this help message");
+            Log::Info("  clear - Clear console output");
+            Log::Info("  test  - Test all log levels");
         }
         else if (command == "test") {
-            spdlog::trace("[TEST] This is a TRACE message");
-            spdlog::debug("[TEST] This is a DEBUG message");
-            spdlog::info("[TEST] This is an INFO message");
-            spdlog::warn("[TEST] This is a WARNING message");
-            spdlog::error("[TEST] This is an ERROR message");
-            spdlog::critical("[TEST] This is a CRITICAL message");
+            Log::Trace("[TEST] This is a TRACE message");
+            Log::Debug("[TEST] This is a DEBUG message");
+            Log::Info("[TEST] This is an INFO message");
+            Log::Warn("[TEST] This is a WARNING message");
+            Log::Error("[TEST] This is an ERROR message");
+            Log::Fatal("[TEST] This is a CRITICAL message");
         }
         else {
-            spdlog::warn("Unknown command: '{}'. Type 'help' for available commands.", command);
+            Log::Warn("Unknown command: '{}'. Type 'help' for available commands.", command);
         }
     }
 
