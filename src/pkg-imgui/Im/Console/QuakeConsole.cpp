@@ -101,7 +101,7 @@ namespace Im
             if (*value) {
                 // Active: thick colored border
                 ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
-                ImGui::PushStyleColor(ImGuiCol_Border, levelColor);
+                ImGui::PushStyleColor(ImGuiCol_Border, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
             } else {
                 // Inactive: no border, dark background
