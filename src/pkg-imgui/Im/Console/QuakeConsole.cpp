@@ -10,6 +10,8 @@ namespace Im
     static constexpr size_t MAX_BUFFER_SIZE = 1000;
     static constexpr float ANIMATION_SPEED = 16.0f;     // Units per second
     static constexpr float CONSOLE_HEIGHT_RATIO = 0.7f; // % of window height
+    static constexpr float CONSOLE_FONT_SCALE = 0.9f;   // Scale down font for better readability
+    static constexpr float CONSOLE_LINE_SPACING = 2.0f; // Reduced line spacing for compact output
 
     QuakeConsole::QuakeConsole(bool initiallyVisible)
         : _buffer(std::make_shared<Detail::ConsoleBuffer>(MAX_BUFFER_SIZE))
@@ -92,38 +94,68 @@ namespace Im
 
     void QuakeConsole::RenderFilters()
     {
+        // Helper lambda for flat toggle buttons
+        auto ToggleButton = [](const char* label, bool* value) {
+            if (*value) {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+            } else {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
+            }
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+            
+            if (ImGui::SmallButton(label)) {
+                *value = !*value;
+            }
+            
+            ImGui::PopStyleColor(2);
+        };
+
         ImGui::Text("Filter:");
+
         ImGui::SameLine();
-        ImGui::Checkbox("Trace", &_filterTrace);
+        ToggleButton("Trace", &_filterTrace);
         ImGui::SameLine();
-        ImGui::Checkbox("Debug", &_filterDebug);
+        ToggleButton("Debug", &_filterDebug);
         ImGui::SameLine();
-        ImGui::Checkbox("Info", &_filterInfo);
+        ToggleButton("Info", &_filterInfo);
         ImGui::SameLine();
-        ImGui::Checkbox("Warn", &_filterWarn);
+        ToggleButton("Warn", &_filterWarn);
         ImGui::SameLine();
-        ImGui::Checkbox("Error", &_filterError);
+        ToggleButton("Error", &_filterError);
         ImGui::SameLine();
-        ImGui::Checkbox("Critical", &_filterCritical);
+        ToggleButton("Critical", &_filterCritical);
+
         ImGui::SameLine();
         ImGui::Dummy(ImVec2(20, 0));
+
         ImGui::SameLine();
-        if (ImGui::SmallButton("Clear")) {
+        if (ImGui::SmallButton("✖")) {
             Clear();
         }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Clear");
+        }
         ImGui::SameLine();
-        ImGui::Checkbox("Auto-scroll", &_autoScroll);
+        ToggleButton("⬇", &_autoScroll);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Auto-scroll");
+        }
     }
 
     void QuakeConsole::RenderLogOutput()
     {
         const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+        
         ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_None);
 
         // Use monospace font for log output
         if (_monoFont) {
             ImGui::PushFont(_monoFont);
+            ImGui::SetWindowFontScale(CONSOLE_FONT_SCALE);
         }
+
+        // Reduce line spacing for compact output
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, CONSOLE_LINE_SPACING));
 
         // Display log entries with filter
         _buffer->ForEach([this](const Detail::ConsoleBuffer::LogEntry& entry) {
@@ -137,12 +169,15 @@ namespace Im
             ImGui::PopStyleColor();
         });
 
+        ImGui::PopStyleVar(); // ItemSpacing
+
         // Auto-scroll to bottom
         if (_autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
             ImGui::SetScrollHereY(1.0f);
         }
 
         if (_monoFont) {
+            ImGui::SetWindowFontScale(1.0f);  // BeginChild starts with scale 1.0f by default
             ImGui::PopFont();
         }
 
