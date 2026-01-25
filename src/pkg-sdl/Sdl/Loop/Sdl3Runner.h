@@ -29,16 +29,18 @@ namespace Sdl::Loop
             int Height = 600;
             SDL_WindowFlags Flags = 
                 SDL_WINDOW_RESIZABLE
-                //| SDL_WINDOW_HIDDEN
-                | SDL_WINDOW_HIGH_PIXEL_DENSITY
-                //| SDL_WINDOW_FILL_DOCUMENT
+                | SDL_WINDOW_HIGH_PIXEL_DENSITY  // Enable Retina/HiDPI support
+                //| SDL_WINDOW_FILL_DOCUMENT    // Fill-document mode (Emscripten only)
                 ;
         };
 
         struct Options
         {
+            SDL_InitFlags InitFlags = 
+                SDL_INIT_VIDEO
+                //| SDL_INIT_GAMEPAD
+                ;
             WindowConfig Window{};
-            SDL_InitFlags InitFlags = SDL_INIT_VIDEO;
 
             /// VSync setting (1 = enabled, 0 = disabled, -1 = adaptive)
             /// Enabled by default

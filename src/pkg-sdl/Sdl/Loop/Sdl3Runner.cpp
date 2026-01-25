@@ -100,19 +100,31 @@ namespace Sdl::Loop
         int major = SDL_VERSIONNUM_MAJOR(version);
         int minor = SDL_VERSIONNUM_MINOR(version);
         int patch = SDL_VERSIONNUM_MICRO(version);
-        Log::Debug("SDL3 {}.{}.{} '{}' {}x{} vsync={}", 
-            major, minor, patch,
+        Log::Debug("SDL3 {}.{}.{}", major, minor, patch);
+
+        //TODO: SDL_SetAppMetadata("appname", "1.0", "com.group.identifier");
+        if (!SDL_Init(_options.InitFlags))
+        {
+            Log::Error("SDL_Init failed: {}", SDL_GetError());
+            return SDL_APP_FAILURE;
+        }
+
+        // Create window
+        auto primaryDisplay = SDL_GetPrimaryDisplay();
+        float displayContentScale = SDL_GetDisplayContentScale(primaryDisplay);
+        Log::Debug("'{}' {}x{} vsync={} [display={} scale={}]", 
             _options.Window.Title,
             _options.Window.Width,
             _options.Window.Height,
-            _options.VSync
+            _options.VSync,
+            primaryDisplay,
+            displayContentScale
         );
 
-        // Create window
         _window = Window{SDL_CreateWindow(
             _options.Window.Title.c_str(),
-            _options.Window.Width,
-            _options.Window.Height,
+            static_cast<int>(static_cast<float>(_options.Window.Width) * displayContentScale),
+            static_cast<int>(static_cast<float>(_options.Window.Height) * displayContentScale),
             _options.Window.Flags
         )};
 
@@ -170,6 +182,8 @@ namespace Sdl::Loop
 
         _renderer.reset();
         _window.reset();
+
+        SDL_Quit();
 
 #if __EMSCRIPTEN__
         // pospone runtime exit 
