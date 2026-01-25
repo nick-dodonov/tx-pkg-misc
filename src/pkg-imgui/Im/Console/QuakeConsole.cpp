@@ -12,6 +12,9 @@ namespace Im
     static constexpr float CONSOLE_HEIGHT_RATIO = 0.7f; // % of window height
     static constexpr float CONSOLE_FONT_SCALE = 0.9f;   // Scale down font for better readability
     static constexpr float CONSOLE_LINE_SPACING = 2.0f; // Reduced line spacing for compact output
+    static constexpr float CONSOLE_MIN_HEIGHT = 100.0f; // Minimum console height in pixels
+    static constexpr float CONSOLE_MAX_HEIGHT_RATIO = 0.9f; // Maximum console height as % of screen
+    static constexpr ImVec4 CONSOLE_BG_COLOR = ImVec4(0.0f, 0.0f, 0.0f, 0.85f); // Console background color
 
     QuakeConsole::QuakeConsole(bool initiallyVisible)
         : _buffer(std::make_shared<Detail::ConsoleBuffer>(MAX_BUFFER_SIZE))
@@ -94,6 +97,9 @@ namespace Im
 
     void QuakeConsole::RenderFilters()
     {
+        constexpr float buttonWidth = 20.0f;
+        constexpr ImVec2 buttonSize(buttonWidth, 0.0f);
+
         // Helper lambda for flat toggle buttons
         auto ToggleButton = [](const char* label, bool* value, spdlog::level::level_enum level, const char* tooltip = nullptr) {
             const ImVec4 levelColor = GetColorForLogLevel(level);
@@ -114,7 +120,7 @@ namespace Im
             ImGui::PushStyleColor(ImGuiCol_Text, levelColor);
             
             // Fixed width for consistent button sizes
-            const ImVec2 buttonSize(20.0f, 0.0f);
+            const ImVec2 buttonSize(buttonWidth, 0.0f);
             if (ImGui::Button(label, buttonSize)) {
                 *value = !*value;
             }
@@ -145,17 +151,14 @@ namespace Im
         ToggleButton("C", &_filterCritical, spdlog::level::critical, "Critical");
 
         ImGui::SameLine();
-        ImGui::Dummy(ImVec2(20, 0));
+        const auto& style = ImGui::GetStyle();
+        auto itemSpacing = style.ItemSpacing.x; // additional same as between items
+        ImGui::Dummy(ImVec2(itemSpacing, 0));
 
-        // Text filter input
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(200.0f);
-        ImGui::InputTextWithHint("##FilterText", "Search...", _filterText.data(), _filterText.size());
-
+        //TODO: find good and small font with unicode icons
         // Clear button ✖
         ImGui::SameLine();
-        const ImVec2 buttonSize(20.0f, 0.0f);
-        if (ImGui::Button("✖", buttonSize)) {
+        if (ImGui::Button("c", buttonSize)) {
             Clear();
         }
         if (ImGui::IsItemHovered()) {
@@ -170,12 +173,34 @@ namespace Im
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
         }
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
-        if (ImGui::Button("⬇")) {
+        if (ImGui::Button("a", buttonSize)) {
             _autoScroll = !_autoScroll;
         }
         ImGui::PopStyleColor(2);
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Auto-scroll");
+        }
+
+        ImGui::SameLine();
+        ImGui::Dummy(ImVec2(itemSpacing, 0));
+
+        // Text filter input
+        ImGui::SameLine();
+        const float closeButtonWidth = 20.0f;
+        const float availableWidth = ImGui::GetContentRegionAvail().x - closeButtonWidth - itemSpacing - ImGui::GetStyle().ItemSpacing.x;
+        ImGui::SetNextItemWidth(availableWidth);
+        ImGui::InputTextWithHint("##FilterText", "Search...", _filterText.data(), _filterText.size());
+
+        ImGui::SameLine();
+        ImGui::Dummy(ImVec2(itemSpacing, 0));
+
+        // Close button (right-aligned)
+        ImGui::SameLine(ImGui::GetWindowWidth() - buttonSize.x - style.WindowPadding.x);
+        if (ImGui::Button("×", buttonSize)) {
+            Hide();
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Close");
         }
     }
 
@@ -286,13 +311,13 @@ namespace Im
         // Position at top of screen
         ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x, viewport->WorkPos.y), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(windowWidth, currentHeight), ImGuiCond_Always);
-        ImGui::SetNextWindowSizeConstraints(ImVec2(windowWidth, 100.0f), ImVec2(windowWidth, viewport->WorkSize.y * 0.9f));
+        ImGui::SetNextWindowSizeConstraints(ImVec2(windowWidth, CONSOLE_MIN_HEIGHT), ImVec2(windowWidth, viewport->WorkSize.y * CONSOLE_MAX_HEIGHT_RATIO));
 
         // Console window style
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 8.0f));
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.85f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImGui::GetStyle().ItemSpacing);
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, CONSOLE_BG_COLOR);
 
         const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
 
