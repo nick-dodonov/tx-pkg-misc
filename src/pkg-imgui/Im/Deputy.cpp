@@ -12,7 +12,13 @@
 namespace Im
 {
     static const float DefaultFontSize = 15.0f;
-    static const auto DefaultFontPath = std::filesystem::current_path() / "data" / "fonts" / "Roboto-Medium.ttf";
+    static const auto DefaultFontsDir = std::filesystem::current_path() / "data" / "fonts";
+    static const auto DefaultUiFont = "Roboto-Medium.ttf";
+    static const auto DefaultMonoFont = "JetBrainsMono-Bold.ttf";
+    static const std::array DefaultFonts = {
+        DefaultUiFont,
+        DefaultMonoFont,
+    };
 
     Log::Logger Deputy::_logger = Log::Logger("Im.Deputy");
 
@@ -44,11 +50,21 @@ namespace Im
         // style.FontScaleDpi = scale; // using io.ConfigDpiScaleFonts=true makes this unnecessary
         _logger.Trace("style: font: SizeBase={} ScaleMain={} ScaleDpi={}", style.FontSizeBase, style.FontScaleMain, style.FontScaleDpi);
 
-        // font
-        auto size_pixels = DefaultFontSize;
-        const auto font_path_str = DefaultFontPath.string();
-        _logger.Debug("Loading font: {}", font_path_str);
-        io.Fonts->AddFontFromFileTTF(font_path_str.c_str(), size_pixels);
+        // load default fonts list
+        bool font_loaded = false;
+        for (const auto& font_name : DefaultFonts) {
+            const auto font_path = DefaultFontsDir / font_name;
+            const auto font_path_str = font_path.string();
+            if (io.Fonts->AddFontFromFileTTF(font_path_str.c_str(), DefaultFontSize) != nullptr) {
+                _logger.Debug("Loaded font: {}", font_path_str);
+                font_loaded = true;
+            } else {
+                _logger.Warn("Failed to load font: {}", font_path_str);
+            }
+        }
+        if (!font_loaded) {
+            _logger.Warn("Failed to load any custom font, using default");
+        }
 
         // backend/renderer
         ImGui_ImplSDL3_InitForSDLRenderer(_window, _renderer);

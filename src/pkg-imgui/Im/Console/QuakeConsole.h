@@ -4,6 +4,7 @@
 #include <memory>
 
 struct ImVec4;
+struct ImFont;
 
 namespace Im
 {
@@ -36,6 +37,7 @@ namespace Im
         
         std::shared_ptr<Detail::ConsoleBuffer> _buffer;
         std::shared_ptr<Detail::ConsoleSinkMt> _sink;
+        ImFont* _monoFont = nullptr;  // Monospace font for log output
         
         bool _visible = false;
         float _animationProgress = 0.0f;  // 0.0 = hidden, 1.0 = fully visible

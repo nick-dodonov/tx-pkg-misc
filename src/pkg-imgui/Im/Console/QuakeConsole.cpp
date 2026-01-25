@@ -28,6 +28,12 @@ namespace Im
     void QuakeConsole::Initialize()
     {
         Log::Detail::AddSink(_sink);
+        
+        // Find monospace font (should be the second font loaded by Deputy)
+        auto& io = ImGui::GetIO();
+        if (io.Fonts->Fonts.Size > 1) {
+            _monoFont = io.Fonts->Fonts[1];
+        }
     }
 
     void QuakeConsole::Toggle()
@@ -122,76 +128,84 @@ namespace Im
             ImGuiWindowFlags_NoSavedSettings;
         
         if (ImGui::Begin("QuakeConsole", nullptr, windowFlags)) {
-            // Log level filters
-            ImGui::Text("Filter:");
-            ImGui::SameLine();
-            ImGui::Checkbox("Trace", &_filterTrace);
-            ImGui::SameLine();
-            ImGui::Checkbox("Debug", &_filterDebug);
-            ImGui::SameLine();
-            ImGui::Checkbox("Info", &_filterInfo);
-            ImGui::SameLine();
-            ImGui::Checkbox("Warn", &_filterWarn);
-            ImGui::SameLine();
-            ImGui::Checkbox("Error", &_filterError);
-            ImGui::SameLine();
-            ImGui::Checkbox("Critical", &_filterCritical);
-            ImGui::SameLine();
-            ImGui::Dummy(ImVec2(20, 0));
-            ImGui::SameLine();
-            if (ImGui::SmallButton("Clear")) {
-                Clear();
+            // Log optiona and filters
+            {
+                ImGui::Text("Filter:");
+                ImGui::SameLine();
+                ImGui::Checkbox("Trace", &_filterTrace);
+                ImGui::SameLine();
+                ImGui::Checkbox("Debug", &_filterDebug);
+                ImGui::SameLine();
+                ImGui::Checkbox("Info", &_filterInfo);
+                ImGui::SameLine();
+                ImGui::Checkbox("Warn", &_filterWarn);
+                ImGui::SameLine();
+                ImGui::Checkbox("Error", &_filterError);
+                ImGui::SameLine();
+                ImGui::Checkbox("Critical", &_filterCritical);
+                ImGui::SameLine();
+                ImGui::Dummy(ImVec2(20, 0));
+                ImGui::SameLine();
+                if (ImGui::SmallButton("Clear")) {
+                    Clear();
+                }
+                ImGui::SameLine();
+                ImGui::Checkbox("Auto-scroll", &_autoScroll);
+                //ImGui::Separator();
             }
-            ImGui::SameLine();
-            ImGui::Checkbox("Auto-scroll", &_autoScroll);
-            
-            //ImGui::Separator();
             
             // Log output area
-            const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-            ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_None);
-            
-            // Display log entries with filter
-            _buffer->ForEach([this](const Detail::ConsoleBuffer::LogEntry& entry) {
-                // Check if this log level should be displayed
-                if (!IsLogLevelEnabled(entry.level)) {
-                    return;
+            {
+                const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+                ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_None);
+                
+                // Use monospace font for log output
+                if (_monoFont) {
+                    ImGui::PushFont(_monoFont);
                 }
                 
-                // Color based on log level
-                const ImVec4 color = GetColorForLogLevel(entry.level);
+                // Display log entries with filter
+                _buffer->ForEach([this](const Detail::ConsoleBuffer::LogEntry& entry) {
+                    if (!IsLogLevelEnabled(entry.level)) {
+                        return;
+                    }
+                    
+                    const ImVec4 color = GetColorForLogLevel(entry.level);
+                    ImGui::PushStyleColor(ImGuiCol_Text, color);
+                    ImGui::TextUnformatted(entry.message.c_str());
+                    ImGui::PopStyleColor();
+                });
                 
-                ImGui::PushStyleColor(ImGuiCol_Text, color);
-                ImGui::TextUnformatted(entry.message.c_str());
-                ImGui::PopStyleColor();
-            });
-            
-            // Auto-scroll to bottom
-            if (_autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
-                ImGui::SetScrollHereY(1.0f);
+                // Auto-scroll to bottom
+                if (_autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+                    ImGui::SetScrollHereY(1.0f);
+                }
+                
+                if (_monoFont) {
+                    ImGui::PopFont();
+                }
+                
+                ImGui::EndChild();
             }
-            
-            ImGui::EndChild();
             
             // Command input area
-            //ImGui::Separator();
+            {
+                static std::array<char, 256> inputBuf{};
+                const ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_EnterReturnsTrue;
 
-            static std::array<char, 256> inputBuf{};
-            const ImGuiInputTextFlags inputFlags = 
-                ImGuiInputTextFlags_EnterReturnsTrue;
-            
-            ImGui::PushItemWidth(-1);
-            if (ImGui::InputText("##ConsoleInput", inputBuf.data(), inputBuf.size(), inputFlags)) {
-                // Handle command input
-                if (inputBuf[0] != '\0') {
-                    std::string command(inputBuf.data());
-                    ExecuteCommand(command);
-                    inputBuf[0] = '\0';
+                ImGui::PushItemWidth(-1);
+                if (ImGui::InputText("##ConsoleInput", inputBuf.data(), inputBuf.size(), inputFlags)) {
+                    // Handle command input
+                    if (inputBuf[0] != '\0') {
+                        std::string command(inputBuf.data());
+                        ExecuteCommand(command);
+                        inputBuf[0] = '\0';
+                    }
+                    // Keep focus on input after executing command
+                    ImGui::SetKeyboardFocusHere(-1);
                 }
-                // Keep focus on input after executing command
-                ImGui::SetKeyboardFocusHere(-1);
+                ImGui::PopItemWidth();
             }
-            ImGui::PopItemWidth();
             
             // Set focus to input when console opens
             if (_shouldFocusInput && _animationProgress > 0.95f) {
