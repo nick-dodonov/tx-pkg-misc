@@ -95,48 +95,80 @@ namespace Im
     void QuakeConsole::RenderFilters()
     {
         // Helper lambda for flat toggle buttons
-        auto ToggleButton = [](const char* label, bool* value) {
-            if (*value) {
-                ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            } else {
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
-            }
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+        auto ToggleButton = [](const char* label, bool* value, spdlog::level::level_enum level, const char* tooltip = nullptr) {
+            const ImVec4 levelColor = GetColorForLogLevel(level);
             
-            if (ImGui::SmallButton(label)) {
+            if (*value) {
+                // Active: thick colored border
+                ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+                ImGui::PushStyleColor(ImGuiCol_Border, levelColor);
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
+            } else {
+                // Inactive: no border, dark background
+                ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+                ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.15f, 0.15f, 0.5f));
+            }
+            
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+            ImGui::PushStyleColor(ImGuiCol_Text, levelColor);
+            
+            // Fixed width for consistent button sizes
+            const ImVec2 buttonSize(20.0f, 0.0f);
+            if (ImGui::Button(label, buttonSize)) {
                 *value = !*value;
             }
             
-            ImGui::PopStyleColor(2);
+            ImGui::PopStyleColor(4);
+            ImGui::PopStyleVar();
+            
+            if (tooltip && ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("%s", tooltip);
+            }
         };
 
+        ImGui::AlignTextToFramePadding();
         ImGui::Text("Filter:");
 
+        // Log level toggles
         ImGui::SameLine();
-        ToggleButton("Trace", &_filterTrace);
+        ToggleButton("T", &_filterTrace, spdlog::level::trace, "Trace");
         ImGui::SameLine();
-        ToggleButton("Debug", &_filterDebug);
+        ToggleButton("D", &_filterDebug, spdlog::level::debug, "Debug");
         ImGui::SameLine();
-        ToggleButton("Info", &_filterInfo);
+        ToggleButton("I", &_filterInfo, spdlog::level::info, "Info");
         ImGui::SameLine();
-        ToggleButton("Warn", &_filterWarn);
+        ToggleButton("W", &_filterWarn, spdlog::level::warn, "Warn");
         ImGui::SameLine();
-        ToggleButton("Error", &_filterError);
+        ToggleButton("E", &_filterError, spdlog::level::err, "Error");
         ImGui::SameLine();
-        ToggleButton("Critical", &_filterCritical);
+        ToggleButton("C", &_filterCritical, spdlog::level::critical, "Critical");
 
         ImGui::SameLine();
         ImGui::Dummy(ImVec2(20, 0));
 
+        // Clear button ✖
         ImGui::SameLine();
-        if (ImGui::SmallButton("✖")) {
+        const ImVec2 buttonSize(20.0f, 0.0f);
+        if (ImGui::Button("✖", buttonSize)) {
             Clear();
         }
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Clear");
         }
+
+        // Auto-scroll toggle ⬇
         ImGui::SameLine();
-        ToggleButton("⬇", &_autoScroll);
+        if (_autoScroll) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
+        }
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+        if (ImGui::Button("⬇")) {
+            _autoScroll = !_autoScroll;
+        }
+        ImGui::PopStyleColor(2);
         if (ImGui::IsItemHovered()) {
             ImGui::SetTooltip("Auto-scroll");
         }
