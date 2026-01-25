@@ -32,12 +32,13 @@ namespace Im
 
     private:
         void ExecuteCommand(const std::string& command);
+
+        [[nodiscard]] bool IsLogLevelEnabled(spdlog::level::level_enum level) const;
+        
         void RenderFilters();
         void RenderLogOutput();
         void RenderCommandInput();
-        static ImVec4 GetColorForLogLevel(spdlog::level::level_enum level);
-        [[nodiscard]] bool IsLogLevelEnabled(spdlog::level::level_enum level) const;
-        
+
         std::shared_ptr<Detail::ConsoleBuffer> _buffer;
         std::shared_ptr<Detail::ConsoleSinkMt> _sink;
         ImFont* _monoFont = nullptr;  // Monospace font for log output

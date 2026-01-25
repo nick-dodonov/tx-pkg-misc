@@ -8,13 +8,43 @@
 namespace Im
 {
     static constexpr size_t MAX_BUFFER_SIZE = 1000;
-    static constexpr float ANIMATION_SPEED = 16.0f;     // Units per second
-    static constexpr float CONSOLE_HEIGHT_RATIO = 0.7f; // % of window height
-    static constexpr float CONSOLE_FONT_SCALE = 0.9f;   // Scale down font for better readability
-    static constexpr float CONSOLE_LINE_SPACING = 2.0f; // Reduced line spacing for compact output
-    static constexpr float CONSOLE_MIN_HEIGHT = 100.0f; // Minimum console height in pixels
-    static constexpr float CONSOLE_MAX_HEIGHT_RATIO = 0.9f; // Maximum console height as % of screen
+    static constexpr float ANIMATION_SPEED = 16.0f;                             // Units per second
+    static constexpr float CONSOLE_HEIGHT_RATIO = 0.7f;                         // % of window height
+    static constexpr float CONSOLE_FONT_SCALE = 0.9f;                           // Scale down font for better readability
+    static constexpr float CONSOLE_LINE_SPACING = 2.0f;                         // Reduced line spacing for compact output
+    static constexpr float CONSOLE_MIN_HEIGHT = 100.0f;                         // Minimum console height in pixels
+    static constexpr float CONSOLE_MAX_HEIGHT_RATIO = 0.9f;                     // Maximum console height as % of screen
     static constexpr ImVec4 CONSOLE_BG_COLOR = ImVec4(0.0f, 0.0f, 0.0f, 0.85f); // Console background color
+
+    static ImVec4 GetColorForLogLevel(const spdlog::level::level_enum level)
+    {
+        switch (level) {
+            case spdlog::level::trace:
+                return {0.5f, 0.5f, 0.5f, 1.0f}; // Gray
+            case spdlog::level::debug:
+                return {0.3f, 0.65f, 0.79f, 1.0f}; // Darker cyan
+            case spdlog::level::info:
+                return {0.34f, 0.72f, 0.50f, 1.0f}; // Light green
+            case spdlog::level::warn:
+                return {0.9f, 0.9f, 0.3f, 1.0f}; // Yellow
+            case spdlog::level::err:
+                return {1.0f, 0.3f, 0.3f, 1.0f}; // Red
+            case spdlog::level::critical:
+                return {1.0f, 0.0f, 1.0f, 1.0f}; // Bright magenta
+            default:
+                return {1.0f, 1.0f, 1.0f, 1.0f}; // White
+        }
+    }
+
+    static void TestCommand()
+    {
+        Log::Trace("This is a Trace message");
+        Log::Debug("This is a Debug message");
+        Log::Info("This is an Info message");
+        Log::Warn("This is a Warning message");
+        Log::Error("This is an Error message");
+        Log::Fatal("This is a Critical message");
+    }
 
     QuakeConsole::QuakeConsole(bool initiallyVisible)
         : _buffer(std::make_shared<Detail::ConsoleBuffer>(MAX_BUFFER_SIZE))
@@ -46,239 +76,6 @@ namespace Im
         if (_visible) {
             _shouldFocusInput = true;
         }
-    }
-
-    void QuakeConsole::Clear()
-    {
-        _buffer->Clear();
-    }
-
-    ImVec4 QuakeConsole::GetColorForLogLevel(const spdlog::level::level_enum level)
-    {
-        switch (level) {
-            case spdlog::level::trace:
-                return {0.5f, 0.5f, 0.5f, 1.0f}; // Gray
-            case spdlog::level::debug:
-                // return {0.4f, 0.8f, 1.0f, 1.0f};  // Cyan
-                return {0.3f, 0.65f, 0.79f, 1.0f}; // Darker cyan
-            case spdlog::level::info:
-                // return {0.8f, 0.8f, 0.8f, 1.0f};  // Light gray
-                return {0.34f, 0.72f, 0.50f, 1.0f}; // Light green
-            case spdlog::level::warn:
-                return {1.0f, 1.0f, 0.0f, 1.0f}; // Yellow
-            case spdlog::level::err:
-                return {1.0f, 0.4f, 0.4f, 1.0f}; // Red
-            case spdlog::level::critical:
-                return {1.0f, 0.0f, 0.0f, 1.0f}; // Bright red
-            default:
-                return {1.0f, 1.0f, 1.0f, 1.0f}; // White
-        }
-    }
-
-    bool QuakeConsole::IsLogLevelEnabled(const spdlog::level::level_enum level) const
-    {
-        switch (level) {
-            case spdlog::level::trace:
-                return _filterTrace;
-            case spdlog::level::debug:
-                return _filterDebug;
-            case spdlog::level::info:
-                return _filterInfo;
-            case spdlog::level::warn:
-                return _filterWarn;
-            case spdlog::level::err:
-                return _filterError;
-            case spdlog::level::critical:
-                return _filterCritical;
-            default:
-                return true;
-        }
-    }
-
-    void QuakeConsole::RenderFilters()
-    {
-        constexpr float buttonWidth = 20.0f;
-        constexpr ImVec2 buttonSize(buttonWidth, 0.0f);
-
-        // Helper lambda for flat toggle buttons
-        auto ToggleButton = [](const char* label, bool* value, spdlog::level::level_enum level, const char* tooltip = nullptr) {
-            const ImVec4 levelColor = GetColorForLogLevel(level);
-            
-            if (*value) {
-                // Active: thick colored border
-                ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
-                ImGui::PushStyleColor(ImGuiCol_Border, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
-            } else {
-                // Inactive: no border, dark background
-                ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-                ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.15f, 0.15f, 0.5f));
-            }
-            
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
-            ImGui::PushStyleColor(ImGuiCol_Text, levelColor);
-            
-            // Fixed width for consistent button sizes
-            const ImVec2 buttonSize(buttonWidth, 0.0f);
-            if (ImGui::Button(label, buttonSize)) {
-                *value = !*value;
-            }
-            
-            ImGui::PopStyleColor(4);
-            ImGui::PopStyleVar();
-            
-            if (tooltip && ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("%s", tooltip);
-            }
-        };
-
-        ImGui::AlignTextToFramePadding();
-        ImGui::Text("Filter:");
-
-        // Log level toggles
-        ImGui::SameLine();
-        ToggleButton("T", &_filterTrace, spdlog::level::trace, "Trace");
-        ImGui::SameLine();
-        ToggleButton("D", &_filterDebug, spdlog::level::debug, "Debug");
-        ImGui::SameLine();
-        ToggleButton("I", &_filterInfo, spdlog::level::info, "Info");
-        ImGui::SameLine();
-        ToggleButton("W", &_filterWarn, spdlog::level::warn, "Warn");
-        ImGui::SameLine();
-        ToggleButton("E", &_filterError, spdlog::level::err, "Error");
-        ImGui::SameLine();
-        ToggleButton("C", &_filterCritical, spdlog::level::critical, "Critical");
-
-        ImGui::SameLine();
-        const auto& style = ImGui::GetStyle();
-        auto itemSpacing = style.ItemSpacing.x; // additional same as between items
-        ImGui::Dummy(ImVec2(itemSpacing, 0));
-
-        //TODO: find good and small font with unicode icons
-        // Clear button ✖
-        ImGui::SameLine();
-        if (ImGui::Button("c", buttonSize)) {
-            Clear();
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Clear");
-        }
-
-        // Auto-scroll toggle ⬇
-        ImGui::SameLine();
-        if (_autoScroll) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-        } else {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
-        }
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
-        if (ImGui::Button("a", buttonSize)) {
-            _autoScroll = !_autoScroll;
-        }
-        ImGui::PopStyleColor(2);
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Auto-scroll");
-        }
-
-        ImGui::SameLine();
-        ImGui::Dummy(ImVec2(itemSpacing, 0));
-
-        // Text filter input
-        ImGui::SameLine();
-        const float closeButtonWidth = 20.0f;
-        const float availableWidth = ImGui::GetContentRegionAvail().x - closeButtonWidth - itemSpacing - ImGui::GetStyle().ItemSpacing.x;
-        ImGui::SetNextItemWidth(availableWidth);
-        ImGui::InputTextWithHint("##FilterText", "Search...", _filterText.data(), _filterText.size());
-
-        ImGui::SameLine();
-        ImGui::Dummy(ImVec2(itemSpacing, 0));
-
-        // Close button (right-aligned)
-        ImGui::SameLine(ImGui::GetWindowWidth() - buttonSize.x - style.WindowPadding.x);
-        if (ImGui::Button("×", buttonSize)) {
-            Hide();
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Close");
-        }
-    }
-
-    void QuakeConsole::RenderLogOutput()
-    {
-        const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
-        
-        ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
-
-        // Use monospace font for log output
-        if (_monoFont) {
-            ImGui::PushFont(_monoFont);
-            ImGui::SetWindowFontScale(CONSOLE_FONT_SCALE);
-        }
-
-        // Reduce line spacing for compact output
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, CONSOLE_LINE_SPACING));
-
-        // Display log entries with filter
-        _buffer->ForEach([this](const Detail::ConsoleBuffer::LogEntry& entry) {
-            if (!IsLogLevelEnabled(entry.level)) {
-                return;
-            }
-            
-            // Apply text filter (case-insensitive)
-            if (_filterText[0] != '\0') {
-                const std::string filterStr(_filterText.data());
-                const auto found = std::search(
-                    entry.message.begin(), entry.message.end(),
-                    filterStr.begin(), filterStr.end(),
-                    [](char ch1, char ch2) {
-                        return std::tolower(static_cast<unsigned char>(ch1)) == 
-                               std::tolower(static_cast<unsigned char>(ch2));
-                    }
-                );
-                if (found == entry.message.end()) {
-                    return;
-                }
-            }
-
-            const ImVec4 color = GetColorForLogLevel(entry.level);
-            ImGui::PushStyleColor(ImGuiCol_Text, color);
-            ImGui::TextUnformatted(entry.message.c_str());
-            ImGui::PopStyleColor();
-        });
-
-        ImGui::PopStyleVar(); // ItemSpacing
-
-        // Auto-scroll to bottom
-        if (_autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
-            ImGui::SetScrollHereY(1.0f);
-        }
-
-        if (_monoFont) {
-            ImGui::SetWindowFontScale(1.0f);  // BeginChild starts with scale 1.0f by default
-            ImGui::PopFont();
-        }
-
-        ImGui::EndChild();
-    }
-
-    void QuakeConsole::RenderCommandInput()
-    {
-        static std::array<char, 256> inputBuf{};
-        const ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_EnterReturnsTrue;
-
-        ImGui::PushItemWidth(-1);
-        if (ImGui::InputText("##ConsoleInput", inputBuf.data(), inputBuf.size(), inputFlags)) {
-            // Handle command input
-            if (inputBuf[0] != '\0') {
-                std::string command(inputBuf.data());
-                ExecuteCommand(command);
-                inputBuf[0] = '\0';
-            }
-            // Keep focus on input after executing command
-            ImGui::SetKeyboardFocusHere(-1);
-        }
-        ImGui::PopItemWidth();
     }
 
     void QuakeConsole::Render()
@@ -347,10 +144,220 @@ namespace Im
         ImGui::PopStyleVar(3);
     }
 
+    void QuakeConsole::Clear()
+    {
+        _buffer->Clear();
+    }
+
+    bool QuakeConsole::IsLogLevelEnabled(const spdlog::level::level_enum level) const
+    {
+        switch (level) {
+            case spdlog::level::trace:
+                return _filterTrace;
+            case spdlog::level::debug:
+                return _filterDebug;
+            case spdlog::level::info:
+                return _filterInfo;
+            case spdlog::level::warn:
+                return _filterWarn;
+            case spdlog::level::err:
+                return _filterError;
+            case spdlog::level::critical:
+                return _filterCritical;
+            default:
+                return true;
+        }
+    }
+
+    void QuakeConsole::RenderFilters()
+    {
+        constexpr float buttonWidth = 20.0f;
+        constexpr ImVec2 buttonSize(buttonWidth, 0.0f);
+
+        // Helper lambda for flat toggle buttons
+        auto ToggleButton = [](const char* label, bool* value, spdlog::level::level_enum level, const char* tooltip = nullptr) {
+            const ImVec4 levelColor = GetColorForLogLevel(level);
+
+            if (*value) {
+                // Active: thick colored border
+                ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 2.0f);
+                ImGui::PushStyleColor(ImGuiCol_Border, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
+            } else {
+                // Inactive: no border, dark background
+                ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
+                ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.15f, 0.15f, 0.5f));
+            }
+
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+            ImGui::PushStyleColor(ImGuiCol_Text, levelColor);
+
+            // Fixed width for consistent button sizes
+            const ImVec2 buttonSize(buttonWidth, 0.0f);
+            if (ImGui::Button(label, buttonSize)) {
+                *value = !*value;
+            }
+
+            ImGui::PopStyleColor(4);
+            ImGui::PopStyleVar();
+
+            if (tooltip && ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("%s", tooltip);
+            }
+        };
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Filter:");
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+            // Hidden functionality: test all log levels on double-click
+            TestCommand();
+        }
+
+        // Log level toggles
+        ImGui::SameLine();
+        ToggleButton("T", &_filterTrace, spdlog::level::trace, "Trace");
+        ImGui::SameLine();
+        ToggleButton("D", &_filterDebug, spdlog::level::debug, "Debug");
+        ImGui::SameLine();
+        ToggleButton("I", &_filterInfo, spdlog::level::info, "Info");
+        ImGui::SameLine();
+        ToggleButton("W", &_filterWarn, spdlog::level::warn, "Warn");
+        ImGui::SameLine();
+        ToggleButton("E", &_filterError, spdlog::level::err, "Error");
+        ImGui::SameLine();
+        ToggleButton("C", &_filterCritical, spdlog::level::critical, "Critical");
+
+        ImGui::SameLine();
+        const auto& style = ImGui::GetStyle();
+        auto itemSpacing = style.ItemSpacing.x; // additional same as between items
+        ImGui::Dummy(ImVec2(itemSpacing, 0));
+
+        // TODO: find good and small font with unicode icons
+        //  Clear button ✖
+        ImGui::SameLine();
+        if (ImGui::Button("c", buttonSize)) {
+            Clear();
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Clear");
+        }
+
+        // Auto-scroll toggle ⬇
+        ImGui::SameLine();
+        if (_autoScroll) {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+        } else {
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
+        }
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+        if (ImGui::Button("∞", buttonSize)) {
+            _autoScroll = !_autoScroll;
+        }
+        ImGui::PopStyleColor(2);
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Auto-scroll");
+        }
+
+        ImGui::SameLine();
+        ImGui::Dummy(ImVec2(itemSpacing, 0));
+
+        // Text filter input
+        ImGui::SameLine();
+        const float closeButtonWidth = 20.0f;
+        const float availableWidth = ImGui::GetContentRegionAvail().x - closeButtonWidth - itemSpacing - ImGui::GetStyle().ItemSpacing.x;
+        ImGui::SetNextItemWidth(availableWidth);
+        ImGui::InputTextWithHint("##FilterText", "Search...", _filterText.data(), _filterText.size());
+
+        ImGui::SameLine();
+        ImGui::Dummy(ImVec2(itemSpacing, 0));
+
+        // Close button (right-aligned)
+        ImGui::SameLine(ImGui::GetWindowWidth() - buttonSize.x - style.WindowPadding.x);
+        if (ImGui::Button("×", buttonSize)) {
+            Hide();
+        }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Close");
+        }
+    }
+
+    void QuakeConsole::RenderLogOutput()
+    {
+        const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
+
+        ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
+
+        // Use monospace font for log output
+        if (_monoFont) {
+            ImGui::PushFont(_monoFont);
+            ImGui::SetWindowFontScale(CONSOLE_FONT_SCALE);
+        }
+
+        // Reduce line spacing for compact output
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, CONSOLE_LINE_SPACING));
+
+        // Display log entries with filter
+        _buffer->ForEach([this](const Detail::ConsoleBuffer::LogEntry& entry) {
+            if (!IsLogLevelEnabled(entry.level)) {
+                return;
+            }
+
+            // Apply text filter (case-insensitive)
+            if (_filterText[0] != '\0') {
+                const std::string filterStr(_filterText.data());
+                const auto found = std::search(entry.message.begin(), entry.message.end(), filterStr.begin(), filterStr.end(), [](char ch1, char ch2) {
+                    return std::tolower(static_cast<unsigned char>(ch1)) == std::tolower(static_cast<unsigned char>(ch2));
+                });
+                if (found == entry.message.end()) {
+                    return;
+                }
+            }
+
+            const ImVec4 color = GetColorForLogLevel(entry.level);
+            ImGui::PushStyleColor(ImGuiCol_Text, color);
+            ImGui::TextUnformatted(entry.message.c_str());
+            ImGui::PopStyleColor();
+        });
+
+        ImGui::PopStyleVar(); // ItemSpacing
+
+        // Auto-scroll to bottom
+        if (_autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+            ImGui::SetScrollHereY(1.0f);
+        }
+
+        if (_monoFont) {
+            ImGui::SetWindowFontScale(1.0f); // BeginChild starts with scale 1.0f by default
+            ImGui::PopFont();
+        }
+
+        ImGui::EndChild();
+    }
+
+    void QuakeConsole::RenderCommandInput()
+    {
+        static std::array<char, 256> inputBuf{};
+        const ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_EnterReturnsTrue;
+
+        ImGui::PushItemWidth(-1);
+        if (ImGui::InputText("##ConsoleInput", inputBuf.data(), inputBuf.size(), inputFlags)) {
+            // Handle command input
+            if (inputBuf[0] != '\0') {
+                std::string command(inputBuf.data());
+                ExecuteCommand(command);
+                inputBuf[0] = '\0';
+            }
+            // Keep focus on input after executing command
+            ImGui::SetKeyboardFocusHere(-1);
+        }
+        ImGui::PopItemWidth();
+    }
+
     void QuakeConsole::ExecuteCommand(const std::string& command)
     {
         // Log the command
-        Log::Info("> {}", command);
+        Log::Info("{}", command);
 
         // Process commands
         if (command == "clear") {
@@ -361,12 +368,7 @@ namespace Im
             Log::Info("  clear - Clear console output");
             Log::Info("  test  - Test all log levels");
         } else if (command == "test") {
-            Log::Trace("[TEST] This is a TRACE message");
-            Log::Debug("[TEST] This is a DEBUG message");
-            Log::Info("[TEST] This is an INFO message");
-            Log::Warn("[TEST] This is a WARNING message");
-            Log::Error("[TEST] This is an ERROR message");
-            Log::Fatal("[TEST] This is a CRITICAL message");
+            TestCommand();
         } else {
             Log::Warn("Unknown command: '{}'. Type 'help' for available commands.", command);
         }
