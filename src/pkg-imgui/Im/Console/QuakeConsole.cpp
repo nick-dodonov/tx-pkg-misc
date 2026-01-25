@@ -147,6 +147,11 @@ namespace Im
         ImGui::SameLine();
         ImGui::Dummy(ImVec2(20, 0));
 
+        // Text filter input
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(200.0f);
+        ImGui::InputTextWithHint("##FilterText", "Search...", _filterText.data(), _filterText.size());
+
         // Clear button ✖
         ImGui::SameLine();
         const ImVec2 buttonSize(20.0f, 0.0f);
@@ -193,6 +198,22 @@ namespace Im
         _buffer->ForEach([this](const Detail::ConsoleBuffer::LogEntry& entry) {
             if (!IsLogLevelEnabled(entry.level)) {
                 return;
+            }
+            
+            // Apply text filter (case-insensitive)
+            if (_filterText[0] != '\0') {
+                const std::string filterStr(_filterText.data());
+                const auto found = std::search(
+                    entry.message.begin(), entry.message.end(),
+                    filterStr.begin(), filterStr.end(),
+                    [](char ch1, char ch2) {
+                        return std::tolower(static_cast<unsigned char>(ch1)) == 
+                               std::tolower(static_cast<unsigned char>(ch2));
+                    }
+                );
+                if (found == entry.message.end()) {
+                    return;
+                }
             }
 
             const ImVec4 color = GetColorForLogLevel(entry.level);

@@ -55,6 +55,9 @@ namespace Im
         bool _filterWarn = true;
         bool _filterError = true;
         bool _filterCritical = true;
+        
+        // Text filter
+        std::array<char, 256> _filterText{};
     };
 
 } // namespace Im
