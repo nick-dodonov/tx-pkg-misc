@@ -41,7 +41,12 @@ namespace Sdl::Loop
 
     int Sdl3Runner::Run()
     {
-        Log::Debug(".");
+        int version = SDL_GetVersion();
+        int major = SDL_VERSIONNUM_MAJOR(version);
+        int minor = SDL_VERSIONNUM_MINOR(version);
+        int patch = SDL_VERSIONNUM_MICRO(version);
+        Log::Debug("SDL3 {}.{}.{}", major, minor, patch);
+
         _updateCtx.Initialize();
         _running = true;
 
@@ -97,11 +102,6 @@ namespace Sdl::Loop
 
     SDL_AppResult Sdl3Runner::DoInit()
     {
-        int version = SDL_GetVersion();
-        int major = SDL_VERSIONNUM_MAJOR(version);
-        int minor = SDL_VERSIONNUM_MINOR(version);
-        int patch = SDL_VERSIONNUM_MICRO(version);
-        Log::Debug("SDL3 {}.{}.{}", major, minor, patch);
         Log::Trace("options: '{}' {}x{} vsync={}", 
             _options.Window.Title,
             _options.Window.Width,

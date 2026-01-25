@@ -1,6 +1,7 @@
 #pragma once
 #include "ConsoleBuffer.h"
 #include "Log/Sink.h"
+#include "Log/Details/Format.h"
 
 namespace Im::Detail
 {
@@ -12,6 +13,7 @@ namespace Im::Detail
         explicit ConsoleSink(std::shared_ptr<ConsoleBuffer> buffer)
             : _buffer(std::move(buffer))
         {
+            this->set_formatter(Log::Detail::MakeDefaultFormatter());
         }
 
     protected:
