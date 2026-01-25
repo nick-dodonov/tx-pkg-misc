@@ -171,11 +171,13 @@ namespace Im
 
     void QuakeConsole::RenderFilters()
     {
-        constexpr float buttonWidth = 20.0f;
-        constexpr ImVec2 buttonSize(buttonWidth, 0.0f);
+        // Calculate button size based on single character + frame padding
+        const auto& style = ImGui::GetStyle();
+        const float buttonWidth = ImGui::CalcTextSize("W").x + style.FramePadding.x * 2.0f;
+        const ImVec2 buttonSize(buttonWidth, 0.0f);
 
         // Helper lambda for flat toggle buttons
-        auto ToggleButton = [](const char* label, bool* value, spdlog::level::level_enum level, const char* tooltip = nullptr) {
+        auto ToggleButton = [buttonWidth](const char* label, bool* value, spdlog::level::level_enum level, const char* tooltip = nullptr) {
             const ImVec4 levelColor = GetColorForLogLevel(level);
 
             if (*value) {
@@ -229,7 +231,6 @@ namespace Im
         ToggleButton("C", &_filterCritical, spdlog::level::critical, "Critical");
 
         ImGui::SameLine();
-        const auto& style = ImGui::GetStyle();
         auto itemSpacing = style.ItemSpacing.x; // additional same as between items
         ImGui::Dummy(ImVec2(itemSpacing, 0));
 
