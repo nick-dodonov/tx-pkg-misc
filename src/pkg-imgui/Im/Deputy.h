@@ -1,5 +1,6 @@
 #pragma once
 #include "imgui.h"
+#include "Log/Log.h"
 
 struct SDL_Window;
 struct SDL_Renderer;
@@ -9,6 +10,8 @@ namespace Im
 {
     class Deputy
     {
+        static Log::Logger _logger;
+
     public:
         Deputy(SDL_Window* window, SDL_Renderer* renderer);
         ~Deputy();

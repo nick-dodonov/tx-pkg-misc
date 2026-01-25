@@ -82,7 +82,7 @@ int main(int argc, const char** argv)
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     //style.FontSizeBase = 60.0f;
     //io.Fonts->AddFontDefault(&font_cfg);
-    auto size_pixels = 15.0f * main_scale;
+    auto size_pixels = 15.0f;// * main_scale;
     const auto fonts_dir = 
         std::filesystem::current_path()
         //std::filesystem::path(argv[0]).parent_path()

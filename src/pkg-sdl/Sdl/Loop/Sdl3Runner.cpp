@@ -1,6 +1,7 @@
 #include "Sdl3Runner.h"
 #include "Log/Log.h"
 #include <boost/describe.hpp>
+#include <tuple>
 
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL_main.h>
@@ -101,52 +102,81 @@ namespace Sdl::Loop
         int minor = SDL_VERSIONNUM_MINOR(version);
         int patch = SDL_VERSIONNUM_MICRO(version);
         Log::Debug("SDL3 {}.{}.{}", major, minor, patch);
+        Log::Trace("options: '{}' {}x{} vsync={}", 
+            _options.Window.Title,
+            _options.Window.Width,
+            _options.Window.Height,
+            _options.VSync
+        );
 
+        // Main
         //TODO: SDL_SetAppMetadata("appname", "1.0", "com.group.identifier");
         if (!SDL_Init(_options.InitFlags))
         {
             Log::Error("SDL_Init failed: {}", SDL_GetError());
             return SDL_APP_FAILURE;
         }
-
-        // Create window
         auto primaryDisplay = SDL_GetPrimaryDisplay();
         float displayContentScale = SDL_GetDisplayContentScale(primaryDisplay);
-        Log::Debug("'{}' {}x{} vsync={} [display={} scale={}]", 
-            _options.Window.Title,
-            _options.Window.Width,
-            _options.Window.Height,
-            _options.VSync,
+        //TODO: diagnostics bounds, usable-bounds, props, orientation, mode
+        Log::Trace("display: id={} scale={}", 
             primaryDisplay,
             displayContentScale
         );
 
-        _window = Window{SDL_CreateWindow(
+        // Window
+        auto* window = SDL_CreateWindow(
             _options.Window.Title.c_str(),
             static_cast<int>(static_cast<float>(_options.Window.Width) * displayContentScale),
             static_cast<int>(static_cast<float>(_options.Window.Height) * displayContentScale),
             _options.Window.Flags
-        )};
-
-        if (!_window) {
+        );
+        if (!window) {
             Log::Error("SDL_CreateWindow failed: {}", SDL_GetError());
             return SDL_APP_FAILURE;
         }
+        _window = Window{window};
 
-        // Create renderer
-        _renderer = Renderer{SDL_CreateRenderer(_window.get(), nullptr)};
+        if (Log::Enabled(Log::Level::Trace)) {
+            struct Size {
+                int w;
+                int h;
+            };
+            Size windowSize{};
+            if (!SDL_GetWindowSize(window, &windowSize.w, &windowSize.h)) {
+                Log::Warn("SDL_GetWindowSize failed: {}", SDL_GetError());
+            }
+            Size pixelSize{};
+            if (!SDL_GetWindowSizeInPixels(window, &pixelSize.w, &pixelSize.h)) {
+                Log::Warn("SDL_GetWindowSizeInPixels failed: {}", SDL_GetError());
+            }
+
+            auto windowDisplayScale = SDL_GetWindowDisplayScale(window);
+            auto windowPixelDensity = SDL_GetWindowPixelDensity(window);
+
+            //TODO: add diagnostic info of mode, pixel format, safe-area, etc.
+            Log::Trace("window: size={}x{} pixels={}x{} scale={} density={}", 
+                windowSize.w, windowSize.h,
+                pixelSize.w, pixelSize.h,
+                windowDisplayScale,
+                windowPixelDensity
+            );
+        }
+
+        // Renderer
+        _renderer = Renderer{SDL_CreateRenderer(window, nullptr)};
         if (!_renderer) {
             Log::Error("SDL_CreateRenderer failed: {}", SDL_GetError());
             _window.reset();
             return SDL_APP_FAILURE;
         }
 
-        // Set VSync
         if (!SDL_SetRenderVSync(_renderer.get(), _options.VSync)) {
             Log::Warn("SDL_SetRenderVSync({}) not supported, using disabled", _options.VSync);
             SDL_SetRenderVSync(_renderer.get(), SDL_RENDERER_VSYNC_DISABLED);
         }
 
+        // User handler
         if (!InvokeStart()) {
             Log::Error("Started handler failed");
             _renderer.reset();

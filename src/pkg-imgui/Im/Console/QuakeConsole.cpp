@@ -117,7 +117,7 @@ namespace Im
             ImGui::SameLine();
             ImGui::Checkbox("Auto-scroll", &_autoScroll);
             
-            ImGui::Separator();
+            //ImGui::Separator();
             
             // Log output area
             const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
@@ -180,7 +180,8 @@ namespace Im
             ImGui::EndChild();
             
             // Command input area
-            ImGui::Separator();
+            //ImGui::Separator();
+
             static std::array<char, 256> inputBuf{};
             const ImGuiInputTextFlags inputFlags = 
                 ImGuiInputTextFlags_EnterReturnsTrue;

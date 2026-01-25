@@ -14,12 +14,16 @@ namespace Im
     static const float DefaultFontSize = 15.0f;
     static const auto DefaultFontPath = std::filesystem::current_path() / "data" / "fonts" / "Roboto-Medium.ttf";
 
+    Log::Logger Deputy::_logger = Log::Logger("Im.Deputy");
+
     Deputy::Deputy(SDL_Window* window, SDL_Renderer* renderer)
         : _window(window)
         , _renderer(renderer)
     {
         // context
         IMGUI_CHECKVERSION();
+        _logger.Debug("ImGUI {}", ImGui::GetVersion());
+
         ImGui::CreateContext();
         ImGuiIO& io = ImGui::GetIO();
         _imGuiIO = &io;
@@ -27,18 +31,23 @@ namespace Im
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
         // scaling
-        float scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+        io.ConfigDpiScaleFonts = true;      // [EXPERIMENTAL] Automatically overwrite style.FontScaleDpi when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+        io.ConfigDpiScaleViewports = true;  // [EXPERIMENTAL] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
 
         // style
         ImGui::StyleColorsDark();
         ImGuiStyle& style = ImGui::GetStyle();
+
+        auto scale = SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(_window));
+        _logger.Trace("style: scale: all={}", scale);
         style.ScaleAllSizes(scale);
-        style.FontScaleDpi = scale; // using io.ConfigDpiScaleFonts=true makes this unnecessary
+        // style.FontScaleDpi = scale; // using io.ConfigDpiScaleFonts=true makes this unnecessary
+        _logger.Trace("style: font: SizeBase={} ScaleMain={} ScaleDpi={}", style.FontSizeBase, style.FontScaleMain, style.FontScaleDpi);
 
         // font
-        auto size_pixels = DefaultFontSize * scale;
+        auto size_pixels = DefaultFontSize;
         const auto font_path_str = DefaultFontPath.string();
-        Log::Debug("Loading font: {}", font_path_str);
+        _logger.Debug("Loading font: {}", font_path_str);
         io.Fonts->AddFontFromFileTTF(font_path_str.c_str(), size_pixels);
 
         // backend/renderer
