@@ -8,8 +8,8 @@
 namespace Im
 {
     static constexpr size_t MAX_BUFFER_SIZE = 1000;
-    static constexpr float ANIMATION_SPEED = 16.0f;  // Units per second
-    static constexpr float CONSOLE_HEIGHT_RATIO = 0.7f;  // % of window height
+    static constexpr float ANIMATION_SPEED = 16.0f;     // Units per second
+    static constexpr float CONSOLE_HEIGHT_RATIO = 0.7f; // % of window height
 
     QuakeConsole::QuakeConsole(bool initiallyVisible)
         : _buffer(std::make_shared<Detail::ConsoleBuffer>(MAX_BUFFER_SIZE))
@@ -17,8 +17,7 @@ namespace Im
         , _visible(initiallyVisible)
         , _animationProgress(initiallyVisible ? 1.0f : 0.0f)
         , _shouldFocusInput(initiallyVisible)
-    {
-    }
+    {}
 
     QuakeConsole::~QuakeConsole()
     {
@@ -28,7 +27,7 @@ namespace Im
     void QuakeConsole::Initialize()
     {
         Log::Detail::AddSink(_sink);
-        
+
         // Find monospace font (should be the second font loaded by Deputy)
         auto& io = ImGui::GetIO();
         if (io.Fonts->Fonts.Size > 1) {
@@ -53,80 +52,84 @@ namespace Im
     {
         switch (level) {
             case spdlog::level::trace:
-                return {0.5f, 0.5f, 0.5f, 1.0f};  // Gray
+                return {0.5f, 0.5f, 0.5f, 1.0f}; // Gray
             case spdlog::level::debug:
-                //return {0.4f, 0.8f, 1.0f, 1.0f};  // Cyan
-                return {0.3f, 0.65f, 0.79f, 1.0f};  // Darker cyan
+                // return {0.4f, 0.8f, 1.0f, 1.0f};  // Cyan
+                return {0.3f, 0.65f, 0.79f, 1.0f}; // Darker cyan
             case spdlog::level::info:
-                //return {0.8f, 0.8f, 0.8f, 1.0f};  // Light gray
-                return {0.34f, 0.72f, 0.50f, 1.0f};  // Light green
+                // return {0.8f, 0.8f, 0.8f, 1.0f};  // Light gray
+                return {0.34f, 0.72f, 0.50f, 1.0f}; // Light green
             case spdlog::level::warn:
-                return {1.0f, 1.0f, 0.0f, 1.0f};  // Yellow
+                return {1.0f, 1.0f, 0.0f, 1.0f}; // Yellow
             case spdlog::level::err:
-                return {1.0f, 0.4f, 0.4f, 1.0f};  // Red
+                return {1.0f, 0.4f, 0.4f, 1.0f}; // Red
             case spdlog::level::critical:
-                return {1.0f, 0.0f, 0.0f, 1.0f};  // Bright red
+                return {1.0f, 0.0f, 0.0f, 1.0f}; // Bright red
             default:
-                return {1.0f, 1.0f, 1.0f, 1.0f};  // White
+                return {1.0f, 1.0f, 1.0f, 1.0f}; // White
         }
     }
 
     bool QuakeConsole::IsLogLevelEnabled(const spdlog::level::level_enum level) const
     {
         switch (level) {
-            case spdlog::level::trace:    return _filterTrace;
-            case spdlog::level::debug:    return _filterDebug;
-            case spdlog::level::info:     return _filterInfo;
-            case spdlog::level::warn:     return _filterWarn;
-            case spdlog::level::err:      return _filterError;
-            case spdlog::level::critical: return _filterCritical;
-            default:                      return true;
+            case spdlog::level::trace:
+                return _filterTrace;
+            case spdlog::level::debug:
+                return _filterDebug;
+            case spdlog::level::info:
+                return _filterInfo;
+            case spdlog::level::warn:
+                return _filterWarn;
+            case spdlog::level::err:
+                return _filterError;
+            case spdlog::level::critical:
+                return _filterCritical;
+            default:
+                return true;
         }
     }
 
     void QuakeConsole::Render()
     {
         const float deltaTime = ImGui::GetIO().DeltaTime;
-        
+
         // Animate console sliding down/up
         if (_visible && _animationProgress < 1.0f) {
             _animationProgress = std::min(1.0f, _animationProgress + ANIMATION_SPEED * deltaTime);
         } else if (!_visible && _animationProgress > 0.0f) {
             _animationProgress = std::max(0.0f, _animationProgress - ANIMATION_SPEED * deltaTime);
         }
-        
+
         // Don't render if fully hidden
         if (_animationProgress <= 0.0f) {
             return;
         }
-        
+
         // Get window dimensions
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
         const float windowWidth = viewport->WorkSize.x;
-        
+
         // Use saved height or default to 50% of screen
         if (_consoleHeight == 0.0f) {
             _consoleHeight = viewport->WorkSize.y * CONSOLE_HEIGHT_RATIO;
         }
         const float maxHeight = _consoleHeight;
         const float currentHeight = maxHeight * _animationProgress;
-        
+
         // Position at top of screen
         ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x, viewport->WorkPos.y), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(windowWidth, currentHeight), ImGuiCond_Always);
         ImGui::SetNextWindowSizeConstraints(ImVec2(windowWidth, 100.0f), ImVec2(windowWidth, viewport->WorkSize.y * 0.9f));
-        
+
         // Console window style
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 8.0f));
         ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.85f));
-        
-        const ImGuiWindowFlags windowFlags = 
-            ImGuiWindowFlags_NoTitleBar |
-            ImGuiWindowFlags_NoCollapse |
-            ImGuiWindowFlags_NoSavedSettings;
-        
+
+        const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
+
         if (ImGui::Begin("QuakeConsole", nullptr, windowFlags)) {
             // Log optiona and filters
             {
@@ -151,43 +154,43 @@ namespace Im
                 }
                 ImGui::SameLine();
                 ImGui::Checkbox("Auto-scroll", &_autoScroll);
-                //ImGui::Separator();
+                // ImGui::Separator();
             }
-            
+
             // Log output area
             {
                 const float footerHeight = ImGui::GetStyle().ItemSpacing.y + ImGui::GetFrameHeightWithSpacing();
                 ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_None);
-                
+
                 // Use monospace font for log output
                 if (_monoFont) {
                     ImGui::PushFont(_monoFont);
                 }
-                
+
                 // Display log entries with filter
                 _buffer->ForEach([this](const Detail::ConsoleBuffer::LogEntry& entry) {
                     if (!IsLogLevelEnabled(entry.level)) {
                         return;
                     }
-                    
+
                     const ImVec4 color = GetColorForLogLevel(entry.level);
                     ImGui::PushStyleColor(ImGuiCol_Text, color);
                     ImGui::TextUnformatted(entry.message.c_str());
                     ImGui::PopStyleColor();
                 });
-                
+
                 // Auto-scroll to bottom
                 if (_autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
                     ImGui::SetScrollHereY(1.0f);
                 }
-                
+
                 if (_monoFont) {
                     ImGui::PopFont();
                 }
-                
+
                 ImGui::EndChild();
             }
-            
+
             // Command input area
             {
                 static std::array<char, 256> inputBuf{};
@@ -206,14 +209,14 @@ namespace Im
                 }
                 ImGui::PopItemWidth();
             }
-            
+
             // Set focus to input when console opens
             if (_shouldFocusInput && _animationProgress > 0.95f) {
                 ImGui::SetKeyboardFocusHere(-1);
                 _shouldFocusInput = false;
             }
         }
-        
+
         // Save user-defined height when fully visible
         if (_visible && _animationProgress >= 1.0f) {
             const auto windowSize = ImGui::GetWindowSize();
@@ -221,9 +224,9 @@ namespace Im
                 _consoleHeight = windowSize.y;
             }
         }
-        
+
         ImGui::End();
-        
+
         ImGui::PopStyleColor();
         ImGui::PopStyleVar(3);
     }
@@ -232,26 +235,23 @@ namespace Im
     {
         // Log the command
         Log::Info("> {}", command);
-        
+
         // Process commands
         if (command == "clear") {
             Clear();
-        }
-        else if (command == "help") {
+        } else if (command == "help") {
             Log::Info("Available commands:");
             Log::Info("  help  - Show this help message");
             Log::Info("  clear - Clear console output");
             Log::Info("  test  - Test all log levels");
-        }
-        else if (command == "test") {
+        } else if (command == "test") {
             Log::Trace("[TEST] This is a TRACE message");
             Log::Debug("[TEST] This is a DEBUG message");
             Log::Info("[TEST] This is an INFO message");
             Log::Warn("[TEST] This is a WARNING message");
             Log::Error("[TEST] This is an ERROR message");
             Log::Fatal("[TEST] This is a CRITICAL message");
-        }
-        else {
+        } else {
             Log::Warn("Unknown command: '{}'. Type 'help' for available commands.", command);
         }
     }
