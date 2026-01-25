@@ -4,6 +4,8 @@
 #include "Im/Deputy.h"
 #include "Im/Console/QuakeConsole.h"
 
+#include "imgui_internal.h"
+
 struct ImHandler
     : App::Loop::Handler
     , Sdl::Loop::Sdl3Handler
@@ -39,8 +41,14 @@ struct ImHandler
         auto elapsed = ctx.session.passedSeconds;
 
         // Clear with dark blue
+        //SDL_SetRenderScale(renderer, 1, 1);
         SDL_SetRenderDrawColor(renderer, 30, 30, 130, 255);
         SDL_RenderClear(renderer);
+
+        // Static rectangle 500x400 from top-left corner towards center
+        SDL_SetRenderDrawColor(renderer, 55, 100, 100, 255);
+        SDL_FRect staticRect = {10, 10, 500, 400};
+        SDL_RenderFillRect(renderer, &staticRect);
 
         // Animated rectangle - moves in circle and pulses
         float centerX = 320.0f;
@@ -70,21 +78,43 @@ struct ImHandler
         // ImGui sample windows
         {
             // sample window
-            ImGui::Begin("Hello, world!");
+            auto* mainViewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(ImVec2(mainViewport->Size.x / 10, mainViewport->Size.y / 10), ImGuiCond_FirstUseEver);
+            if (ImGui::Begin("Hello, world!")) {
+                ImGui::Checkbox("Demo Window", &_show_demo_window);
+                ImGui::Text("Session Time: %.2f s", ctx.session.passedSeconds);
+                ImGui::Text("Frame Index: %llu", static_cast<unsigned long long>(ctx.frame.index));
+                ImGui::Text("Delta: %.3f ms", ctx.frame.deltaSeconds * 1000.0f);
 
-            ImGui::Checkbox("Demo Window", &_show_demo_window);
-            ImGui::Text("Session Time: %.2f s", ctx.session.passedSeconds);
-            ImGui::Text("Frame Index: %llu", static_cast<unsigned long long>(ctx.frame.index));
-            ImGui::Text("Delta: %.3f ms", ctx.frame.deltaSeconds * 1000.0f);
-
-            auto framerate = _imDeputy->GetImGuiIO().Framerate;
-            ImGui::Text("ImGUI FPS: %.3f ms/frame (%.1f FPS)", 1000.0f / framerate, framerate);
+                auto framerate = _imDeputy->GetImGuiIO().Framerate;
+                ImGui::Text("ImGUI FPS: %.3f ms/frame (%.1f FPS)", 1000.0f / framerate, framerate);
+            }
             ImGui::End();
 
             // default demo window
             if (_show_demo_window) {
-                ImGui::SetNextWindowPos(ImVec2(50, 20), ImGuiCond_FirstUseEver);
+                // Create right dock area on first run
+                static ImGuiID dockIdRight = 0;
+                if (auto dockSpaceId = _imDeputy->GetDockSpaceId(); dockSpaceId && dockIdRight == 0) {
+                    dockIdRight = ImGui::DockBuilderSplitNode(
+                        dockSpaceId, 
+                        ImGuiDir_Right, 
+                        0.3f,
+                         nullptr, 
+                         nullptr);
+                }
+                
                 ImGui::ShowDemoWindow(&_show_demo_window);
+                
+                // Dock window to the right area AFTER it's been shown
+                static bool firstDock = true;
+                if (firstDock && dockIdRight) {
+                    ImGuiWindow* window = ImGui::FindWindowByName("Dear ImGui Demo");
+                    if (window && window->DockNode == nullptr) {
+                        ImGui::SetWindowDock(window, dockIdRight, ImGuiCond_Always);
+                        firstDock = false;
+                    }
+                }
             }
         }
 

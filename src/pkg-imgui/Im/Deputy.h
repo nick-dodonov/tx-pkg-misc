@@ -21,6 +21,7 @@ namespace Im
         void ProcessSdlEvent(const SDL_Event& event);
 
         [[nodiscard]] const ImGuiIO& GetImGuiIO() const { return *_io; }
+        [[nodiscard]] ImGuiID GetDockSpaceId() const { return _dockSpaceId; }
 
     private:
         SDL_Window* _window;
@@ -28,5 +29,8 @@ namespace Im
 
         ImGuiContext* _context{};
         ImGuiIO* _io{};
+
+        // Update
+        ImGuiID _dockSpaceId{};
     };
 }

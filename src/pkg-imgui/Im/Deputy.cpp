@@ -1,8 +1,9 @@
 #include "Deputy.h"
 #include "Log/Log.h"
 
-#include "SDL3/SDL_render.h"
-#include "SDL3/SDL_video.h"
+#include "Sdl/RendererScopes.h"
+#include <SDL3/SDL_render.h>
+#include <SDL3/SDL_video.h>
 
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
@@ -37,6 +38,8 @@ namespace Im
 
         ImGuiIO& io = ImGui::GetIO();
         _io = &io;
+
+        io.IniFilename = nullptr; // disable saving ini file
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
@@ -54,9 +57,12 @@ namespace Im
         ImGui::StyleColorsDark();
         ImGuiStyle& style = ImGui::GetStyle();
 
-        auto scale = SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(_window));
-        _logger.Trace("style: scale: all={}", scale);
-        style.ScaleAllSizes(scale);
+        const auto& fbScale = _io->DisplayFramebufferScale;
+        _logger.Trace("fb-scale: {}x{}", fbScale.x, fbScale.y);
+
+        auto contentScale = SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(_window));
+        _logger.Trace("style: content-scale={}", contentScale);
+        style.ScaleAllSizes(contentScale);
         // style.FontScaleDpi = scale; // using io.ConfigDpiScaleFonts=true makes this unnecessary
         _logger.Trace("style: font: SizeBase={} ScaleMain={} ScaleDpi={}", style.FontSizeBase, style.FontScaleMain, style.FontScaleDpi);
 
@@ -97,15 +103,28 @@ namespace Im
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
+        const auto& fbScale = _io->DisplayFramebufferScale;
+        static bool fbScaleLogged = false;
+        if (!fbScaleLogged) {
+            _logger.Trace("fb-scale: {}x{}", fbScale.x, fbScale.y);
+            fbScaleLogged = true;
+        }
+
         // docking
-        ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+        _dockSpaceId = ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
     }
 
     void Deputy::UpdateEnd()
     {
         ImGui::Render();
-        SDL_SetRenderScale(_renderer, _io->DisplayFramebufferScale.x, _io->DisplayFramebufferScale.y);
-        ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), _renderer);
+
+        auto* drawData = ImGui::GetDrawData();
+        Sdl::SetRenderScaleScope scaleScope{
+            _renderer,
+            _io->DisplayFramebufferScale.x,
+            _io->DisplayFramebufferScale.y
+        };
+        ImGui_ImplSDLRenderer3_RenderDrawData(drawData, _renderer);
     }
 
     void Deputy::ProcessSdlEvent(const SDL_Event& event)

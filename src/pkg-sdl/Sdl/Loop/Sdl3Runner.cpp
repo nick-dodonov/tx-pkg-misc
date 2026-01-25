@@ -1,7 +1,6 @@
 #include "Sdl3Runner.h"
 #include "Log/Log.h"
 #include <boost/describe.hpp>
-#include <tuple>
 
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL_main.h>
@@ -119,16 +118,24 @@ namespace Sdl::Loop
         auto primaryDisplay = SDL_GetPrimaryDisplay();
         float displayContentScale = SDL_GetDisplayContentScale(primaryDisplay);
         //TODO: diagnostics bounds, usable-bounds, props, orientation, mode
-        Log::Trace("display: id={} scale={}", 
+        Log::Trace("display: id={} content-scale={}", 
             primaryDisplay,
             displayContentScale
         );
 
         // Window
+        struct Size {
+            int w{};
+            int h{};
+        };
+        Size windowSize {
+            .w=static_cast<int>(static_cast<float>(_options.Window.Width) * displayContentScale),
+            .h=static_cast<int>(static_cast<float>(_options.Window.Height) * displayContentScale),
+        };
         auto* window = SDL_CreateWindow(
             _options.Window.Title.c_str(),
-            static_cast<int>(static_cast<float>(_options.Window.Width) * displayContentScale),
-            static_cast<int>(static_cast<float>(_options.Window.Height) * displayContentScale),
+            windowSize.w,
+            windowSize.h,
             _options.Window.Flags
         );
         if (!window) {
@@ -137,31 +144,26 @@ namespace Sdl::Loop
         }
         _window = Window{window};
 
-        if (Log::Enabled(Log::Level::Trace)) {
-            struct Size {
-                int w;
-                int h;
-            };
-            Size windowSize{};
-            if (!SDL_GetWindowSize(window, &windowSize.w, &windowSize.h)) {
-                Log::Warn("SDL_GetWindowSize failed: {}", SDL_GetError());
-            }
-            Size pixelSize{};
-            if (!SDL_GetWindowSizeInPixels(window, &pixelSize.w, &pixelSize.h)) {
-                Log::Warn("SDL_GetWindowSizeInPixels failed: {}", SDL_GetError());
-            }
-
-            auto windowDisplayScale = SDL_GetWindowDisplayScale(window);
-            auto windowPixelDensity = SDL_GetWindowPixelDensity(window);
-
-            //TODO: add diagnostic info of mode, pixel format, safe-area, etc.
-            Log::Trace("window: size={}x{} pixels={}x{} scale={} density={}", 
-                windowSize.w, windowSize.h,
-                pixelSize.w, pixelSize.h,
-                windowDisplayScale,
-                windowPixelDensity
-            );
+        if (!SDL_GetWindowSize(window, &windowSize.w, &windowSize.h)) {
+            Log::Warn("SDL_GetWindowSize failed: {}", SDL_GetError());
         }
+
+        Size pixelSize;
+        if (!SDL_GetWindowSizeInPixels(window, &pixelSize.w, &pixelSize.h)) {
+            Log::Warn("SDL_GetWindowSizeInPixels failed: {}", SDL_GetError());
+        }
+
+        auto windowPixelDensity = SDL_GetWindowPixelDensity(window);
+        auto windowDisplayScale = SDL_GetWindowDisplayScale(window);
+
+        //TODO: add diagnostic info of mode, pixel format, safe-area, etc.
+        Log::Trace("window: {}x{} ({}x{} pixels) -> scale={} (density={} * content={})",
+            windowSize.w, windowSize.h,
+            pixelSize.w, pixelSize.h,
+            windowPixelDensity,
+            windowDisplayScale,
+            displayContentScale
+        );
 
         // Renderer
         _renderer = Renderer{SDL_CreateRenderer(window, nullptr)};
