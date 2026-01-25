@@ -20,11 +20,13 @@ namespace Im
         void UpdateEnd();
         void ProcessSdlEvent(const SDL_Event& event);
 
-        [[nodiscard]] const ImGuiIO& GetImGuiIO() const { return *_imGuiIO; }
+        [[nodiscard]] const ImGuiIO& GetImGuiIO() const { return *_io; }
 
     private:
-        SDL_Window* _window = nullptr;
-        SDL_Renderer* _renderer = nullptr;
-        ImGuiIO* _imGuiIO = nullptr;
+        SDL_Window* _window;
+        SDL_Renderer* _renderer;
+
+        ImGuiContext* _context{};
+        ImGuiIO* _io{};
     };
 }

@@ -6,6 +6,7 @@
 
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
+#include "imgui_internal.h"
 
 #include <filesystem>
 
@@ -20,6 +21,7 @@ namespace Im
         DefaultMonoFont,
     };
 
+    static Log::Logger _internalImGuiLogger{"ImGui"};
     Log::Logger Deputy::_logger = Log::Logger("Im.Deputy");
 
     Deputy::Deputy(SDL_Window* window, SDL_Renderer* renderer)
@@ -30,11 +32,19 @@ namespace Im
         IMGUI_CHECKVERSION();
         _logger.Debug("ImGUI {}", ImGui::GetVersion());
 
-        ImGui::CreateContext();
+        auto* context = ImGui::CreateContext();
+        _context = context;
+
         ImGuiIO& io = ImGui::GetIO();
-        _imGuiIO = &io;
+        _io = &io;
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+        // error handling
+        _context->ErrorCallback = [](ImGuiContext* ctx, void* user_data, const char* msg) { 
+            _internalImGuiLogger.Msg({}, Log::Level::Error, msg);
+        };
+        io.ConfigErrorRecoveryEnableAssert = false; // disable asserts on errors (don't crash app)
 
         // scaling
         io.ConfigDpiScaleFonts = true;      // [EXPERIMENTAL] Automatically overwrite style.FontScaleDpi when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
@@ -56,14 +66,14 @@ namespace Im
             const auto font_path = DefaultFontsDir / font_name;
             const auto font_path_str = font_path.string();
             if (io.Fonts->AddFontFromFileTTF(font_path_str.c_str(), DefaultFontSize) != nullptr) {
-                _logger.Debug("Loaded font: {}", font_path_str);
+                _logger.Debug("Font loaded: {}", font_path_str);
                 font_loaded = true;
             } else {
-                _logger.Warn("Failed to load font: {}", font_path_str);
+                _logger.Warn("Font loading failed: {} -> {}", font_name, font_path_str);
             }
         }
         if (!font_loaded) {
-            _logger.Warn("Failed to load any custom font, using default");
+            _logger.Warn("Failed to load any font, using default");
         }
 
         // backend/renderer
@@ -76,8 +86,9 @@ namespace Im
         ImGui_ImplSDLRenderer3_Shutdown();
         ImGui_ImplSDL3_Shutdown();
 
-        _imGuiIO = nullptr;
-        ImGui::DestroyContext();
+        _io = {};
+        ImGui::DestroyContext(_context);
+        _context = {};
     }
 
     void Deputy::UpdateBegin()
@@ -93,7 +104,7 @@ namespace Im
     void Deputy::UpdateEnd()
     {
         ImGui::Render();
-        SDL_SetRenderScale(_renderer, _imGuiIO->DisplayFramebufferScale.x, _imGuiIO->DisplayFramebufferScale.y);
+        SDL_SetRenderScale(_renderer, _io->DisplayFramebufferScale.x, _io->DisplayFramebufferScale.y);
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), _renderer);
     }
 
