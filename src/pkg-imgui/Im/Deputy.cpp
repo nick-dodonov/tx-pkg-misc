@@ -66,21 +66,7 @@ namespace Im
         // style.FontScaleDpi = scale; // using io.ConfigDpiScaleFonts=true makes this unnecessary
         _logger.Trace("style: font: SizeBase={} ScaleMain={} ScaleDpi={}", style.FontSizeBase, style.FontScaleMain, style.FontScaleDpi);
 
-        // load default fonts list
-        bool font_loaded = false;
-        for (const auto& font_name : DefaultFonts) {
-            const auto font_path = DefaultFontsDir / font_name;
-            const auto font_path_str = font_path.string();
-            if (io.Fonts->AddFontFromFileTTF(font_path_str.c_str(), DefaultFontSize) != nullptr) {
-                _logger.Debug("Font loaded: {}", font_path_str);
-                font_loaded = true;
-            } else {
-                _logger.Warn("Font loading failed: {} -> {}", font_name, font_path_str);
-            }
-        }
-        if (!font_loaded) {
-            _logger.Warn("Failed to load any font, using default");
-        }
+        LoadFonts();
 
         // backend/renderer
         ImGui_ImplSDL3_InitForSDLRenderer(_window, _renderer);
@@ -95,6 +81,24 @@ namespace Im
         _io = {};
         ImGui::DestroyContext(_context);
         _context = {};
+    }
+
+    void Deputy::LoadFonts()
+    {
+        bool font_loaded = false;
+        for (const auto& font_name : DefaultFonts) {
+            const auto font_path = DefaultFontsDir / font_name;
+            const auto font_path_str = font_path.string();
+            if (_io->Fonts->AddFontFromFileTTF(font_path_str.c_str(), DefaultFontSize) != nullptr) {
+                _logger.Debug("Font loaded: {}", font_path_str);
+                font_loaded = true;
+            } else {
+                _logger.Warn("Font loading failed: {} -> {}", font_name, font_path_str);
+            }
+        }
+        if (!font_loaded) {
+            _logger.Warn("Failed to load any font, using default");
+        }
     }
 
     void Deputy::UpdateBegin()

@@ -24,6 +24,8 @@ namespace Im
         [[nodiscard]] ImGuiID GetDockSpaceId() const { return _dockSpaceId; }
 
     private:
+        void LoadFonts();
+
         SDL_Window* _window;
         SDL_Renderer* _renderer;
 
