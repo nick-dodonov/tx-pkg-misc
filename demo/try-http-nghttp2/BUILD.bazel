@@ -4,7 +4,7 @@ tx_binary(
     name = "try-http-nghttp2",
     srcs = glob(["*.cpp"]),
     deps = [
-        "@tx-pkg-aux//:pkg-boot",
+        "@tx-pkg-aux//src/pkg-boot",
         "@nghttp2//:nghttp2",
         "@openssl//:crypto",
         "@openssl//:ssl",

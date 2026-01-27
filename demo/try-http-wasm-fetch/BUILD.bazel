@@ -4,7 +4,7 @@ tx_binary(
     name = "try-http-wasm-fetch",
     srcs = glob(["*.cpp"]),
     deps = [
-        "@tx-pkg-aux//:pkg-boot",
+        "@tx-pkg-aux//src/pkg-boot",
     ],
     linkopts = [
         "-sFETCH=1",

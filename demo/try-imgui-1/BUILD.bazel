@@ -8,7 +8,7 @@ tx_binary(
         "//data:copy_fonts",
     ],
     deps = [
-        "@tx-pkg-aux//:pkg-boot",
+        "@tx-pkg-aux//src/pkg-boot",
         "@imgui//:imgui",
         "@imgui//backends:platform-sdl3",
         "@imgui//backends:renderer-sdlrenderer3",  #TODO: try SDL_GPU renderer as more modern and advanced

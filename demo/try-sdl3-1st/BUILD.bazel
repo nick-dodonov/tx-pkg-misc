@@ -5,7 +5,7 @@ tx_binary(
     srcs = glob(["*.cpp"]),
     data = [".env"],
     deps = [
-        "@tx-pkg-aux//:pkg-boot",
+        "@tx-pkg-aux//src/pkg-boot",
         "@sdl3",
     ],
     #TODO: add support for sdl3_shared build on platforms except wasm32

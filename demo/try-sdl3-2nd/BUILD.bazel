@@ -15,7 +15,7 @@ tx_binary(
         ":copy_data",
     ],
     deps = [
-        "@tx-pkg-aux//:pkg-boot",
+        "@tx-pkg-aux//src/pkg-boot",
         "@sdl3",
     ],
     linkopts = select({
