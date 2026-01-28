@@ -1,7 +1,9 @@
 #include "QuakeConsole.h"
+#include "Log/Log.h"
+#include "Log/Sink.h"
+
 #include "imgui.h"
-#include <Log/Log.h>
-#include <Log/Sink.h>
+#include "imgui_internal.h"
 #include <array>
 #include <string>
 

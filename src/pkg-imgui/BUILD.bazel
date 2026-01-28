@@ -6,7 +6,7 @@ tx_library(
     hdrs = glob(["**/*.h"]),
     strip_include_prefix = ".",
     data = [
-        "//data:copy_fonts",
+        "//data:fonts_dir",
     ],
     deps = [
         "//src/pkg-sdl",
@@ -18,7 +18,7 @@ tx_library(
     linkopts = select({
         "//conditions:default": [],
         "@platforms//cpu:wasm32": [
-            "--preload-file", "$(location //data:copy_fonts)@/data/fonts",
+            "--preload-file", "$(location //data:fonts_dir)@/data/fonts",
         ],
     }),
     visibility = ["//visibility:public"],

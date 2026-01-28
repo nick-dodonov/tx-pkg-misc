@@ -5,7 +5,7 @@ tx_binary(
     srcs = glob(["*.cpp", "*.h"]),
     data = [
         ".env",
-        "//data:copy_fonts",
+        "//data:fonts_dir",
     ],
     deps = [
         "@tx-pkg-aux//src/pkg-boot",
@@ -16,7 +16,7 @@ tx_binary(
     linkopts = select({
         "//conditions:default": [],
         "@platforms//cpu:wasm32": [
-            "--preload-file", "$(location //data:copy_fonts)@/data/fonts",
+            "--preload-file", "$(location //data:fonts_dir)@/data/fonts",
         ],
     }),
 )
