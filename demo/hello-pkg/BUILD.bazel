@@ -1,7 +1,29 @@
 load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
+load("@tx-pkg-aux//uni/tools/build_info:generate_build_info.bzl", "var_providing_rule")
+
+var_providing_rule(
+    name = "my_vars",
+    var_value = "HelloFromHelloPkg",
+)
 
 tx_binary(
     name = "hello-pkg",
     srcs = glob(["*.cpp"]),
-    deps = ["@tx-pkg-aux//src/pkg-boot"],
+    local_defines = [
+        "FOO=$(FOO)",
+        "WORKSPACE_NAME=$(WORKSPACE_NAME)",
+        "LABEL_NAME=$(LABEL_NAME)",
+        "LABEL_PACKAGE_NAME=$(LABEL_PACKAGE_NAME)",
+        "LABEL_WORKSPACE_NAME=$(LABEL_WORKSPACE_NAME)",
+        "LABEL_REPO_NAME=$(LABEL_REPO_NAME)",
+        "LABEL_WORKSPACE_ROOT=$(LABEL_WORKSPACE_ROOT)",
+    ],
+    toolchains = [
+        ":my_vars",
+        "@tx-pkg-aux//src/pkg-build:build_vars",
+    ],
+    deps = [
+        "@tx-pkg-aux//src/pkg-boot",
+        "@tx-pkg-aux//src/pkg-fs",
+    ],
 )
