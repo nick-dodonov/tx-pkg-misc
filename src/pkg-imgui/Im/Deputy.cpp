@@ -1,6 +1,10 @@
 #include "Deputy.h"
 #include "Log/Log.h"
 
+#include "Fs/OverlayDrive.h"
+#include "Fs/RunfilesDrive.h"
+#include "Fs/System.h"
+
 #include "Sdl/RendererScopes.h"
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_video.h>
@@ -9,12 +13,10 @@
 #include "imgui_impl_sdlrenderer3.h"
 #include "imgui_internal.h"
 
-#include <filesystem>
-
 namespace Im
 {
     static const float DefaultFontSize = 15.0f;
-    static const auto DefaultFontsDir = std::filesystem::current_path() / "data" / "fonts";
+    static const auto DefaultFontsDir = "data/fonts";
     static const auto DefaultUiFont = "Roboto-Medium.ttf";
     static const auto DefaultMonoFont = "JetBrainsMono-Bold.ttf";
     static const std::array DefaultFonts = {
@@ -44,14 +46,13 @@ namespace Im
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
         // error handling
-        _context->ErrorCallback = [](ImGuiContext* ctx, void* user_data, const char* msg) { 
-            _internalImGuiLogger.Msg({}, Log::Level::Error, msg);
-        };
+        _context->ErrorCallback = [](ImGuiContext* ctx, void* user_data, const char* msg) { _internalImGuiLogger.Msg({}, Log::Level::Error, msg); };
         io.ConfigErrorRecoveryEnableAssert = false; // disable asserts on errors (don't crash app)
 
         // scaling
-        io.ConfigDpiScaleFonts = true;      // [EXPERIMENTAL] Automatically overwrite style.FontScaleDpi when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
-        io.ConfigDpiScaleViewports = true;  // [EXPERIMENTAL] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+        io.ConfigDpiScaleFonts = true; // [EXPERIMENTAL] Automatically overwrite style.FontScaleDpi when Monitor DPI changes. This will scale fonts but _NOT_
+                                       // scale sizes/padding for now.
+        io.ConfigDpiScaleViewports = true; // [EXPERIMENTAL] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
 
         // style
         ImGui::StyleColorsDark();
@@ -85,17 +86,42 @@ namespace Im
 
     void Deputy::LoadFonts()
     {
+        // TODO: setup drive externally
+        // Setup drive system for font loading
+        Fs::RunfilesDrive runfilesDrive("tx-pkg-misc");
+        auto& defaultDrive = Fs::System::GetDefaultDrive();
+
+        Fs::Drive* drive = &defaultDrive;
+        Fs::OverlayDrive overlayDrive({&runfilesDrive, &defaultDrive});
+
+        if (runfilesDrive.IsSupported()) {
+            _logger.Debug("Using runfiles overlay drive");
+            drive = &overlayDrive;
+        } else {
+            _logger.Debug("Using default drive");
+        }
+
         bool font_loaded = false;
         for (const auto& font_name : DefaultFonts) {
-            const auto font_path = DefaultFontsDir / font_name;
-            const auto font_path_str = font_path.string();
-            if (_io->Fonts->AddFontFromFileTTF(font_path_str.c_str(), DefaultFontSize) != nullptr) {
-                _logger.Debug("Font loaded: {}", font_path_str);
+            const std::string relative_path = std::string{DefaultFontsDir} + "/" + std::string{font_name};
+
+            auto result = drive->GetNativePath(relative_path);
+            if (!result.has_value()) {
+                _logger.Warn("Resolve failed: {} (error: {})", relative_path, result.error().message());
+                continue;
+            }
+
+            const std::string& native_path = result.value();
+            _logger.Trace("Resolved path: {} -> {}", relative_path, native_path);
+
+            if (_io->Fonts->AddFontFromFileTTF(native_path.c_str(), DefaultFontSize) != nullptr) {
+                _logger.Debug("Loaded: {}", font_name);
                 font_loaded = true;
             } else {
-                _logger.Warn("Font loading failed: {} -> {}", font_name, font_path_str);
+                _logger.Warn("Loading failed: {}", font_name);
             }
         }
+
         if (!font_loaded) {
             _logger.Warn("Failed to load any font, using default");
         }
@@ -123,11 +149,7 @@ namespace Im
         ImGui::Render();
 
         auto* drawData = ImGui::GetDrawData();
-        Sdl::SetRenderScaleScope scaleScope{
-            _renderer,
-            _io->DisplayFramebufferScale.x,
-            _io->DisplayFramebufferScale.y
-        };
+        Sdl::SetRenderScaleScope scaleScope{_renderer, _io->DisplayFramebufferScale.x, _io->DisplayFramebufferScale.y};
         ImGui_ImplSDLRenderer3_RenderDrawData(drawData, _renderer);
     }
 
