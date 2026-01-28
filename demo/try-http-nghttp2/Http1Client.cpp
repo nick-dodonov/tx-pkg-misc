@@ -1,16 +1,12 @@
 #include "Http1Client.h"
+#include "SocketCompat.h"
 #include "Log/Log.h"
-#include <arpa/inet.h>
 #include <cstring>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 /// Helper function to establish SSL/TLS connection
-static SSL* setupTLS(int sockfd)
+static SSL* setupTLS(SOCKET sockfd)
 {
     SSL_library_init();
     SSL_load_error_strings();
@@ -53,7 +49,7 @@ static void cleanupTLS(SSL* ssl)
 }
 
 /// Helper function to send HTTP request
-static bool sendHttpRequest(int sockfd, SSL* ssl, const std::string& request)
+static bool sendHttpRequest(SOCKET sockfd, SSL* ssl, const std::string& request)
 {
     if (ssl) {
         int ret = SSL_write(ssl, request.c_str(), request.size());
@@ -71,7 +67,7 @@ static bool sendHttpRequest(int sockfd, SSL* ssl, const std::string& request)
 }
 
 /// Helper function to receive HTTP response
-static std::string receiveHttpResponse(int sockfd, SSL* ssl)
+static std::string receiveHttpResponse(SOCKET sockfd, SSL* ssl)
 {
     std::string full_response;
     char buffer[4096];
@@ -131,8 +127,8 @@ HttpResponse makeHttpRequest(const std::string& host, int port, const std::strin
     HttpResponse response;
 
     // Create socket
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
+    SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd == INVALID_SOCKET) {
         Log::Error("Failed to create socket");
         return response;
     }
@@ -141,7 +137,7 @@ HttpResponse makeHttpRequest(const std::string& host, int port, const std::strin
     struct hostent* server = gethostbyname(host.c_str());
     if (server == nullptr) {
         Log::Error("Failed to resolve hostname: {}", host);
-        close(sockfd);
+        close_socket(sockfd);
         return response;
     }
 
@@ -154,7 +150,7 @@ HttpResponse makeHttpRequest(const std::string& host, int port, const std::strin
 
     if (connect(sockfd, reinterpret_cast<struct sockaddr*>(&serv_addr), sizeof(serv_addr)) < 0) {
         Log::Error("Failed to connect to {}:{}", host, port);
-        close(sockfd);
+        close_socket(sockfd);
         return response;
     }
 
@@ -165,7 +161,7 @@ HttpResponse makeHttpRequest(const std::string& host, int port, const std::strin
     if (use_tls) {
         ssl = setupTLS(sockfd);
         if (!ssl) {
-            close(sockfd);
+            close_socket(sockfd);
             return response;
         }
     }
@@ -184,7 +180,7 @@ HttpResponse makeHttpRequest(const std::string& host, int port, const std::strin
 
     if (!sendHttpRequest(sockfd, ssl, request)) {
         cleanupTLS(ssl);
-        close(sockfd);
+        close_socket(sockfd);
         return response;
     }
 
@@ -194,7 +190,7 @@ HttpResponse makeHttpRequest(const std::string& host, int port, const std::strin
 
     // Cleanup
     cleanupTLS(ssl);
-    close(sockfd);
+    close_socket(sockfd);
 
     return response;
 }

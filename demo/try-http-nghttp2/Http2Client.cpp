@@ -1,21 +1,17 @@
 #include "Http2Client.h"
+#include "SocketCompat.h"
 #include "Log/Log.h"
-#include <arpa/inet.h>
 #include <cstring>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <nghttp2/nghttp2.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 /// HTTP/2 session data
 struct Http2SessionData
 {
     nghttp2_session* session = nullptr;
     SSL* ssl = nullptr;
-    int sockfd = -1;
+    SOCKET sockfd = INVALID_SOCKET;
     HttpResponse response;
     bool response_complete = false;
 };
@@ -92,7 +88,7 @@ HttpResponse makeHttp2Request(const std::string& host, int port, const std::stri
 
     // Create socket
     session_data.sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (session_data.sockfd < 0) {
+    if (session_data.sockfd == INVALID_SOCKET) {
         Log::Error("Failed to create socket");
         return response;
     }
@@ -101,7 +97,7 @@ HttpResponse makeHttp2Request(const std::string& host, int port, const std::stri
     struct hostent* server = gethostbyname(host.c_str());
     if (server == nullptr) {
         Log::Error("Failed to resolve hostname: {}", host);
-        close(session_data.sockfd);
+        close_socket(session_data.sockfd);
         return response;
     }
 
@@ -114,7 +110,7 @@ HttpResponse makeHttp2Request(const std::string& host, int port, const std::stri
 
     if (connect(session_data.sockfd, reinterpret_cast<struct sockaddr*>(&serv_addr), sizeof(serv_addr)) < 0) {
         Log::Error("Failed to connect to {}:{}", host, port);
-        close(session_data.sockfd);
+        close_socket(session_data.sockfd);
         return response;
     }
 
@@ -127,7 +123,7 @@ HttpResponse makeHttp2Request(const std::string& host, int port, const std::stri
     SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
     if (!ctx) {
         Log::Error("Failed to create SSL context");
-        close(session_data.sockfd);
+        close_socket(session_data.sockfd);
         return response;
     }
 
@@ -142,7 +138,7 @@ HttpResponse makeHttp2Request(const std::string& host, int port, const std::stri
         Log::Error("Failed to establish SSL connection");
         SSL_free(session_data.ssl);
         SSL_CTX_free(ctx);
-        close(session_data.sockfd);
+        close_socket(session_data.sockfd);
         return response;
     }
 
@@ -156,7 +152,7 @@ HttpResponse makeHttp2Request(const std::string& host, int port, const std::stri
         SSL_shutdown(session_data.ssl);
         SSL_free(session_data.ssl);
         SSL_CTX_free(ctx);
-        close(session_data.sockfd);
+        close_socket(session_data.sockfd);
         return response;
     }
 
@@ -194,7 +190,7 @@ HttpResponse makeHttp2Request(const std::string& host, int port, const std::stri
         SSL_shutdown(session_data.ssl);
         SSL_free(session_data.ssl);
         SSL_CTX_free(ctx);
-        close(session_data.sockfd);
+        close_socket(session_data.sockfd);
         return response;
     }
 
@@ -228,7 +224,7 @@ HttpResponse makeHttp2Request(const std::string& host, int port, const std::stri
     SSL_shutdown(session_data.ssl);
     SSL_free(session_data.ssl);
     SSL_CTX_free(ctx);
-    close(session_data.sockfd);
+    close_socket(session_data.sockfd);
 
     return response;
 }

@@ -10,11 +10,15 @@ tx_binary(
         #OPENSSL "@openssl//:ssl",
         "@boringssl//:ssl",
     ],
+    linkopts = select({
+        "@platforms//os:windows": ["ws2_32.lib"],
+        "//conditions:default": [],
+    }),
     target_compatible_with = select({
         "//conditions:default": [],
         # WASM don't need custom http client implementation
         "@platforms//cpu:wasm32": ["@platforms//:incompatible"],
-        # Windows ARM64 doesn't have perl rules to build openssl (don't try as boringssl will be used finally)
-        "@platforms//os:windows": ["@platforms//:incompatible"],
+        #OPENSSL # Windows ARM64 doesn't have perl rules to build openssl (don't try as boringssl will be used finally)
+        #OPENSSL "@platforms//os:windows": ["@platforms//:incompatible"],
     }),
 )

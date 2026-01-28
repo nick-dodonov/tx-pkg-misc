@@ -1,4 +1,5 @@
 #include "Boot/Boot.h"
+#include "SocketCompat.h"  // Must be before nghttp2.h to define ssize_t on Windows
 #include "Http1Client.h"
 #include "Http2Client.h"
 #include "Log/Log.h"
@@ -44,6 +45,12 @@ int main(int argc, const char** argv)
 {
     Boot::DefaultInit(argc, argv);
 
+    // Initialize sockets (Winsock on Windows, no-op on Unix)
+    if (!init_sockets()) {
+        Log::Error("Failed to initialize sockets");
+        return 1;
+    }
+
     // Display nghttp2 version
     nghttp2_info* info = nghttp2_version(0);
     Log::Info("nghttp2 version: {}", info->version_str);
@@ -80,6 +87,9 @@ int main(int argc, const char** argv)
     if (examples_to_run.contains(3)) {
         runExample3();
     }
+
+    // Cleanup sockets (Winsock on Windows, no-op on Unix)
+    cleanup_sockets();
 
     return 0;
 }
