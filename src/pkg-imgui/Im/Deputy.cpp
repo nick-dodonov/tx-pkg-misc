@@ -140,7 +140,7 @@ namespace Im
             fbScaleLogged = true;
         }
 
-        // docking
+        // https://github.com/ocornut/imgui/wiki/Docking
         _dockSpaceId = ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
     }
 

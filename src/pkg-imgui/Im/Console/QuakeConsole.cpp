@@ -239,7 +239,7 @@ namespace Im
         // TODO: find good and small font with unicode icons
         //  Clear button ✖
         ImGui::SameLine();
-        if (ImGui::Button("c", buttonSize)) {
+        if (ImGui::Button("≠", buttonSize)) {
             Clear();
         }
         if (ImGui::IsItemHovered()) {
@@ -275,13 +275,24 @@ namespace Im
         ImGui::SameLine();
         ImGui::Dummy(ImVec2(itemSpacing, 0));
 
-        // Close button (right-aligned)
-        ImGui::SameLine(ImGui::GetWindowWidth() - buttonSize.x - style.WindowPadding.x);
-        if (ImGui::Button("×", buttonSize)) {
+        // Close button (right-aligned) - using ImGui::CloseButton
+        const float closeButtonSize = ImGui::GetFontSize();
+        ImGui::SameLine(ImGui::GetWindowWidth() - closeButtonSize - style.WindowPadding.x);
+        
+        // Calculate vertical centering offset
+        const float frameHeight = ImGui::GetFrameHeight();
+        const float yOffset = (frameHeight - closeButtonSize) * 0.5f;
+        
+        ImGui::AlignTextToFramePadding();
+        const ImVec2 closeButtonPos = ImVec2(ImGui::GetCursorScreenPos().x, ImGui::GetCursorScreenPos().y + yOffset);
+        const ImGuiID closeButtonId = ImGui::GetID("##CloseButton");
+        
+        // Reserve space for the button so it doesn't overlap next line
+        ImGui::Dummy(ImVec2(closeButtonSize, closeButtonSize));
+        
+        // Draw close button at the reserved position
+        if (ImGui::CloseButton(closeButtonId, closeButtonPos)) {
             Hide();
-        }
-        if (ImGui::IsItemHovered()) {
-            ImGui::SetTooltip("Close");
         }
     }
 
