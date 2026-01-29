@@ -203,11 +203,13 @@ HttpResponse makeHttp2Request(const std::string& host, int port, const std::stri
     char buffer[4096];
     while (!session_data.response_complete) {
         int nread = SSL_read(session_data.ssl, buffer, sizeof(buffer));
+        Log::Debug("SSL_read result: {}", nread);
         if (nread <= 0) {
             break;
         }
 
         ssize_t readlen = nghttp2_session_mem_recv(session_data.session, reinterpret_cast<uint8_t*>(buffer), nread);
+        Log::Debug("nghttp2_session_mem_recv result: {}", readlen);
         if (readlen < 0) {
             Log::Error("nghttp2_session_mem_recv failed: {}", nghttp2_strerror(readlen));
             break;
