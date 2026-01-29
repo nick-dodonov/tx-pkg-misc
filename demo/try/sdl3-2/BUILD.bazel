@@ -8,7 +8,7 @@ copy_directory(
 )
 
 tx_binary(
-    name = "try-sdl3-2nd",
+    name = "sdl3-2",
     srcs = glob(["*.cpp"]),
     data = [
         ".env",
