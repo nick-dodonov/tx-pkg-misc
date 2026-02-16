@@ -20,18 +20,6 @@
                 "kind": "build",
             },
         },
-        {
-            "type": "shell",
-            "label": "dev:init (force links)",
-            "command": "bazel run @tx-kit-ext//tools/dev:init --override_module=tx-kit-ext=../tx-kit-ext -- -s",
-            "group": {
-                "kind": "build",
-            },
-            // https://code.visualstudio.com/docs/debugtest/tasks#_run-behavior
-            "runOptions": {
-                //ALWAYS runs "runOn": "folderOpen"
-            }
-        },
         // ================ build demo tasks
         // https://web.archive.org/web/20220716134022/https://shanee.io/blog/2019/05/28/bazel-with-visual-studio-code/
         {
