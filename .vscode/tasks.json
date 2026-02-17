@@ -78,7 +78,7 @@
             "id": "buildTarget",
             "type": "pickString",
             "options": [
-                "demo:hello-pkg",
+                "demo:hello-aux",
                 "demo:hello-coro",
                 "demo:try-asio",
                 "demo:try-sdl3-1st",

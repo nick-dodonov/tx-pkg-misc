@@ -7,7 +7,7 @@ var_providing_rule(
 )
 
 tx_binary(
-    name = "hello-pkg",
+    name = "hello-aux",
     srcs = glob(["*.cpp"]),
     local_defines = [
         "FOO=$(FOO)",

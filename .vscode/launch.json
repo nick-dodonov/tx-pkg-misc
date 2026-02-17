@@ -18,8 +18,8 @@
         // ================ debug experiments configurations
         // Useful links/commands to investigate source mapping issues.
         //  - https://github.com/bazelbuild/apple_support?tab=readme-ov-file
-        //  - dsymutil -s bazel-bin/demo/hello-pkg | grep N_OSO
-        //  - dwarfdump --debug-line bazel-out/darwin_x86_64-dbg/bin/demo/_objs/hello-pkg/main.o
+        //  - dsymutil -s bazel-bin/demo/hello-aux | grep N_OSO
+        //  - dwarfdump --debug-line bazel-out/darwin_x86_64-dbg/bin/demo/_objs/hello-aux/main.o
         //  - TODO: add lldb investigation commands too
         //TODO: Try Natvis for my types https://code.visualstudio.com/docs/cpp/natvis
         //TODO: Find the way to share settings for different targets (e.g. via variables or "compounds")
@@ -29,10 +29,10 @@
         // Via C/C++ extension ("cppdbg")
         //  https://code.visualstudio.com/docs/cpp/launch-json-reference#_sourcefilemap
         {
-            "name": "demo/hello-pkg (C/C++)",
+            "name": "demo/hello-aux (C/C++)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bazel-bin/demo/hello-pkg",
+            "program": "${workspaceFolder}/bazel-bin/demo/hello-aux",
             "args": [],
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -62,16 +62,16 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "demo/hello-pkg",
+            "preLaunchTask": "demo/hello-aux",
             // "stopAtEntry": true,
         },
         // Via CodeLLDB extension ("lldb")
         //  https://github.com/vadimcn/codelldb/blob/master/MANUAL.md
         {
-            "name": "demo/hello-pkg (LLDB)",
+            "name": "demo/hello-aux (LLDB)",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/bazel-bin/demo/hello-pkg",
+            "program": "${workspaceFolder}/bazel-bin/demo/hello-aux",
             "cwd": "${workspaceFolder}",
             "initCommands": [
                 // Workaround for multi-root workspace issue of CoreLLDB: 
@@ -88,7 +88,7 @@
                 // "settings append target.source-map ${workspaceFolder}/external ${workspaceFolder}/bazel-${workspaceFolderBasename}/external",
                 // "b main", // better than stopOnEntry (stops in _start)
             ],
-            "preLaunchTask": "demo/hello-pkg",
+            "preLaunchTask": "demo/hello-aux",
             // "stopOnEntry": true
         },
         // ================ debug tests configurations
