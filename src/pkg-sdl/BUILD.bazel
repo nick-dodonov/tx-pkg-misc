@@ -1,6 +1,6 @@
-load("@tx-kit-ext//rules/build:tx_library.bzl", "tx_library")
+load("@tx-kit-ext//rules/build:multi_lib.bzl", "multi_lib")
 
-tx_library(
+multi_lib(
     name = "pkg-sdl",
     srcs = glob(["Sdl/**/*.cpp"]),
     hdrs = glob(["Sdl/**/*.h"]),

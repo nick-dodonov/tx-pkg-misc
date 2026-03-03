@@ -1,6 +1,6 @@
-load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
+load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
 
-tx_binary(
+multi_app(
     name = "hello-im",
     srcs = glob(["**/*.cpp"]),
     data = [".env"],

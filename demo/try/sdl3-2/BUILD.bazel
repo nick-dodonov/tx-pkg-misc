@@ -1,4 +1,4 @@
-load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
+load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
 load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
 
 copy_directory(
@@ -7,7 +7,7 @@ copy_directory(
     out = "data",
 )
 
-tx_binary(
+multi_app(
     name = "sdl3-2",
     srcs = glob(["*.cpp"]),
     data = [
@@ -21,7 +21,7 @@ tx_binary(
     linkopts = select({
         "//conditions:default": [],
         "@platforms//cpu:wasm32": [
-            "--preload-file", "$(location :copy_data)@/data",
+            "--preload-file", "$(rootpath :copy_data)@/data",
         ],
     }),
 )
