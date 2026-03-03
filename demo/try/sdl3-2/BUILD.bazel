@@ -10,18 +10,20 @@ copy_directory(
 multi_app(
     name = "sdl3-2",
     srcs = glob(["*.cpp"]),
-    data = [
-        ".env",
-        ":copy_data",
-    ],
     deps = [
         "@tx-pkg-aux//src/pkg-boot",
         "@sdl3",
     ],
-    linkopts = select({
+    data = [
+        ".env",
+        ":copy_data",
+    ],
+    additional_linker_inputs = select({
+        "@platforms//cpu:wasm32": [":copy_data"],
         "//conditions:default": [],
-        "@platforms//cpu:wasm32": [
-            "--preload-file", "$(rootpath :copy_data)@/data",
-        ],
+    }),
+    linkopts = select({
+        "@platforms//cpu:wasm32": ["--preload-file", "$(execpath :copy_data)@/data"],
+        "//conditions:default": [],
     }),
 )

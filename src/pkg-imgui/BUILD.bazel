@@ -5,9 +5,6 @@ multi_lib(
     srcs = glob(["**/*.cpp"]),
     hdrs = glob(["**/*.h"]),
     strip_include_prefix = ".",
-    data = [
-        "//data:fonts_dir",
-    ],
     deps = [
         "//src/pkg-sdl",
         "@tx-pkg-aux//src/pkg-fs",
@@ -15,11 +12,16 @@ multi_lib(
         "@imgui//backends:platform-sdl3",
         "@imgui//backends:renderer-sdlrenderer3",  #TODO: try SDL_GPU renderer as more modern and advanced
     ],
-    linkopts = select({
+    data = [
+        "//data:fonts_dir",
+    ],
+    additional_linker_inputs = select({
+        "@platforms//cpu:wasm32": ["//data:fonts_dir"],
         "//conditions:default": [],
-        "@platforms//cpu:wasm32": [
-            "--preload-file", "$(rootpath //data:fonts_dir)@/data/fonts",
-        ],
+    }),
+    linkopts = select({
+        "@platforms//cpu:wasm32": ["--preload-file", "$(execpath //data:fonts_dir)@/data/fonts"],
+        "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
 )
