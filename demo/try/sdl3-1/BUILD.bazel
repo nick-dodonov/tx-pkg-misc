@@ -7,7 +7,7 @@ android_library(
         "TryActivity.java",
     ],
     deps = [
-        "//demo/try/sdl3-1/lib:sdl3_android",
+        "@sdl3",
     ],
 )
 
