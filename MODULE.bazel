@@ -13,6 +13,7 @@ bazel_dep(name = "rules_foreign_cc", version = "0.15.1")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "emsdk", version = "4.0.17")
 bazel_dep(name = "rules_python", version = "1.8.4")
+bazel_dep(name = "rules_android", version = "0.7.1")
 
 # Hedron's Compile Commands Extractor for Bazel
 # - https://github.com/hedronvision/bazel-compile-commands-extractor
@@ -45,6 +46,12 @@ git_override(
 
 bazel_dep(name = "boost.asio", version = "1.89.0.bcr.1.1-tx.1")  # private registry
 bazel_dep(name = "sdl3", version = "3.4.0-tx.1")  # private registry
+single_version_override(
+    module_name = "sdl3",
+    patches = ["//patches:sdl3.patch"],
+    patch_strip = 0,
+)
+
 bazel_dep(name = "imgui", version = "1.92.5-docking-tx.1")  # private registry
 
 # test deps

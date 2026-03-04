@@ -1,9 +1,11 @@
 #include "Boot/Boot.h"
 #include "Log/Log.h"
 
-#define SDL_MAIN_HANDLED
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_version.h>
+
+#define SDL_MAIN_HANDLED
+#include <SDL3/SDL_main.h>
 
 #ifdef __EMSCRIPTEN__
     #include <emscripten.h>
@@ -46,8 +48,12 @@ void mainLoop(void* arg)
     SDL_RenderClear(ctx->renderer);
 
     // Put your drawing code here
+    int w, h;
+    SDL_GetWindowSize(ctx->window, &w, &h);
+    //Log::Debug("Window size: {}x{}", w, h);
+
     SDL_SetRenderDrawColor(ctx->renderer, 255, 100, 100, 255);
-    SDL_FRect rect = {50, 50, 100, 100};
+    SDL_FRect rect = {.x = float(w / 10), .y = float(h / 10), .w = float(w / 2), .h = float(h / 2)};
     SDL_RenderFillRect(ctx->renderer, &rect);
 
     SDL_RenderPresent(ctx->renderer);
@@ -64,12 +70,14 @@ int main(int argc, const char** argv)
     Log::Info("SDL version: {}.{}.{}", major, minor, patch);
 
     // 1. SDL3 initialization
+    Log::Info("SDL_Init...");
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         SDL_Log("SDL_Init failed: %s", SDL_GetError());
         return 1;
     }
 
     // 2. Window creation
+    Log::Info("SDL_CreateWindow...");
     SDL_Window* window = SDL_CreateWindow(
         "SDL3 Window",
         // 800, 600,
@@ -85,6 +93,7 @@ int main(int argc, const char** argv)
     }
 
     // 3. Renderer creation
+    Log::Info("SDL_CreateRenderer...");
     SDL_Renderer* renderer = SDL_CreateRenderer(window, NULL);
     if (!renderer) {
         SDL_Log("Renderer creation failed: %s", SDL_GetError());
@@ -94,6 +103,7 @@ int main(int argc, const char** argv)
     }
 
     // Create context for main loop
+    Log::Info("Context...");
     Context context;
     context.renderer = renderer;
     context.window = window;
@@ -125,3 +135,12 @@ int main(int argc, const char** argv)
 
     return 0;
 }
+
+#if __ANDROID__
+void redirect_stdout_to_logcat(void);
+extern "C" int SDLCALL SDL_main(int argc, char *argv[])
+{
+    redirect_stdout_to_logcat();
+    return main(argc, (const char**)argv);
+}
+#endif

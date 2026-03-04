@@ -1,0 +1,365 @@
+# https://bazel-contrib.github.io/rules_foreign_cc/cmake.html
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
+
+string_flag(
+    name = "build",
+    build_setting_default = "via_cmake",
+    values = [
+        "via_cmake",
+        "via_bazel",
+    ],
+    visibility = ["//visibility:public"],
+)
+config_setting(name = "via_cmake", flag_values = {":build": "via_cmake"})
+config_setting(name = "via_bazel", flag_values = {":build": "via_bazel"})
+
+################################
+# Build via CMake foreign rule
+################################
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:private"],
+)
+
+cmake(
+    name = "sdl3_shared",
+    lib_source = ":all_srcs",
+    defines = select({
+        "@bazel_tools//src/conditions:darwin": [
+            "CMAKE_OSX_DEPLOYMENT_TARGET=10.13",
+        ],
+        "//conditions:default": []
+    }),
+    out_include_dir = "include",
+    out_interface_libs = select({
+        "@bazel_tools//src/conditions:windows": ["SDL3.lib"],
+        "//conditions:default": []
+    }),
+    out_shared_libs = select({
+        "@bazel_tools//src/conditions:darwin": ["libSDL3.0.dylib"],
+        "@bazel_tools//src/conditions:linux": ["libSDL3.so.0"],
+        "@bazel_tools//src/conditions:windows": ["SDL3.dll"],
+        #TODO: WASM -sSIDE_MODULE https://emscripten.org/docs/compiling/Dynamic-Linking.html
+        # "@platforms//cpu:wasm32": ["libSDL3.so"]
+        "//conditions:default": []
+    }),
+    visibility = ["//visibility:public"],
+)
+
+cmake(
+    name = "sdl3_static_base",
+    lib_source = ":all_srcs",
+    generate_args = [
+        "-DSDL_STATIC=true",
+        "-DSDL_SHARED=false",
+        "-DSDL_PTHREADS=true",
+    ] + select({
+        "@platforms//cpu:wasm32": ["-DEMSCRIPTEN=true"],
+        "@platforms//os:wasi": ["-DEMSCRIPTEN=true"],
+        "//conditions:default": []
+    }),
+    defines = select({
+        "@bazel_tools//src/conditions:darwin": [
+            "CMAKE_OSX_DEPLOYMENT_TARGET=10.13",
+        ],
+        "//conditions:default": []
+    }),
+    out_include_dir = "include",
+    out_static_libs = select({
+        "@bazel_tools//src/conditions:windows": ["SDL3-static.lib"],
+        "//conditions:default": ["libSDL3.a"],
+    }),
+    visibility = ["//visibility:private"],
+)
+
+# Workaround for linkopts in cmake rule w/ space isn't passed to dependents correctly
+cc_library(
+    name = "sdl3_static",
+    deps = [":sdl3_static_base"],
+    # link options to be passed up to the dependencies of this library
+    linkopts = select({
+        "@bazel_tools//src/conditions:darwin": [
+            "-framework", "CoreGraphics",
+            "-framework", "CoreAudio",
+            "-framework", "CoreHaptics",
+            "-framework", "CoreMedia",
+            "-framework", "CoreVideo",
+            "-framework", "AVFoundation",
+            "-framework", "AudioToolbox",
+            "-framework", "ForceFeedback",
+            "-framework", "GameController",
+            "-framework", "IOKit",
+            "-framework", "Carbon",
+            "-framework", "Metal",
+            "-framework", "AppKit",
+            "-framework", "QuartzCore",
+            "-framework", "UniformTypeIdentifiers",
+        ],
+        "@bazel_tools//src/conditions:windows": [
+            "User32.lib",   # Window functions (CreateWindow, MessageBox, etc.)
+            "Gdi32.lib",    # GDI functions (CreateDC, SelectObject, BitBlt, GetDeviceCaps, etc.)
+            "Advapi32.lib", # Registry functions (RegOpenKeyExW, etc.)
+            "Shell32.lib",  # Shell functions (ShellExecuteW, SHGetFolderPathW, etc.)
+            "Ole32.lib",    # COM functions (CoInitializeEx, CoCreateInstance, etc.)
+            "Oleaut32.lib", # OLE Automation functions (IDispatch, VARIANT, SysFreeString, etc.)
+            "Imm32.lib",    # IME Input Method Manager functions
+            "Winmm.lib",    # Windows Multimedia functions (timeBeginPeriod, etc.)
+            "Version.lib",  # Version functions (GetFileVersionInfo, etc.)
+            "Setupapi.lib", # Device Setup API functions (SetupDiGetClassDevs, etc.)
+            #"Cfgmgr32.lib", # Configuration Manager functions
+        ],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+################################
+# Build via pure Bazel rules
+################################
+GENERAL_SRCS = [
+    "src/*.c",
+    "src/atomic/*.c",
+    "src/audio/*.c",
+    "src/camera/*.c",
+    "src/core/*.c",
+    "src/cpuinfo/*.c",
+    "src/dynapi/*.c",
+    "src/events/*.c",
+    "src/io/*.c",
+    "src/io/generic/*.c",
+    "src/filesystem/*.c",
+    "src/gpu/*.c",
+    "src/joystick/*.c",
+    "src/haptic/*.c",
+    "src/hidapi/*.c",
+    "src/locale/*.c",
+    "src/main/*.c",
+    "src/misc/*.c",
+    "src/power/*.c",
+    "src/render/*.c",
+    "src/render/*/*.c",
+    "src/sensor/*.c",
+    "src/stdlib/*.c",
+    "src/storage/*.c",
+    "src/thread/*.c",
+    "src/time/*.c",
+    "src/timer/*.c",
+    "src/video/*.c",
+    "src/video/yuv2rgb/*.c",
+]
+GENERAL_MAIN_SRCS = ["src/main/generic/*.c"]
+
+# if(SDL_AUDIO)
+#   if(SDL_DUMMYAUDIO)
+DUMMYAUDIO_SRCS = ["src/audio/dummy/*.c"]
+#   if(SDL_DISKAUDIO)
+DISKAUDIO_SRCS = ["src/audio/disk/*.c"]
+
+# if(SDL_CAMERA)
+#   if(SDL_DUMMYCAMERA)
+DUMMYCAMERA_SRCS = ["src/camera/dummy/*.c"]
+#   if(UNIX OR APPLE)
+DLOPEN_SRCS = ["src/loadso/dlopen/*.c"]
+
+# if(SDL_JOYSTICK) && if(SDL_JOYSTICK_VIRTUAL)
+VIRTUAL_JOYSTICK_SRCS = ["src/joystick/virtual/*.c"]
+
+# if(SDL_VIDEO) && if(SDL_DUMMYVIDEO)
+DUMMYVIDEO_SRCS = ["src/video/dummy/*.c"]
+
+# if(APPLE)
+#   if(SDL_CAMERA) && if(MACOS OR IOS)
+APPLE_CAMERA_SRCS = ["src/camera/coremedia/*.m"]
+#   !if(IOS OR TVOS OR VISIONOS OR WATCHOS)
+DARWIN_MISC_SRCS = ["src/misc/macos/*.m"]
+#   if(SDL_AUDIO)
+APPLE_AUDIO_SRCS = ["src/audio/coreaudio/*.m"]
+#   if(SDL_JOYSTICK)
+APPLE_JOYSTICK_SRCS = ["src/joystick/apple/*.m"]
+#   if(SDL_JOYSTICK) && !if(IOS OR TVOS OR VISIONOS OR WATCHOS)
+DARWIN_JOYSTICK_SRCS = ["src/joystick/darwin/*.c"]
+#   if(SDL_HAPTIC) && !if(IOS OR TVOS OR VISIONOS OR WATCHOS)
+DARWIN_HAPTIC_SRCS = ["src/haptic/darwin/*.c"]
+#   if(SDL_POWER) && !if(IOS OR TVOS OR VISIONOS OR WATCHOS)
+DARWIN_POWER_SRCS = ["src/power/macos/*.c"]
+#   General Apple platform sources
+APPLE_GENERAL_SRCS = [
+    "src/locale/macos/*.m",
+    "src/time/unix/*.c",
+    "src/timer/unix/*.c",
+    "src/filesystem/cocoa/*.m",
+    "src/storage/generic/*.c",
+    "src/filesystem/posix/*.c",
+]
+#   if(SDL_SENSOR) && if(IOS OR VISIONOS OR WATCHOS)
+COREMOTION_SENSOR_SRCS = ["src/sensor/coremotion/*.m"]
+#   if(SDL_VULKAN OR SDL_METAL OR SDL_RENDER_METAL)
+#       if(HAVE_FRAMEWORK_METAL) && if (SDL_GPU)
+METAL_FRAMEWORK_SRCS = [
+    "src/render/metal/*.m",
+    "src/gpu/metal/*.m",
+]
+#   if(MACOS)
+MACOS_TRAY_SRCS = ["src/tray/cocoa/*.m"]
+#   if(SDL_COCOA)
+COCOA_VIDEO_SRCS = ["src/video/cocoa/*.m"]
+
+# if (SDL_DIALOG)
+GENERAL_DIALOG_SRCS = ["src/dialog/*.c"]
+#   if(MACOS)
+MACOS_DIALOG_SRCS = ["src/dialog/cocoa/*.m"]
+
+GENERAL_PROCESS_SRCS = ["src/process/*.c"]
+POSIX_PROCESS_SRCS = ["src/process/posix/*.c"]
+
+# if(SDL_PTHREADS)
+PTHREAD_THREAD_SRCS = ["src/thread/pthread/*.c"]
+
+# if(SDL_VIDEO) && if(SDL_OFFSCREEN)
+GENERAL_OFFSCREEN_SRCS = ["src/video/offscreen/*.c"]
+
+GENERAL_TRAY_SRCS = ["src/tray/*.c"]
+
+DUMMY_SENSOR_SRCS = ["src/sensor/dummy/*.c"]
+
+HIDAPI_JOYSTICK_SRCS = ["src/joystick/hidapi/*.c"]
+
+VULKAN_GPU_SRCS = ["src/gpu/vulkan/*.c"]
+
+HIDAPI_HAPTIC_SRCS = ["src/haptic/hidapi/*.c"]
+
+objc_library(
+    name = "sdl3_darwin",
+    srcs = glob(
+        GENERAL_SRCS
+        + GENERAL_MAIN_SRCS
+        + DUMMYAUDIO_SRCS
+        + DISKAUDIO_SRCS
+        + DUMMYCAMERA_SRCS
+        + VIRTUAL_JOYSTICK_SRCS
+        + DUMMYVIDEO_SRCS
+
+        + DLOPEN_SRCS
+        + APPLE_CAMERA_SRCS
+        + DARWIN_MISC_SRCS
+        + APPLE_AUDIO_SRCS
+        + APPLE_JOYSTICK_SRCS
+        + DARWIN_JOYSTICK_SRCS
+        + DARWIN_HAPTIC_SRCS
+        + DARWIN_POWER_SRCS
+        + APPLE_GENERAL_SRCS
+        + METAL_FRAMEWORK_SRCS
+        + GENERAL_TRAY_SRCS
+        + MACOS_TRAY_SRCS
+        + COCOA_VIDEO_SRCS
+        + COREMOTION_SENSOR_SRCS
+        + HIDAPI_JOYSTICK_SRCS
+
+        + GENERAL_DIALOG_SRCS
+        + MACOS_DIALOG_SRCS
+        + GENERAL_PROCESS_SRCS
+        + POSIX_PROCESS_SRCS
+        + PTHREAD_THREAD_SRCS
+        + GENERAL_OFFSCREEN_SRCS
+        + DUMMY_SENSOR_SRCS
+        + VULKAN_GPU_SRCS
+
+        + HIDAPI_HAPTIC_SRCS
+    ),
+    hdrs = glob(["include/**/*.h"]),
+    copts = [
+        # lot of warning: '<name>' is deprecated: first deprecated in macOS 13.0 - Use MTLGPUFamily instead [-Wdeprecated-declarations]
+        "-Wno-deprecated-declarations",
+        # SDL_tray.m:379:98: warning: undeclared selector 'menu:' [-Wundeclared-selector]
+        "-Wno-undeclared-selector",
+    ],
+    includes = [
+        "src",
+        "include",
+        "include/build_config",
+        "src/video/khronos",
+    ],
+    linkopts = [
+        "-framework", "CoreGraphics",
+        "-framework", "CoreAudio",
+        "-framework", "CoreHaptics",
+        "-framework", "CoreMedia",
+        "-framework", "CoreVideo",
+        "-framework", "AVFoundation",
+        "-framework", "AudioToolbox",
+        "-framework", "ForceFeedback",
+        "-framework", "GameController",
+        "-framework", "IOKit",
+        "-framework", "Carbon",
+        "-framework", "Metal",
+        "-framework", "AppKit",
+        "-framework", "QuartzCore",
+        "-framework", "UniformTypeIdentifiers",
+    ],
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "sdl3_wasm",
+    srcs = glob(
+        GENERAL_SRCS
+        + DUMMYAUDIO_SRCS
+        + DUMMYCAMERA_SRCS
+        + GENERAL_TRAY_SRCS
+        + DUMMY_SENSOR_SRCS
+        + [
+            "src/main/emscripten/*.c",
+            "src/thread/generic/*.c",
+            "src/tray/dummy/*.c",
+            "src/libm/*.c",
+            "src/timer/unix/*.c",
+            "src/video/dummy/*.c",
+            "src/video/emscripten/*.c",
+
+            "src/joystick/dummy/*.c",
+            "src/misc/*.c",
+            "src/misc/emscripten/*.c",
+            "src/filesystem/emscripten/*.c",
+        ]
+    ),
+    copts = [
+        "-DHAVE_STDIO_H",
+        "-DSDL_TIMER_UNIX",
+        "-DSDL_VIDEO_DRIVER_EMSCRIPTEN",
+        "-DSDL_FILESYSTEM_EMSCRIPTEN",
+    ],
+    hdrs = glob(["include/**/*.h"]),
+    includes = [
+        "src",
+        "include",
+        "include/build_config",
+    ],
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "sdl3_bazel",
+    deps = select({
+        "@bazel_tools//src/conditions:darwin": [":sdl3_darwin"],
+        "@platforms//cpu:wasm32": [":sdl3_wasm"],
+
+        # fallback on undone platform - via cmake rule
+        "//conditions:default": [":sdl3_static"],
+    })
+)
+
+################################
+# Convenience library depending on selected rule feature
+################################
+cc_library(
+    name = "sdl3",
+    deps = select({
+        ":via_cmake": [":sdl3_static"],
+        ":via_bazel": [":sdl3_bazel"],
+    }),
+    visibility = ["//visibility:public"],
+)

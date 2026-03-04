@@ -1,0 +1,38 @@
+--- BUILD.bazel	2026-01-15 09:51:13.992055400 +0100
++++ BUILD.bazel	2026-03-04 22:45:05.971503469 +0100
+@@ -58,6 +58,7 @@
+         "-DSDL_SHARED=false",
+         "-DSDL_PTHREADS=true",
+     ] + select({
++        "@platforms//os:android": ["-DSDL_TEST_LIBRARY=OFF"],  # test libcheckkeys.so fails to link on Android now
+         "@platforms//cpu:wasm32": ["-DEMSCRIPTEN=true"],
+         "@platforms//os:wasi": ["-DEMSCRIPTEN=true"],
+         "//conditions:default": []
+@@ -82,6 +83,10 @@
+     deps = [":sdl3_static_base"],
+     # link options to be passed up to the dependencies of this library
+     linkopts = select({
++        "@platforms//os:android": [
++            "-lOpenSLES",  # slCreateEngine, SL_IID_VOLUME, etc (OpenSL ES)
++            "-lGLESv2",    # glActiveTexture, etc (GLES 2.0/3.0)
++        ],
+         "@bazel_tools//src/conditions:darwin": [
+             "-framework", "CoreGraphics",
+             "-framework", "CoreAudio",
+@@ -363,3 +368,16 @@
+     }),
+     visibility = ["//visibility:public"],
+ )
++
++filegroup(
++    name = "sdl3_android_java_srcs",
++    srcs = glob(["android-project/app/src/main/java/org/libsdl/app/*.java"]),
++    visibility = ["//visibility:public"],
++)
++
++# load("@rules_android//rules:rules.bzl", "android_library")
++# android_library(
++#     name = "sdl3_android",
++#     srcs = ":sdl3_android_java_srcs",
++#     visibility = ["//visibility:public"],
++# )
