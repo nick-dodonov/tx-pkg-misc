@@ -57,6 +57,8 @@ cmake(
         "-DSDL_STATIC=true",
         "-DSDL_SHARED=false",
         "-DSDL_PTHREADS=true",
+
+        "-DSDL_TEST_LIBRARY=OFF",  #TODO: config_setting with default ON, and disable only for Android where it fails to link now
     ] + select({
         "@platforms//os:android": ["-DSDL_TEST_LIBRARY=OFF"],  # test libcheckkeys.so fails to link on Android now
         "@platforms//cpu:wasm32": ["-DEMSCRIPTEN=true"],

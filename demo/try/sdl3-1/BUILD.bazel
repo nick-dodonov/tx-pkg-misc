@@ -1,13 +1,14 @@
 load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
-
 load("@rules_android//rules:rules.bzl", "android_library")
+
 android_library(
-    name = "sdl3_android",
+    name = "sdl3-1_android",
     srcs = [
-        "@sdl3//:sdl3_android_java_srcs",
         "TryActivity.java",
     ],
-    visibility = ["//visibility:public"],
+    deps = [
+        "//demo/try/sdl3-1/lib:sdl3_android",
+    ],
 )
 
 multi_app(
@@ -16,15 +17,9 @@ multi_app(
     data = [".env"],
     deps = [
         "@tx-pkg-aux//src/pkg-boot",
-        "@sdl3",
+        ":sdl3-1_android",
     ],
-    droid_deps = [":sdl3_android"],
     droid_manifest = "AndroidManifest.xml",
-    #TODO: add support for sdl3_shared build on platforms except wasm32
-    # + select({
-    #     "@platforms//cpu:wasm32": ["@sdl3//:sdl3_static"],
-    #     "//conditions:default": ["@sdl3//:sdl3_shared"],
-    # }),
     linkopts = select({
         #"@platforms//os:android": ["-Wl,--undefined=SDL_main"],
         "//conditions:default": [],
