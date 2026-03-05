@@ -1,23 +1,13 @@
 load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
-load("@rules_android//rules:rules.bzl", "android_library")
-
-android_library(
-    name = "sdl3-1_android",
-    srcs = [
-        "TryActivity.java",
-    ],
-    deps = [
-        "@sdl3",
-    ],
-)
 
 multi_app(
     name = "sdl3-1",
     srcs = glob(["*.cpp"]),
+    droid_srcs = ["TryActivity.java"],
     data = [".env"],
     deps = [
         "@tx-pkg-aux//src/pkg-boot",
-        ":sdl3-1_android",
+        "@sdl3",
     ],
     droid_manifest = "AndroidManifest.xml",
     linkopts = select({
