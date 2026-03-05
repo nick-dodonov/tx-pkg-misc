@@ -8,8 +8,11 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
+#include "imgui_internal.h"
 
 #include <SDL3/SDL.h>
+#define SDL_MAIN_HANDLED
+#include <SDL3/SDL_main.h>
 
 #include <filesystem>
 
@@ -53,11 +56,17 @@ int main(int argc, const char** argv)
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+    auto* context = ImGui::CreateContext();
+    context->ErrorCallback = [](ImGuiContext* ctx, void* user_data, const char* msg) { 
+        Log::Error("ImGui error: {}", msg);
+    };
+
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    io.ConfigErrorRecoveryEnableAssert = false; // disable asserts on errors (don't crash app)
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -102,6 +111,7 @@ int main(int argc, const char** argv)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
+    Log::Debug("Starting main loop");
     bool done = false;
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
@@ -201,3 +211,12 @@ int main(int argc, const char** argv)
 
     return 0;
 }
+
+#if __ANDROID__
+void redirect_stdout_to_logcat(void);
+extern "C" int SDLCALL SDL_main(int argc, char *argv[])
+{
+    redirect_stdout_to_logcat();
+    return main(argc, (const char**)argv);
+}
+#endif

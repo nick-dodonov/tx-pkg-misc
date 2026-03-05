@@ -8,10 +8,9 @@
 namespace
 {
     static constexpr int DefaultTimeoutSeconds = 2;
-    std::shared_ptr<App::Domain> domain;
 }
 
-[[maybe_unused]] static boost::asio::awaitable<int> CoroMain(std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
+[[maybe_unused]] static boost::asio::awaitable<int> CoroMain(std::shared_ptr<App::Domain> domain, std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
 {
     if (timeoutSeconds <= 0) {
         Log::Info("WAITING: stop signal...");
@@ -132,7 +131,7 @@ int main(const int argc, const char* argv[])
     );
 
     // Create domain with custom runner
-    domain = std::make_shared<App::Domain>();
+    auto domain = std::make_shared<App::Domain>();
     composite->Add(*domain);
-    return domain->RunCoroMain(runner, CoroMain(runner, timeoutSeconds));
+    return domain->RunCoroMain(runner, CoroMain(domain, runner, timeoutSeconds));
 }

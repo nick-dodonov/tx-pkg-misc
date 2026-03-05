@@ -2,7 +2,6 @@
 #include "Log/Log.h"
 
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_version.h>
 
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL_main.h>
@@ -21,7 +20,7 @@ struct Context {
 
 void mainLoop(void* arg)
 {
-    Context* ctx = static_cast<Context*>(arg);
+    auto* ctx = static_cast<Context*>(arg);
     SDL_Event event;
 
     // Event handling
@@ -35,7 +34,7 @@ void mainLoop(void* arg)
             }
         }
 
-        if (ctx->running == false) {
+        if (!ctx->running) {
 #ifdef __EMSCRIPTEN__
             emscripten_cancel_main_loop();
 #endif
@@ -48,7 +47,8 @@ void mainLoop(void* arg)
     SDL_RenderClear(ctx->renderer);
 
     // Put your drawing code here
-    int w, h;
+    int w = 0;
+    int h = 0;
     SDL_GetWindowSize(ctx->window, &w, &h);
     //Log::Debug("Window size: {}x{}", w, h);
 
@@ -104,7 +104,7 @@ int main(int argc, const char** argv)
 
     // Create context for main loop
     Log::Info("Context...");
-    Context context;
+    Context context = {};
     context.renderer = renderer;
     context.window = window;
     context.running = true;
