@@ -6,6 +6,7 @@
     <application
         android:label="Try Sdl App"
         android:hasCode="true"
+        android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
         >
         <activity
             android:name="TryActivity"

@@ -12,8 +12,10 @@ multi_app(
     srcs = glob(["*.cpp"]),
     deps = [
         "@tx-pkg-aux//src/pkg-boot",
-        "@sdl3",
+        "//demo/try/sdl3-lib",
     ],
+    droid_manifest = "//demo/try/sdl3-lib:AndroidManifest.xml",
+
     data = [
         ".env",
         ":copy_data",
@@ -26,5 +28,5 @@ multi_app(
         "@platforms//cpu:wasm32": ["--preload-file", "$(execpath :copy_data)@/data"],
         "//conditions:default": [],
     }),
-    platforms = ["host", "wasm"],
+    # platforms = ["host", "wasm"],
 )

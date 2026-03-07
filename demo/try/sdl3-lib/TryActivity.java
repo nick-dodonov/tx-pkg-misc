@@ -1,13 +1,15 @@
 package com.tx;
 
 import android.content.pm.PackageManager;
+// import android.view.View;
+// import android.view.WindowManager;
 import android.os.Bundle;
 import android.util.Log;
 
 import org.libsdl.app.SDLActivity;
 
 public class TryActivity extends SDLActivity {
-    private final String TAG = "sdl.M";
+    private final String TAG = "try.A";
 
     // Using the same <meta-data> notation as NativeActivity for convenience
     public static final String META_DATA_LIB_NAME = "android.app.lib_name";
@@ -16,7 +18,7 @@ public class TryActivity extends SDLActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.d(TAG, ">>>>>>>>>>>>>>>> onCreate >>>>>>>>>>>>>>>>");
+        Log.d(TAG, "->->->-> onCreate");
 
         // Get the library name from the manifest meta-data, defaulting to "app" if not specified
         try {

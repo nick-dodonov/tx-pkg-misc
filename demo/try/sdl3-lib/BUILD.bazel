@@ -5,7 +5,7 @@ exports_files(["AndroidManifest.xml"])
 # SDL3 wrapper library with Android glue code, allowing to declare simple main() function in C++ app
 multi_lib(
     name = "sdl3-lib",
-    srcs = glob(["*.cpp"]),
+    srcs = glob(["*.cc"]),
     droid_srcs = ["TryActivity.java"],
     # droid_manifest = "AndroidManifest.xml",
     droid_library = True,
