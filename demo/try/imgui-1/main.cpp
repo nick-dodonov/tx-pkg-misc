@@ -90,17 +90,34 @@ int main(int argc, const char** argv)
     //style.FontSizeBase = 60.0f;
     //io.Fonts->AddFontDefault(&font_cfg);
     auto size_pixels = 15.0f;// * main_scale;
-    const auto fonts_dir = 
-        std::filesystem::current_path()
-        //std::filesystem::path(argv[0]).parent_path()
-        / "data" / "fonts";
+    // const auto fonts_dir = 
+    //     std::filesystem::current_path()
+    //     //std::filesystem::path(argv[0]).parent_path()
+    //     / "data" / "fonts";
+
+    const auto fonts_dir = std::filesystem::path("./data/fonts");
     const auto* font_name =
         "Roboto-Medium.ttf"
     ;
     const auto font_path = fonts_dir / font_name;
-    const auto font_path_str = font_path.string();
-    Log::Debug("Loading font: {}", font_path_str);
-    io.Fonts->AddFontFromFileTTF(font_path_str.c_str(), size_pixels);
+    Log::Debug("Loading font: {}", font_path.c_str());
+#if __ANDROID__
+    // On Android we are using the "assets" storage for font files, which is read-only and doesn't support fopen() (required by ImGui's default font loading implementation).
+    // To work around this, we are SDL abstraction instead
+    size_t size = {};
+    void* data = SDL_LoadFile(
+        font_path.c_str(),
+        &size);
+    if (data) {
+        ImFontConfig font_cfg = ImFontConfig();
+        io.Fonts->AddFontFromMemoryTTF(data, (int)size, size_pixels);
+        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s", font_path.filename().c_str());
+    } else {
+        Log::Error("Failed to load font data from assets: {}", SDL_GetError());
+    }
+#else
+    io.Fonts->AddFontFromFileTTF(font_path.c_str(), size_pixels);
+#endif
     //IM_ASSERT(font != nullptr);
 
     // Our state

@@ -7,6 +7,12 @@ copy_directory(
     out = "data",
 )
 
+copy_directory(
+    name = "assets_copy_data",
+    src = "data",
+    out = "assets/data",
+)
+
 multi_app(
     name = "sdl3-2",
     srcs = glob(["*.cpp"]),
@@ -15,6 +21,8 @@ multi_app(
         "//demo/try/sdl3-lib",
     ],
     droid_manifest = "//demo/try/sdl3-lib:AndroidManifest.xml",
+    droid_assets = [":assets_copy_data"],
+    droid_assets_dir = "assets",
 
     data = [
         ".env",
