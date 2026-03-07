@@ -26,4 +26,5 @@ multi_app(
         "@platforms//cpu:wasm32": ["--preload-file", "$(execpath :copy_data)@/data"],
         "//conditions:default": [],
     }),
+    platforms = ["host", "wasm"],
 )

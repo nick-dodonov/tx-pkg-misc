@@ -3,15 +3,15 @@ load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
 multi_app(
     name = "imgui-1",
     srcs = glob(["*.cpp", "*.h"]),
-    droid_srcs = ["TryActivity.java"],
-    droid_manifest = "AndroidManifest.xml",
     deps = [
         "@tx-pkg-aux//src/pkg-boot",
         "@imgui//:imgui",
         "@imgui//backends:platform-sdl3",
         "@imgui//backends:renderer-sdlrenderer3",  #TODO: try SDL_GPU renderer as more modern and advanced
-        "@sdl3",
+        "//demo/try/sdl3-lib",
     ],
+    droid_manifest = "//demo/try/sdl3-lib:AndroidManifest.xml",
+
     data = [
         ".env",
         "//data:fonts_dir",

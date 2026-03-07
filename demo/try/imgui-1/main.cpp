@@ -11,8 +11,6 @@
 #include "imgui_internal.h"
 
 #include <SDL3/SDL.h>
-#define SDL_MAIN_HANDLED
-#include <SDL3/SDL_main.h>
 
 #include <filesystem>
 
@@ -211,12 +209,3 @@ int main(int argc, const char** argv)
 
     return 0;
 }
-
-#if __ANDROID__
-void redirect_stdout_to_logcat(void);
-extern "C" int SDLCALL SDL_main(int argc, char *argv[])
-{
-    redirect_stdout_to_logcat();
-    return main(argc, (const char**)argv);
-}
-#endif
