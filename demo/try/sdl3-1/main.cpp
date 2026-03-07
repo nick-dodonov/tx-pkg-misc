@@ -3,9 +3,6 @@
 
 #include <SDL3/SDL.h>
 
-#define SDL_MAIN_HANDLED
-#include <SDL3/SDL_main.h>
-
 #ifdef __EMSCRIPTEN__
     #include <emscripten.h>
     #include <emscripten/html5.h>
@@ -59,7 +56,7 @@ void mainLoop(void* arg)
     SDL_RenderPresent(ctx->renderer);
 }
 
-int main(int argc, const char** argv)
+int main(int argc, const char* argv[])
 {
     Boot::LogHeader({argc, argv});
     Log::Info("SDL3 try demo 1st");
@@ -135,12 +132,3 @@ int main(int argc, const char** argv)
 
     return 0;
 }
-
-#if __ANDROID__
-void redirect_stdout_to_logcat(void);
-extern "C" int SDLCALL SDL_main(int argc, char *argv[])
-{
-    redirect_stdout_to_logcat();
-    return main(argc, (const char**)argv);
-}
-#endif

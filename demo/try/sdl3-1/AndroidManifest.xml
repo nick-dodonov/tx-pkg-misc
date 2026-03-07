@@ -11,9 +11,9 @@
             android:name="TryActivity"
             android:exported="true" >
 
-            <!-- <meta-data
+            <meta-data
                 android:name="android.app.lib_name"
-                android:value="__LIB_NAME__" /> -->
+                android:value="$LIB_NAME" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
