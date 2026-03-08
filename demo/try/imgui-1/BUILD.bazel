@@ -17,7 +17,6 @@ multi_app(
         "@imgui//backends:renderer-sdlrenderer3",  #TODO: try SDL_GPU renderer as more modern and advanced
         "//demo/try/sdl3-lib",
     ],
-    droid_manifest = "//demo/try/sdl3-lib:AndroidManifest.xml",
     droid_assets = [":assets_copy_data"],
     droid_assets_dir = "assets",
 
