@@ -1,7 +1,7 @@
 load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
 
 multi_app(
-    name = "hello-im",
+    name = "im",
     srcs = glob(["**/*.cpp"]),
     data = [".env"],
     deps = [

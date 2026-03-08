@@ -1,12 +1,8 @@
 load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
 
 multi_app(
-    name = "hello-sdl",
-    srcs = [
-        "main.cpp",
-        "FpsCounter.cpp",
-        "FpsCounter.h",
-    ],
+    name = "sdl",
+    srcs = glob(["*.cpp", "*.h"]),
     data = [".env"],
     deps = [
         "//src/pkg-sdl",

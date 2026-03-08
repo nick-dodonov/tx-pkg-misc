@@ -7,7 +7,7 @@ var_providing_rule(
 )
 
 multi_app(
-    name = "hello-aux",
+    name = "aux",
     srcs = glob(["*.cpp"]),
     local_defines = [
         "FOO=$(FOO)",
