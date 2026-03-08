@@ -24,9 +24,10 @@ Window window{SDL_CreateWindow("Title", 800, 600, 0)};
  *
  * This code is public domain. Feel free to use it for any purpose!
  */
-#include <SDL3/SDL.h>
 #define SDL_MAIN_USE_CALLBACKS 1 /* use the callbacks instead of main() */
 #include <SDL3/SDL_main.h>
+
+#include <SDL3/SDL.h>
 #include <SDL3/SDL_pixels.h>
 
 /* We will use this renderer to draw into this window every frame. */

@@ -13,7 +13,9 @@ multi_lib(
         "@sdl3",
     ],
     linkopts = select({
-        "@platforms//os:android": ["-Wl,--undefined=SDL_main"],
+        "@platforms//os:android": [
+            "-Wl,--undefined=SDL_main",
+        ],
         "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
