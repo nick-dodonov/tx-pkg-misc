@@ -44,7 +44,7 @@ git_override(
     verbose = True,
 )
 
-bazel_dep(name = "boost.asio", version = "1.89.0.bcr.1.1-tx.1")  # private registry
+bazel_dep(name = "boost.asio", version = "1.89.0.bcr.1.1-tx.2")  # private registry
 bazel_dep(name = "sdl3", version = "3.4.0-tx.2")  # private registry
 
 bazel_dep(name = "imgui", version = "1.92.5-docking-tx.1")  # private registry

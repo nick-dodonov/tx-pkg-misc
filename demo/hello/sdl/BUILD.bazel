@@ -7,4 +7,5 @@ multi_app(
     deps = [
         "//src/pkg-sdl",
     ],
+    droid_manifest = "//demo/try/sdl3-lib:AndroidManifest.xml",
 )
