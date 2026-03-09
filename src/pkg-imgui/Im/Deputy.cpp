@@ -1,9 +1,11 @@
 #include "Deputy.h"
 #include "Log/Log.h"
 
-#include "Fs/OverlayDrive.h"
-#include "Fs/RunfilesDrive.h"
-#include "Fs/System.h"
+// #include "Fs/System.h"
+// #include "Fs/Drive.h"
+// #include "Fs/OverlayDrive.h"
+// #include "Fs/RunfilesDrive.h"
+#include <filesystem>
 
 #include "Sdl/RendererScopes.h"
 #include <SDL3/SDL_render.h>
@@ -16,7 +18,7 @@
 namespace Im
 {
     static const float DefaultFontSize = 15.0f;
-    static const auto DefaultFontsDir = "data/fonts";
+    static const auto DefaultFontsDir = std::filesystem::path("data/fonts");
     static const auto DefaultUiFont = "Roboto-Medium.ttf";
     static const auto DefaultMonoFont = "JetBrainsMono-Bold.ttf";
     static const std::array DefaultFonts = {
@@ -87,34 +89,32 @@ namespace Im
     void Deputy::LoadFonts()
     {
         // TODO: setup drive externally
-        // Setup drive system for font loading
-        Fs::RunfilesDrive runfilesDrive("tx-pkg-misc");
-        auto& defaultDrive = Fs::System::GetDefaultDrive();
-
-        Fs::Drive* drive = &defaultDrive;
-        Fs::OverlayDrive overlayDrive({&runfilesDrive, &defaultDrive});
-
-        if (runfilesDrive.IsSupported()) {
-            _logger.Debug("Using runfiles overlay drive");
-            drive = &overlayDrive;
-        } else {
-            _logger.Debug("Using default drive");
-        }
+        // // Setup drive system for font loading
+        // auto& defaultDrive = Fs::System::GetDefaultDrive();
+        // Fs::Drive* drive = &defaultDrive;
+        // Fs::RunfilesDrive runfilesDrive("tx-pkg-misc");
+        // Fs::OverlayDrive overlayDrive({&runfilesDrive, &defaultDrive});
+        // if (runfilesDrive.IsSupported()) {
+        //     _logger.Debug("Using runfiles overlay drive");
+        //     drive = &overlayDrive;
+        // } else {
+        //     _logger.Debug("Using default drive");
+        // }
 
         bool font_loaded = false;
         for (const auto& font_name : DefaultFonts) {
-            const std::string relative_path = std::string{DefaultFontsDir} + "/" + std::string{font_name};
+            auto font_path = DefaultFontsDir / font_name;
 
-            auto result = drive->GetNativePath(relative_path);
-            if (!result.has_value()) {
-                _logger.Warn("Resolve failed: {} (error: {})", relative_path, result.error().message());
-                continue;
-            }
+            // auto result = drive->GetNativePath(relative_path);
+            // if (!result.has_value()) {
+            //     _logger.Warn("Resolve failed: {} (error: {})", relative_path, result.error().message());
+            //     continue;
+            // }
 
-            const std::string& native_path = result.value();
-            _logger.Trace("Resolved path: {} -> {}", relative_path, native_path);
+            // std::string& native_path = result.value();
+            // _logger.Trace("Resolved path: {} -> {}", relative_path, native_path);
 
-            if (_io->Fonts->AddFontFromFileTTF(native_path.c_str(), DefaultFontSize) != nullptr) {
+            if (AddFontFromFileTTF(font_path, DefaultFontSize)) {
                 _logger.Debug("Loaded: {}", font_name);
                 font_loaded = true;
             } else {
@@ -125,6 +125,26 @@ namespace Im
         if (!font_loaded) {
             _logger.Warn("Failed to load any font, using default");
         }
+    }
+
+    bool Deputy::AddFontFromFileTTF(const std::filesystem::path& path, float size_pixels)
+    {
+#if __ANDROID__
+        // On Android default is using the "assets" storage for font files, which is read-only and doesn't support fopen() (required by ImGui's default font loading implementation).
+        // To work around this, we are SDL load file abstraction
+        size_t size = 0;
+        void* data = SDL_LoadFile(path.c_str(), &size);
+        if (data) {
+            ImFontConfig font_cfg = ImFontConfig();
+            _io->Fonts->AddFontFromMemoryTTF(data, (int)size, size_pixels);
+            ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s", path.filename().c_str());
+            return true;
+        }
+        //Log::Error("Failed to load font data from assets: {}", SDL_GetError());
+        return false;
+#else
+        return _io->Fonts->AddFontFromFileTTF(path.c_str(), size_pixels) != nullptr;
+#endif
     }
 
     void Deputy::UpdateBegin()

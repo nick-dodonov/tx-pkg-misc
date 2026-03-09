@@ -1,4 +1,11 @@
 load("@tx-kit-ext//rules/build:multi_lib.bzl", "multi_lib")
+load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
+
+copy_directory(
+    name = "assets_copy_data",
+    src = "//data:fonts_dir",
+    out = "assets/data/fonts",
+)
 
 multi_lib(
     name = "pkg-imgui",
@@ -15,9 +22,12 @@ multi_lib(
 
     droid_library = True,
     droid_srcs = ["Dummy.java"],
+    droid_assets = [":assets_copy_data"],
+    droid_assets_dir = "assets",
+    droid_custom_package = "org.tx.imgui",
 
     data = [
-        "//data:fonts_dir",
+        "//data:fonts_group",
     ],
     additional_linker_inputs = select({
         "@platforms//cpu:wasm32": ["//data:fonts_dir"],
