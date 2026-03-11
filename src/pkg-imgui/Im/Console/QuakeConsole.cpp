@@ -53,7 +53,7 @@ namespace Im
         , _sink(std::make_shared<Detail::ConsoleSinkMt>(_buffer))
         , _visible(initiallyVisible)
         , _animationProgress(initiallyVisible ? 1.0f : 0.0f)
-        , _shouldFocusInput(initiallyVisible)
+        , _focusTarget(initiallyVisible ? ConsoleFocus::CommandInput : ConsoleFocus::None)
     {}
 
     QuakeConsole::~QuakeConsole()
@@ -76,12 +76,17 @@ namespace Im
     {
         _visible = !_visible;
         if (_visible) {
-            _shouldFocusInput = true;
+            _focusTarget = ConsoleFocus::CommandInput;
         }
     }
 
     void QuakeConsole::Render()
     {
+        // Don't render if fully hidden
+        if (!_visible && _animationProgress <= 0.0f) {
+            return;
+        }
+
         const float deltaTime = ImGui::GetIO().DeltaTime;
 
         // Animate console sliding down/up
@@ -89,11 +94,6 @@ namespace Im
             _animationProgress = std::min(1.0f, _animationProgress + ANIMATION_SPEED * deltaTime);
         } else if (!_visible && _animationProgress > 0.0f) {
             _animationProgress = std::max(0.0f, _animationProgress - ANIMATION_SPEED * deltaTime);
-        }
-
-        // Don't render if fully hidden
-        if (_animationProgress <= 0.0f) {
-            return;
         }
 
         // Get window dimensions
@@ -118,17 +118,21 @@ namespace Im
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImGui::GetStyle().ItemSpacing);
         ImGui::PushStyleColor(ImGuiCol_WindowBg, CONSOLE_BG_COLOR);
 
-        const ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings;
+        const ImGuiWindowFlags windowFlags = 
+            ImGuiWindowFlags_NoTitleBar | 
+            ImGuiWindowFlags_NoCollapse | 
+            ImGuiWindowFlags_NoSavedSettings | 
+            ImGuiWindowFlags_NoDocking;
 
         if (ImGui::Begin("QuakeConsole", nullptr, windowFlags)) {
             RenderFilters();
             RenderLogOutput();
             RenderCommandInput();
 
-            // Set focus to input when console opens
-            if (_shouldFocusInput && _animationProgress > 0.95f) {
+            // Set focus to command input when console opens
+            if (_focusTarget == ConsoleFocus::CommandInput && _animationProgress > 0.95f) {
                 ImGui::SetKeyboardFocusHere(-1);
-                _shouldFocusInput = false;
+                _focusTarget = ConsoleFocus::None;
             }
         }
 
@@ -270,7 +274,19 @@ namespace Im
         const float closeButtonWidth = 20.0f;
         const float availableWidth = ImGui::GetContentRegionAvail().x - closeButtonWidth - itemSpacing - ImGui::GetStyle().ItemSpacing.x;
         ImGui::SetNextItemWidth(availableWidth);
+        
+        // Handle TAB navigation: set focus if requested
+        if (_focusTarget == ConsoleFocus::FilterInput) {
+            ImGui::SetKeyboardFocusHere();
+            _focusTarget = ConsoleFocus::None;
+        }
+        
         ImGui::InputTextWithHint("##FilterText", "Search...", _filterText.data(), _filterText.size());
+        
+        // Handle Shift+TAB to go back to command input
+        if (ImGui::IsItemActive() && ImGui::IsKeyPressed(ImGuiKey_Tab) && ImGui::GetIO().KeyShift) {
+            _focusTarget = ConsoleFocus::CommandInput;
+        }
 
         ImGui::SameLine();
         ImGui::Dummy(ImVec2(itemSpacing, 0));
@@ -355,6 +371,13 @@ namespace Im
         const ImGuiInputTextFlags inputFlags = ImGuiInputTextFlags_EnterReturnsTrue;
 
         ImGui::PushItemWidth(-1);
+        
+        // Handle focus request from TAB navigation
+        if (_focusTarget == ConsoleFocus::CommandInput) {
+            ImGui::SetKeyboardFocusHere();
+            _focusTarget = ConsoleFocus::None;
+        }
+        
         if (ImGui::InputText("##ConsoleInput", inputBuf.data(), inputBuf.size(), inputFlags)) {
             // Handle command input
             if (inputBuf[0] != '\0') {
@@ -365,6 +388,12 @@ namespace Im
             // Keep focus on input after executing command
             ImGui::SetKeyboardFocusHere(-1);
         }
+        
+        // Handle TAB to move to filter input
+        if (ImGui::IsItemActive() && ImGui::IsKeyPressed(ImGuiKey_Tab) && !ImGui::GetIO().KeyShift) {
+            _focusTarget = ConsoleFocus::FilterInput;
+        }
+        
         ImGui::PopItemWidth();
     }
 

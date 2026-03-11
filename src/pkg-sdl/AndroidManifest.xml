@@ -3,6 +3,10 @@
     android:versionCode="1"
     android:versionName="1.0" >
 
+    <uses-sdk
+        android:minSdkVersion="24"
+        android:targetSdkVersion="35" />
+
     <application
         android:label="Sdl App"
         android:hasCode="true"

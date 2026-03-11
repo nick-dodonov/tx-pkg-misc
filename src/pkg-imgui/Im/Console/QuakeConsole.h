@@ -31,6 +31,14 @@ namespace Im
         void Clear();
 
     private:
+        // Focus target for TAB navigation
+        enum class ConsoleFocus
+        {
+            None,
+            CommandInput,
+            FilterInput
+        };
+
         void ExecuteCommand(const std::string& command);
 
         [[nodiscard]] bool IsLogLevelEnabled(spdlog::level::level_enum level) const;
@@ -46,7 +54,7 @@ namespace Im
         bool _visible = false;
         float _animationProgress = 0.0f;  // 0.0 = hidden, 1.0 = fully visible
         bool _autoScroll = true;
-        bool _shouldFocusInput = false;
+        ConsoleFocus _focusTarget = ConsoleFocus::None;
         float _consoleHeight = 0.0f;  // User-defined height, 0 = use default
         
         // Log level filters
