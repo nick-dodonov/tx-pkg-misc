@@ -1,4 +1,4 @@
-load("@tx-kit-ext//rules/build:multi_lib.bzl", "multi_lib")
+load("@tx-kit-ext//rules:multi_lib.bzl", "multi_lib")
 
 multi_lib(
     name = "pkg-sdl",

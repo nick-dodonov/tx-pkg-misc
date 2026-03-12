@@ -1,4 +1,4 @@
-load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_test")
+load("@tx-kit-ext//rules:multi_app.bzl", "multi_test")
 
 multi_test(
     name = "misc",

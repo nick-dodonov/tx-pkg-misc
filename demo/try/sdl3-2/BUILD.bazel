@@ -1,4 +1,4 @@
-load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
+load("@tx-kit-ext//rules:multi_app.bzl", "multi_app")
 load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
 
 copy_directory(

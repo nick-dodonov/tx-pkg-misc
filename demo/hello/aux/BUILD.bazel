@@ -1,4 +1,4 @@
-load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
+load("@tx-kit-ext//rules:multi_app.bzl", "multi_app")
 load("@tx-pkg-aux//uni/tools/build_info:generate_build_info.bzl", "var_providing_rule")
 
 var_providing_rule(
