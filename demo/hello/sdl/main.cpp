@@ -7,7 +7,9 @@
 
 namespace
 {
-    static constexpr int DefaultTimeoutSeconds = 2;
+    static constexpr int DefaultTimeoutSeconds = 20; // 0 means no timeout, wait for quit event
+    static constexpr float DebugTextLineHeight = 8.0f; // SDL_RenderDebugText line height in scaled coordinates
+    static constexpr float DebugTextScale = 3.0f; // Scale applied to debug text rendering
 }
 
 [[maybe_unused]] static boost::asio::awaitable<int> CoroMain(std::shared_ptr<App::Domain> domain, std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
@@ -40,16 +42,18 @@ namespace
     co_return timeoutSeconds;
 }
 
+
 struct MyHandler
     : App::Loop::Handler
     , Sdl::Loop::Sdl3Handler
 {
+    FpsCounter fpsCounter;
+
     void Update(const App::Loop::UpdateCtx& ctx) override
     {
         auto* renderer = (dynamic_cast<Sdl::Loop::Sdl3Runner&>(ctx.Runner)).GetRenderer();
 
         // FPS counter
-        static FpsCounter fpsCounter;
         fpsCounter.AddFrame(ctx.frame.deltaSeconds);
 
         // Accumulate elapsed time from frame deltas
@@ -72,22 +76,65 @@ struct MyHandler
         auto g = static_cast<Uint8>(80 + 40 * std::sinf(elapsed * 2.0f));
 
         SDL_SetRenderDrawColor(renderer, r, g, 50, 255);
-        SDL_FRect rect = {x - size / 2, y - size / 2, size, size};
+        SDL_FRect rect = {
+            .x=x - size / 2, 
+            .y=y - size / 2, 
+            .w=size, 
+            .h=size
+        };
         SDL_RenderFillRect(renderer, &rect);
 
         // Second rectangle rotating opposite direction
         float x2 = centerX + radius * std::cosf(-elapsed * 1.5f);
         float y2 = centerY + radius * std::sinf(-elapsed * 1.5f);
         SDL_SetRenderDrawColor(renderer, 100, 200, 100, 255);
-        SDL_FRect rect2 = {x2 - 25, y2 - 25, 50, 50};
+        SDL_FRect rect2 = {
+            .x=x2 - 25,
+            .y=y2 - 25,
+            .w=50, 
+            .h=50
+        };
         SDL_RenderFillRect(renderer, &rect2);
 
-        // Render debug text with session and frame info
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderDebugTextFormat(renderer, 10.0f, 10.0f, "Session Time: %.2f s", ctx.session.passedSeconds);
-        SDL_RenderDebugTextFormat(renderer, 10.0f, 20.0f, "Frame Index: %llu", static_cast<unsigned long long>(ctx.frame.index));
-        SDL_RenderDebugTextFormat(renderer, 10.0f, 30.0f, "Delta: %.2f ms", ctx.frame.deltaSeconds * 1000.0f);
-        SDL_RenderDebugTextFormat(renderer, 10.0f, 40.0f, "Avg FPS: %.1f", fpsCounter.GetAverageFps());
+        // Render debug text overlay
+        RenderDebugText(renderer, ctx);
+    }
+
+    void RenderDebugText(SDL_Renderer* renderer, const App::Loop::UpdateCtx& ctx) const
+    {
+        // Render debug text with session and frame info - scaled 2x
+        float scaleX = {};
+        float scaleY = {};
+        SDL_GetRenderScale(renderer, &scaleX, &scaleY);
+        SDL_SetRenderScale(renderer, DebugTextScale, DebugTextScale);
+        
+        SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);  // Yellow color
+        auto textY = 0.0f;
+        SDL_RenderDebugTextFormat(renderer, 5.0f, textY+DebugTextLineHeight*0.f, "Session Time: %.2f s", ctx.session.passedSeconds);
+        SDL_RenderDebugTextFormat(renderer, 5.0f, textY+DebugTextLineHeight*1.f, "Frame Index: %llu", static_cast<unsigned long long>(ctx.frame.index));
+        SDL_RenderDebugTextFormat(renderer, 5.0f, textY+DebugTextLineHeight*2.f, "Delta: %.2f ms", ctx.frame.deltaSeconds * 1000.0f);
+        SDL_RenderDebugTextFormat(renderer, 5.0f, textY+DebugTextLineHeight*3.f, "Avg FPS: %.1f", fpsCounter.GetAverageFps());
+        // Render header lines 4 through 10
+        for (int i = 4; i <= 10; ++i) {
+            auto headerY = textY + DebugTextLineHeight * i;
+            SDL_RenderDebugTextFormat(renderer, 5.0f, headerY, "Header line %d", i);
+        }
+
+        // Status bar at the bottom
+        int windowWidth = 0;
+        int windowHeight = 0;
+        SDL_GetRenderOutputSize(renderer, &windowWidth, &windowHeight);
+        auto statusBaseY = (static_cast<float>(windowHeight) / DebugTextScale) - (DebugTextLineHeight * 11);  // Reserve space for 10 lines + status
+        // Render lines 10 through 1
+        for (int i = 10; i >= 1; --i) {
+            auto lineY = statusBaseY + DebugTextLineHeight * (10 - i);
+            SDL_RenderDebugTextFormat(renderer, 5.0f, lineY, "Status line %d", i);
+        }
+        // Render status line
+        auto statusY = statusBaseY + DebugTextLineHeight * 10;
+        SDL_RenderDebugTextFormat(renderer, 5.0f, statusY, "Status: Running | Press ESC to quit");
+
+        SDL_SetRenderScale(renderer, scaleX, scaleY);
     }
 
     SDL_AppResult Sdl3Event(Sdl::Loop::Sdl3Runner& runner, const SDL_Event& event) override

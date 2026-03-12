@@ -7,14 +7,22 @@
         android:minSdkVersion="24"
         android:targetSdkVersion="35" />
 
+    <!--
+        android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+    -->
     <application
         android:label="Sdl App"
         android:hasCode="true"
-        android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+        android:theme="@style/AppTheme"
         >
+        <!--
+            android:screenOrientation="portrait"
+        -->
         <activity
             android:name="SdlDroidActivity"
-            android:exported="true" >
+            android:exported="true"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            >
 
             <meta-data
                 android:name="android.app.lib_name"

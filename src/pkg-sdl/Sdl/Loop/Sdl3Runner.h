@@ -27,8 +27,10 @@ namespace Sdl::Loop
             std::string Title = "SDL3 App";
             int Width = 800;
             int Height = 600;
+
             SDL_WindowFlags Flags = 
-                SDL_WINDOW_RESIZABLE
+                0
+                | SDL_WINDOW_RESIZABLE
                 | SDL_WINDOW_HIGH_PIXEL_DENSITY  // Enable Retina/HiDPI support
                 //| SDL_WINDOW_FILL_DOCUMENT    // Fill-document mode (Emscripten only)
                 ;

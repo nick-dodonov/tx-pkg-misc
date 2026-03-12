@@ -1,7 +1,7 @@
 package com.tx;
 
 import android.content.pm.PackageManager;
-// import android.view.View;
+import android.view.View;
 // import android.view.WindowManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,9 +16,16 @@ public class SdlDroidActivity extends SDLActivity {
 
     private String _libname = "app";
 
+    @Override // SDLActivity method
+    protected String[] getLibraries() {
+        return new String[] { 
+            _libname  // SDL3 is statically linked, so we don't need to specify "SDL3" here, just the main library that contains SDL_main
+        };
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.d(TAG, "->->->-> onCreate");
+        Log.d(TAG, "-> onCreate");
 
         // Get the library name from the manifest meta-data, defaulting to "app" if not specified
         try {
@@ -35,11 +42,34 @@ public class SdlDroidActivity extends SDLActivity {
         }
 
         super.onCreate(savedInstanceState);
+
+        setImmersiveSticky();
     }
 
-    protected String[] getLibraries() {
-        return new String[] { 
-            _libname  // SDL3 is statically linked, so we don't need to specify "SDL3" here, just the main library that contains SDL_main
-        };
+    @Override
+    protected void onDestroy() {
+        Log.d(TAG, "<- onDestroy");
+        super.onDestroy();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus)  {
+            setImmersiveSticky();
+        }
+    }
+
+    void setImmersiveSticky() {
+        // SdlActivity do itself using settings
+        // View decorView = getWindow().getDecorView();
+        // decorView.setSystemUiVisibility(
+        //     View.SYSTEM_UI_FLAG_FULLSCREEN
+        //     | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+        //     | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        //     | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+        //     | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        //     | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        // );
     }
 }

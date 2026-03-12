@@ -15,6 +15,7 @@ multi_lib(
     #   In case of src/ parent folder it becomes invalid "pkg-sdl" ("sub.pkg-sdl" is invalid too).
     #   So we need to specify it explicitly otherwise PackageAndroidResources command will fail on processing AndroidManifest.xml with such value.
     droid_custom_package = "org.tx.sdl",
+    droid_resource_files = glob(["java/res/**"]),
 
     deps = [
         "@tx-pkg-aux//src/pkg-app",

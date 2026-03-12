@@ -11,12 +11,12 @@ namespace Im
 {
     static constexpr size_t MAX_BUFFER_SIZE = 1000;
     static constexpr float ANIMATION_SPEED = 16.0f;                             // Units per second
-    static constexpr float CONSOLE_HEIGHT_RATIO = 0.7f;                         // % of window height
+    static constexpr float CONSOLE_HEIGHT_RATIO = 0.6f;                        // default % of window height (fully visible w/ on-screen keyboard in portrait mode)
     static constexpr float CONSOLE_FONT_SCALE = 0.9f;                           // Scale down font for better readability
     static constexpr float CONSOLE_LINE_SPACING = 2.0f;                         // Reduced line spacing for compact output
     static constexpr float CONSOLE_MIN_HEIGHT = 100.0f;                         // Minimum console height in pixels
     static constexpr float CONSOLE_MAX_HEIGHT_RATIO = 0.9f;                     // Maximum console height as % of screen
-    static constexpr ImVec4 CONSOLE_BG_COLOR = ImVec4(0.0f, 0.0f, 0.0f, 0.85f); // Console background color
+    static constexpr ImVec4 CONSOLE_BG_COLOR = ImVec4(0.0f, 0.0f, 0.0f, 0.8f); // Console background color
 
     static ImVec4 GetColorForLogLevel(const spdlog::level::level_enum level)
     {
