@@ -27,7 +27,7 @@ multi_lib(
     droid_custom_package = "org.tx.imgui",
 
     data = [
-        "//data:fonts_dir",
+        "//data:fonts_group",
     ],
     additional_linker_inputs = select({
         "@platforms//cpu:wasm32": ["//data:fonts_dir"],

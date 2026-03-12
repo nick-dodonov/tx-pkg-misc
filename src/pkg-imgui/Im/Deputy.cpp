@@ -1,10 +1,10 @@
 #include "Deputy.h"
 #include "Log/Log.h"
 
-// #include "Fs/System.h"
-// #include "Fs/Drive.h"
-// #include "Fs/OverlayDrive.h"
-// #include "Fs/RunfilesDrive.h"
+#include "Fs/System.h"
+#include "Fs/Drive.h"
+#include "Fs/OverlayDrive.h"
+#include "Fs/RunfilesDrive.h"
 #include <filesystem>
 
 #include "Sdl/RendererScopes.h"
@@ -86,33 +86,45 @@ namespace Im
         _context = {};
     }
 
+    //TODO: share in Fs and get rid of statics
+    static Fs::Drive* GetModuleDataDrive()
+    {
+        constexpr auto moduleName = "tx-pkg-misc";
+        static Fs::Drive* _drive;
+        if (_drive) {
+            return _drive;
+        }
+        _drive = &Fs::System::GetDefaultDrive();
+        static Fs::RunfilesDrive runfilesDrive(moduleName);
+        if (runfilesDrive.IsSupported()) {
+            static Fs::OverlayDrive overlayDrive({&runfilesDrive, _drive});
+            Log::Debug("Runfiles drive for module '{}'", moduleName);
+            _drive = &overlayDrive;
+        } else {
+            Log::Debug("Default drive");
+        }
+        return _drive;
+    }
+
     void Deputy::LoadFonts()
     {
-        // TODO: setup drive externally
-        // // Setup drive system for font loading
-        // auto& defaultDrive = Fs::System::GetDefaultDrive();
-        // Fs::Drive* drive = &defaultDrive;
-        // Fs::RunfilesDrive runfilesDrive("tx-pkg-misc");
-        // Fs::OverlayDrive overlayDrive({&runfilesDrive, &defaultDrive});
-        // if (runfilesDrive.IsSupported()) {
-        //     _logger.Debug("Using runfiles overlay drive");
-        //     drive = &overlayDrive;
-        // } else {
-        //     _logger.Debug("Using default drive");
-        // }
+        auto* drive = GetModuleDataDrive();
 
         bool font_loaded = false;
         for (const auto& font_name : DefaultFonts) {
             auto font_path = DefaultFontsDir / font_name;
 
-            // auto result = drive->GetNativePath(relative_path);
-            // if (!result.has_value()) {
-            //     _logger.Warn("Resolve failed: {} (error: {})", relative_path, result.error().message());
-            //     continue;
-            // }
-
-            // std::string& native_path = result.value();
-            // _logger.Trace("Resolved path: {} -> {}", relative_path, native_path);
+            //TODO: speedup and share
+            {
+                auto result = drive->GetNativePath(font_path.c_str());
+                if (!result.has_value()) {
+                    _logger.Warn("Resolve failed: {} (error: {})", font_path.c_str(), result.error().message());
+                    continue;
+                }
+                std::string& native_path = result.value();
+                _logger.Trace("Resolved path: {} -> {}", font_path.c_str(), native_path);
+                font_path = native_path;
+            }
 
             if (AddFontFromFileTTF(font_path, DefaultFontSize)) {
                 _logger.Debug("Loaded: {}", font_name);
@@ -132,15 +144,22 @@ namespace Im
 #if __ANDROID__
         // On Android default is using the "assets" storage for font files, which is read-only and doesn't support fopen() (required by ImGui's default font loading implementation).
         // To work around this, we are SDL load file abstraction
+
+        // if path starts with "/" remove it - prepare for SDL_LoadFile
+        auto* pathStr = path.c_str();
+        if (*pathStr == '/') {
+            ++pathStr;
+        }
+
         size_t size = 0;
-        void* data = SDL_LoadFile(path.c_str(), &size);
+        void* data = SDL_LoadFile(pathStr, &size);
         if (data) {
             ImFontConfig font_cfg = ImFontConfig();
             _io->Fonts->AddFontFromMemoryTTF(data, (int)size, size_pixels);
             ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s", path.filename().c_str());
             return true;
         }
-        //Log::Error("Failed to load font data from assets: {}", SDL_GetError());
+        Log::Warn("SDL_LoadFile failed: {}", SDL_GetError());
         return false;
 #else
         return _io->Fonts->AddFontFromFileTTF(path.c_str(), size_pixels) != nullptr;
