@@ -79,7 +79,7 @@ struct ImHandler
         {
             // sample window
             auto* mainViewport = ImGui::GetMainViewport();
-            ImGui::SetNextWindowPos(ImVec2(mainViewport->Size.x / 10, mainViewport->Size.y / 10), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(mainViewport->Size.x / 10, 4 * mainViewport->Size.y / 10), ImGuiCond_FirstUseEver);
             if (ImGui::Begin("Hello, world!")) {
                 ImGui::Checkbox("Demo Window", &_show_demo_window);
                 ImGui::Text("Session Time: %.2f s", ctx.session.passedSeconds);

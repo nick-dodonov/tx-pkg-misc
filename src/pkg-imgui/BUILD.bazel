@@ -1,10 +1,29 @@
 load("@tx-kit-ext//rules/build:multi_lib.bzl", "multi_lib")
-load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
+load(
+    ":embedded.bzl",
+    "embedded_files",
+    "droid_embedded_assets",
+    "wasm_embedded_linkopts_params",
+)
 
-copy_directory(
-    name = "assets_copy_data",
-    src = "//data:fonts_dir",
-    out = "assets/data/fonts",
+embedded_files(
+    name = "embedded_fonts",
+    files_to_dir = {
+        "//data:fonts_group": "data/fonts",
+    },
+    visibility = ["//visibility:public"],
+)
+
+droid_embedded_assets(
+    name = "droid_embedded_assets",
+    embedded = ":embedded_fonts",
+    visibility = ["//visibility:public"],
+)
+
+wasm_embedded_linkopts_params(
+    name = "wasm_embedded_linkopts_params",
+    assets = ":embedded_fonts",
+    visibility = ["//visibility:public"],
 )
 
 multi_lib(
@@ -21,21 +40,27 @@ multi_lib(
     ],
 
     droid_library = True,
-    droid_srcs = ["Dummy.java"],
-    droid_assets = [":assets_copy_data"],
-    droid_assets_dir = "assets",
     droid_custom_package = "org.tx.imgui",
+    droid_srcs = ["Dummy.java"],
 
+    # embedded for android (via assets)
+    droid_assets = [":droid_embedded_assets"],
+    droid_assets_dir = "assets",
+
+    # embedded for host TODO: make their copy in target app instead of runfiles
     data = [
         "//data:fonts_group",
     ],
+
+    # embedded for wasm (via preload-file) TODO: integrate using wasm_preload_params linkopts
     additional_linker_inputs = select({
-        "@platforms//cpu:wasm32": ["//data:fonts_dir"],
+        "@platforms//cpu:wasm32": [":wasm_embedded_linkopts_params"],
         "//conditions:default": [],
     }),
     linkopts = select({
-        "@platforms//cpu:wasm32": ["--preload-file", "$(execpath //data:fonts_dir)@/data/fonts"],
+        "@platforms//cpu:wasm32": ["@$(execpaths :wasm_embedded_linkopts_params)"],
         "//conditions:default": [],
     }),
+
     visibility = ["//visibility:public"],
 )

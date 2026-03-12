@@ -90,16 +90,16 @@ int main(int argc, const char** argv)
     //style.FontSizeBase = 60.0f;
     //io.Fonts->AddFontDefault(&font_cfg);
     auto size_pixels = 15.0f;// * main_scale;
-    // const auto fonts_dir = 
+    // const auto fontsDir = 
     //     std::filesystem::current_path()
     //     //std::filesystem::path(argv[0]).parent_path()
     //     / "data" / "fonts";
 
-    const auto fonts_dir = std::filesystem::path("./data/fonts");
-    const auto* font_name =
+    const auto fontsDir = std::filesystem::path("./data/fonts");
+    const auto* fontName =
         "Roboto-Medium.ttf"
     ;
-    const auto font_path = fonts_dir / font_name;
+    const auto font_path = fontsDir / fontName;
     Log::Debug("Loading font: {}", font_path.c_str());
 #if __ANDROID__
     // On Android we are using the "assets" storage for font files, which is read-only and doesn't support fopen() (required by ImGui's default font loading implementation).
