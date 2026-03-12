@@ -116,10 +116,14 @@ namespace Sdl::Loop
             return SDL_APP_FAILURE;
         }
         auto primaryDisplay = SDL_GetPrimaryDisplay();
+        auto naturalOrientation = SDL_GetNaturalDisplayOrientation(primaryDisplay);
+        auto currentOrientation = SDL_GetCurrentDisplayOrientation(primaryDisplay);
         float displayContentScale = SDL_GetDisplayContentScale(primaryDisplay);
         //TODO: diagnostics bounds, usable-bounds, props, orientation, mode
-        Log::Trace("display: id={} content-scale={}", 
+        Log::Trace("display: id={} orientation={}-{} content-scale={}", 
             primaryDisplay,
+            (int)naturalOrientation,
+            (int)currentOrientation,
             displayContentScale
         );
 
@@ -143,6 +147,12 @@ namespace Sdl::Loop
             return SDL_APP_FAILURE;
         }
         _window = Window{window};
+#if __ANDROID__
+        // issue workaround to hide navigation bar on Android because
+        // - navigation bar isn't hidden until switching app
+        // - SDL_WINDOW_FULLSCREEN makes landscape by default
+        SDL_SetWindowFullscreen(window, true);
+#endif
 
         if (!SDL_GetWindowSize(window, &windowSize.w, &windowSize.h)) {
             Log::Warn("SDL_GetWindowSize failed: {}", SDL_GetError());

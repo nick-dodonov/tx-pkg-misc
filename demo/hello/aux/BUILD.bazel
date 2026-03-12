@@ -1,4 +1,4 @@
-load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
+load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
 load("@tx-pkg-aux//uni/tools/build_info:generate_build_info.bzl", "var_providing_rule")
 
 var_providing_rule(
@@ -6,8 +6,8 @@ var_providing_rule(
     var_value = "HelloFromHelloPkg",
 )
 
-tx_binary(
-    name = "hello-aux",
+multi_app(
+    name = "aux",
     srcs = glob(["*.cpp"]),
     local_defines = [
         "FOO=$(FOO)",

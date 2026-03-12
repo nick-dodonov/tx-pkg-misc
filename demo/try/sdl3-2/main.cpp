@@ -24,11 +24,11 @@ Window window{SDL_CreateWindow("Title", 800, 600, 0)};
  *
  * This code is public domain. Feel free to use it for any purpose!
  */
+#define SDL_MAIN_USE_CALLBACKS 1 /* use the callbacks instead of main() */
+#include <SDL3/SDL_main.h>
 
 #include <SDL3/SDL.h>
-#define SDL_MAIN_USE_CALLBACKS 1 /* use the callbacks instead of main() */
-// #define SDL_MAIN_HANDLED
-#include <SDL3/SDL_main.h>
+#include <SDL3/SDL_pixels.h>
 
 /* We will use this renderer to draw into this window every frame. */
 static SDL_Window* window = NULL;
@@ -40,9 +40,17 @@ static int texture_height = 0;
 #define WINDOW_WIDTH 640
 #define WINDOW_HEIGHT 480
 
+#if __ANDROID__
+void redirect_stdout_to_logcat(void);
+#endif
+
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
 {
+#if __ANDROID__
+    redirect_stdout_to_logcat();
+#endif
+
     Boot::LogHeader({argc, argv});
     Log::Info("SDL3 try demo 1st");
     int version = SDL_GetVersion();
@@ -58,7 +66,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     SDL_SetAppMetadata("Example Renderer Textures", "1.0", "com.example.renderer-textures");
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
+        Log::Error("Couldn't initialize SDL: {}", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
@@ -66,11 +74,11 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
             "examples/renderer/textures",
             WINDOW_WIDTH,
             WINDOW_HEIGHT,
-            0,
+            SDL_WINDOW_RESIZABLE,
             &window,
             &renderer
         )) {
-        SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
+        Log::Error("Couldn't create window/renderer: {}", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
@@ -80,27 +88,43 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
 
     /* SDL_Surface is pixel data the CPU can access. SDL_Texture is pixel data the GPU can access.
        Load a .bmp into a surface, move it to a texture from there. */
-    SDL_asprintf(&bmp_path, "%sdata/sample.bmp", SDL_GetBasePath()); /* allocate a string of the full file path */
+
+    const char* bmp_file = "data/sample.bmp";
+    Log::Info("Loading BMP from BasePath: {}", bmp_file);
+    SDL_asprintf(&bmp_path, "%s%s", SDL_GetBasePath(), bmp_file); /* allocate a string of the full file path */
+
+    // const char* bmp_file2 = "demo/try/sdl3-2/data/sample.bmp";
+    // Log::Info("Loading BMP from CWD: {}", bmp_file2);
+    // SDL_asprintf(&bmp_path, "%s", bmp_file2);
+
     Log::Info("Loading BMP file: {}", bmp_path);
     surface = SDL_LoadBMP(bmp_path);
+    SDL_free(bmp_path); /* done with this, the file is loaded. */
     if (!surface) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Couldn't load bitmap: %s", SDL_GetError());
-        return SDL_APP_FAILURE;
-    }
-    else {
-        SDL_free(bmp_path); /* done with this, the file is loaded. */
+        Log::Error("Couldn't load bitmap: {}", SDL_GetError());
+        // return SDL_APP_FAILURE;
 
-        texture_width = surface->w;
-        texture_height = surface->h;
-
-        texture = SDL_CreateTextureFromSurface(renderer, surface);
-        if (!texture) {
-            SDL_Log("Couldn't create static texture: %s", SDL_GetError());
+        // Create magneta surface as fallback
+        surface = SDL_CreateSurface(64, 64, SDL_PIXELFORMAT_RGBA8888);
+        if (!surface) {
+            Log::Error("Couldn't create fallback surface: {}", SDL_GetError());
             return SDL_APP_FAILURE;
         }
-
-        SDL_DestroySurface(surface); /* done with this, the texture has a copy of the pixels now. */
+        const SDL_PixelFormatDetails *formatDetails = SDL_GetPixelFormatDetails(surface->format);
+        auto magentaColor = SDL_MapRGBA(formatDetails, nullptr, 255, 0, 255, 255);
+        SDL_FillSurfaceRect(surface, nullptr, magentaColor);
     }
+
+    texture_width = surface->w;
+    texture_height = surface->h;
+
+    texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if (!texture) {
+        Log::Error("Couldn't create static texture: {}", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+
+    SDL_DestroySurface(surface); /* done with this, the texture has a copy of the pixels now. */
 
     return SDL_APP_CONTINUE; /* carry on with the program! */
 }
@@ -169,9 +193,3 @@ SDL_AppResult SDL_AppIterate(void* appstate)
 
     return SDL_APP_CONTINUE; /* carry on with the program! */
 }
-
-// int main(const int argc, const char* argv[])
-// {
-//     //App::Domain domain{argc, argv};
-//     return 0;// domain.RunCoroMain(CoroMain());
-// }

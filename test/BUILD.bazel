@@ -1,6 +1,6 @@
-load("@tx-kit-ext//rules/build:tx_test.bzl", "tx_test")
+load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_test")
 
-tx_test(
+multi_test(
     name = "misc",
     srcs = glob(["*.cpp", "*.h"]),
     deps = [

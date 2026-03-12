@@ -6,6 +6,10 @@ struct SDL_Window;
 struct SDL_Renderer;
 union SDL_Event;
 
+namespace std::filesystem {
+    class path;
+}
+
 namespace Im
 {
     class Deputy
@@ -25,6 +29,7 @@ namespace Im
 
     private:
         void LoadFonts();
+        bool AddFontFromFileTTF(const std::filesystem::path& path, float size_pixels = 0.0f);
 
         SDL_Window* _window;
         SDL_Renderer* _renderer;

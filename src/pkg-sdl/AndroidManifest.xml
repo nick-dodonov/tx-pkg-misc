@@ -1,0 +1,37 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.tx"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+    <uses-sdk
+        android:minSdkVersion="24"
+        android:targetSdkVersion="35" />
+
+    <!--
+        android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+    -->
+    <application
+        android:label="Sdl App"
+        android:hasCode="true"
+        android:theme="@style/AppTheme"
+        >
+        <!--
+            android:screenOrientation="portrait"
+        -->
+        <activity
+            android:name="SdlDroidActivity"
+            android:exported="true"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            >
+
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="${native_lib_name}" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

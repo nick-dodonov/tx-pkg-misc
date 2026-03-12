@@ -1,16 +1,11 @@
-load("@tx-kit-ext//rules/build:tx_binary.bzl", "tx_binary")
+load("@tx-kit-ext//rules/build:multi_app.bzl", "multi_app")
 
-tx_binary(
+multi_app(
     name = "sdl3-1",
     srcs = glob(["*.cpp"]),
     data = [".env"],
     deps = [
         "@tx-pkg-aux//src/pkg-boot",
-        "@sdl3",
+        "//demo/try/sdl3-lib",
     ],
-    #TODO: add support for sdl3_shared build on platforms except wasm32
-    # + select({
-    #     "@platforms//cpu:wasm32": ["@sdl3//:sdl3_static"],
-    #     "//conditions:default": ["@sdl3//:sdl3_shared"],
-    # }),
 )

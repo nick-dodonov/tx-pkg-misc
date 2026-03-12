@@ -1,13 +1,17 @@
-load("@tx-kit-ext//rules/build:tx_library.bzl", "tx_library")
+load("@tx-kit-ext//rules/build:multi_lib.bzl", "multi_lib")
+load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
 
-tx_library(
+copy_directory(
+    name = "assets_copy_data",
+    src = "//data:fonts_dir",
+    out = "assets/data/fonts",
+)
+
+multi_lib(
     name = "pkg-imgui",
     srcs = glob(["**/*.cpp"]),
     hdrs = glob(["**/*.h"]),
     strip_include_prefix = ".",
-    data = [
-        "//data:fonts_dir",
-    ],
     deps = [
         "//src/pkg-sdl",
         "@tx-pkg-aux//src/pkg-fs",
@@ -15,11 +19,23 @@ tx_library(
         "@imgui//backends:platform-sdl3",
         "@imgui//backends:renderer-sdlrenderer3",  #TODO: try SDL_GPU renderer as more modern and advanced
     ],
-    linkopts = select({
+
+    droid_library = True,
+    droid_srcs = ["Dummy.java"],
+    droid_assets = [":assets_copy_data"],
+    droid_assets_dir = "assets",
+    droid_custom_package = "org.tx.imgui",
+
+    data = [
+        "//data:fonts_group",
+    ],
+    additional_linker_inputs = select({
+        "@platforms//cpu:wasm32": ["//data:fonts_dir"],
         "//conditions:default": [],
-        "@platforms//cpu:wasm32": [
-            "--preload-file", "$(location //data:fonts_dir)@/data/fonts",
-        ],
+    }),
+    linkopts = select({
+        "@platforms//cpu:wasm32": ["--preload-file", "$(execpath //data:fonts_dir)@/data/fonts"],
+        "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
 )

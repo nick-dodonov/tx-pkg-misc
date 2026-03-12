@@ -8,6 +8,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
 #include "imgui_impl_sdlrenderer3.h"
+#include "imgui_internal.h"
 
 #include <SDL3/SDL.h>
 
@@ -53,11 +54,17 @@ int main(int argc, const char** argv)
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+    auto* context = ImGui::CreateContext();
+    context->ErrorCallback = [](ImGuiContext* ctx, void* user_data, const char* msg) { 
+        Log::Error("ImGui error: {}", msg);
+    };
+
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    io.ConfigErrorRecoveryEnableAssert = false; // disable asserts on errors (don't crash app)
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -83,17 +90,34 @@ int main(int argc, const char** argv)
     //style.FontSizeBase = 60.0f;
     //io.Fonts->AddFontDefault(&font_cfg);
     auto size_pixels = 15.0f;// * main_scale;
-    const auto fonts_dir = 
-        std::filesystem::current_path()
-        //std::filesystem::path(argv[0]).parent_path()
-        / "data" / "fonts";
+    // const auto fonts_dir = 
+    //     std::filesystem::current_path()
+    //     //std::filesystem::path(argv[0]).parent_path()
+    //     / "data" / "fonts";
+
+    const auto fonts_dir = std::filesystem::path("./data/fonts");
     const auto* font_name =
         "Roboto-Medium.ttf"
     ;
     const auto font_path = fonts_dir / font_name;
-    const auto font_path_str = font_path.string();
-    Log::Debug("Loading font: {}", font_path_str);
-    io.Fonts->AddFontFromFileTTF(font_path_str.c_str(), size_pixels);
+    Log::Debug("Loading font: {}", font_path.c_str());
+#if __ANDROID__
+    // On Android we are using the "assets" storage for font files, which is read-only and doesn't support fopen() (required by ImGui's default font loading implementation).
+    // To work around this, we are SDL abstraction instead
+    size_t size = {};
+    void* data = SDL_LoadFile(
+        font_path.c_str(),
+        &size);
+    if (data) {
+        ImFontConfig font_cfg = ImFontConfig();
+        io.Fonts->AddFontFromMemoryTTF(data, (int)size, size_pixels);
+        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s", font_path.filename().c_str());
+    } else {
+        Log::Error("Failed to load font data from assets: {}", SDL_GetError());
+    }
+#else
+    io.Fonts->AddFontFromFileTTF(font_path.c_str(), size_pixels);
+#endif
     //IM_ASSERT(font != nullptr);
 
     // Our state
@@ -102,6 +126,7 @@ int main(int argc, const char** argv)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
+    Log::Debug("Starting main loop");
     bool done = false;
 #ifdef __EMSCRIPTEN__
     // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.

@@ -1,5 +1,11 @@
 load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
 
+filegroup(
+    name = "fonts_group",
+    srcs = glob(["fonts/*"]),
+    visibility = ["//visibility:public"],
+)
+
 copy_directory(
     name = "fonts_dir",
     src = "fonts",
