@@ -1,6 +1,6 @@
 load("@tx-kit-ext//rules:multi_lib.bzl", "multi_lib")
 load(
-    ":embedded.bzl",
+    "@tx-kit-ext//rules:embedded.bzl",
     "embedded_files",
     "droid_embedded_assets",
     "wasm_embedded_linkopts_params",
@@ -17,13 +17,11 @@ embedded_files(
 droid_embedded_assets(
     name = "droid_embedded_assets",
     embedded = ":embedded_fonts",
-    visibility = ["//visibility:public"],
 )
 
 wasm_embedded_linkopts_params(
     name = "wasm_embedded_linkopts_params",
     assets = ":embedded_fonts",
-    visibility = ["//visibility:public"],
 )
 
 multi_lib(
@@ -49,7 +47,8 @@ multi_lib(
 
     # embedded for host TODO: make their copy in target app instead of runfiles
     data = [
-        "//data:fonts_group",
+        # "//data:fonts_group",
+        ":embedded_fonts",
     ],
 
     # embedded for wasm (via preload-file) TODO: integrate using wasm_preload_params linkopts

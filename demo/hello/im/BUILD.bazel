@@ -3,7 +3,9 @@ load("@tx-kit-ext//rules:multi_app.bzl", "multi_app")
 multi_app(
     name = "im",
     srcs = glob(["**/*.cpp"]),
-    data = [".env"],
+    data = [
+        ".env",
+    ],
     deps = [
         "//src/pkg-imgui",
     ],

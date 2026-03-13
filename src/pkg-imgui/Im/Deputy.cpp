@@ -95,7 +95,7 @@ namespace Im
             return _drive;
         }
         _drive = &Fs::System::GetDefaultDrive();
-        static Fs::RunfilesDrive runfilesDrive(moduleName);
+        static Fs::RunfilesDrive runfilesDrive(moduleName, _drive);
         if (runfilesDrive.IsSupported()) {
             static Fs::OverlayDrive overlayDrive({&runfilesDrive, _drive});
             Log::Debug("Runfiles drive for module '{}'", moduleName);
@@ -118,19 +118,22 @@ namespace Im
             {
                 auto result = drive->GetNativePath(font_path.c_str());
                 if (!result.has_value()) {
+#if !__ANDROID__
                     _logger.Warn("Resolve failed: {} (error: {})", font_path.c_str(), result.error().message());
                     continue;
+#endif
+                } else {
+                    std::string& native_path = result.value();
+                    _logger.Trace("Resolved path: {} -> {}", font_path.c_str(), native_path);
+                    font_path = native_path;
                 }
-                std::string& native_path = result.value();
-                _logger.Trace("Resolved path: {} -> {}", font_path.c_str(), native_path);
-                font_path = native_path;
             }
 
             if (AddFontFromFileTTF(font_path, DefaultFontSize)) {
                 _logger.Debug("Loaded: {}", font_name);
                 font_loaded = true;
             } else {
-                _logger.Warn("Loading failed: {}", font_name);
+                _logger.Warn("Loading failed: {}", font_path.c_str());
             }
         }
 
