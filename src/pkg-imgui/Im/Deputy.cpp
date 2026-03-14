@@ -5,7 +5,6 @@
 #include "Fs/Drive.h"
 #include "Fs/OverlayDrive.h"
 #include "Fs/RunfilesDrive.h"
-#include <filesystem>
 
 #include "Sdl/RendererScopes.h"
 #include <SDL3/SDL_render.h>
@@ -18,7 +17,7 @@
 namespace Im
 {
     static const float DefaultFontSize = 15.0f;
-    static const auto DefaultFontsDir = std::filesystem::path("data/fonts");
+    static const auto DefaultFontsDir = Fs::Path("data/fonts");
     static const auto DefaultUiFont = "Roboto-Medium.ttf";
     static const auto DefaultMonoFont = "JetBrainsMono-Bold.ttf";
     static const std::array DefaultFonts = {
@@ -116,16 +115,16 @@ namespace Im
 
             //TODO: speedup and share
             {
-                auto result = drive->GetNativePath(font_path.c_str());
+                auto result = drive->GetNativePath(font_path);
                 if (!result.has_value()) {
 #if !__ANDROID__
                     _logger.Warn("Resolve failed: {} (error: {})", font_path.c_str(), result.error().message());
                     continue;
 #endif
                 } else {
-                    std::string& native_path = result.value();
-                    _logger.Trace("Resolved path: {} -> {}", font_path.c_str(), native_path);
-                    font_path = native_path;
+                    auto& native_path = result.value();
+                    _logger.Trace("Resolved path: {} -> {}", font_path.c_str(), native_path.c_str());
+                    font_path = std::move(native_path);
                 }
             }
 
@@ -142,7 +141,7 @@ namespace Im
         }
     }
 
-    bool Deputy::AddFontFromFileTTF(const std::filesystem::path& path, float size_pixels)
+    bool Deputy::AddFontFromFileTTF(const Fs::Path& path, float size_pixels)
     {
 #if __ANDROID__
         // On Android default is using the "assets" storage for font files, which is read-only and doesn't support fopen() (required by ImGui's default font loading implementation).

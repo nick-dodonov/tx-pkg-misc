@@ -1,14 +1,11 @@
 #pragma once
 #include "imgui.h"
 #include "Log/Log.h"
+#include "Fs/Drive.h"
 
 struct SDL_Window;
 struct SDL_Renderer;
 union SDL_Event;
-
-namespace std::filesystem {
-    class path;
-}
 
 namespace Im
 {
@@ -29,7 +26,7 @@ namespace Im
 
     private:
         void LoadFonts();
-        bool AddFontFromFileTTF(const std::filesystem::path& path, float size_pixels = 0.0f);
+        bool AddFontFromFileTTF(const Fs::Path& path, float size_pixels = 0.0f);
 
         SDL_Window* _window;
         SDL_Renderer* _renderer;
