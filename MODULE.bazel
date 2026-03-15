@@ -7,14 +7,14 @@ module(
 
 #TODO: setup Renovate to auto-update https://github.com/renovatebot/renovate
 bazel_dep(name = "apple_support", version = "2.2.0")
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "bazel_lib", version = "3.2.2")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_cc", version = "0.2.16")
 bazel_dep(name = "rules_foreign_cc", version = "0.15.1")
-bazel_dep(name = "bazel_skylib", version = "1.9.0")
-bazel_dep(name = "bazel_lib", version = "3.2.2")
-bazel_dep(name = "emsdk", version = "4.0.17-tx.1")  # private registry (custom version with C++23 support)
 bazel_dep(name = "rules_python", version = "1.8.4")
 bazel_dep(name = "rules_android", version = "0.7.1")
+bazel_dep(name = "emsdk", version = "4.0.17-tx.1")  # private registry (custom version with C++23 support)
 
 # Hedron's Compile Commands Extractor for Bazel
 # - https://github.com/hedronvision/bazel-compile-commands-extractor
@@ -45,9 +45,12 @@ git_override(
     verbose = True,
 )
 
-bazel_dep(name = "boost.asio", version = "1.89.0.bcr.1.1-tx.2")  # private registry
-bazel_dep(name = "sdl3", version = "3.4.0-tx.2")  # private registry
+single_version_override(
+    module_name = "boost.asio",
+    version = "1.89.0.bcr.1.1-tx.2", # FORCE previous from private registry until aux patch isn't added
+)
 
+bazel_dep(name = "sdl3", version = "3.4.0-tx.2")  # private registry
 bazel_dep(name = "imgui", version = "1.92.5-docking-tx.1")  # private registry
 
 # test deps
