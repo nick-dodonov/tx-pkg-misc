@@ -47,9 +47,12 @@ git_override(
 
 single_version_override(
     module_name = "boost.asio",
-    version = "1.89.0.bcr.1.1-tx.2", # FORCE previous from private registry until aux patch isn't added
+    version = "1.89.0.bcr.1.1-tx.2",  # FORCE previous from private registry until aux patch isn't added
 )
 
+_boost_version = "1.90.0.bcr.1"
+
+bazel_dep(name = "boost.describe", version = _boost_version)
 bazel_dep(name = "sdl3", version = "3.4.0-tx.2")  # private registry
 bazel_dep(name = "imgui", version = "1.92.5-docking-tx.1")  # private registry
 

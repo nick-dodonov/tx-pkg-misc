@@ -1,5 +1,5 @@
 #include "Boot/Boot.h"
-#include "App/Domain.h"
+#include "App/Asio/Domain.h"
 #include "FpsCounter.h"
 #include "Log/Log.h"
 #include "Sdl/Loop/Sdl3Runner.h"
@@ -12,7 +12,7 @@ namespace
     static constexpr float DebugTextScale = 3.0f; // Scale applied to debug text rendering
 }
 
-[[maybe_unused]] static boost::asio::awaitable<int> CoroMain(std::shared_ptr<App::Domain> domain, std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
+[[maybe_unused]] static boost::asio::awaitable<int> CoroMain(std::shared_ptr<App::Asio::Domain> domain, std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
 {
     if (timeoutSeconds <= 0) {
         Log::Info("WAITING: stop signal...");
@@ -178,7 +178,7 @@ int main(const int argc, const char* argv[])
     );
 
     // Create domain with custom runner
-    auto domain = std::make_shared<App::Domain>();
+    auto domain = std::make_shared<App::Asio::Domain>();
     composite->Add(*domain);
     return domain->RunCoroMain(runner, CoroMain(domain, runner, timeoutSeconds));
 }

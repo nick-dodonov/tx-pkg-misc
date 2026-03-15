@@ -26,6 +26,7 @@ namespace Im
 
     private:
         void LoadFonts();
+        static Fs::Drive* GetDrive();
         bool AddFontFromFileTTF(const Fs::Path& path, float size_pixels = 0.0f);
 
         SDL_Window* _window;

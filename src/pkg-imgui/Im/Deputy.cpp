@@ -86,7 +86,7 @@ namespace Im
     }
 
     //TODO: share in Fs and get rid of statics
-    static Fs::Drive* GetModuleDataDrive()
+    Fs::Drive* Deputy::GetDrive()
     {
         constexpr auto moduleName = "tx-pkg-misc";
         static Fs::Drive* _drive;
@@ -97,17 +97,17 @@ namespace Im
         static Fs::RunfilesDrive runfilesDrive(moduleName, _drive);
         if (runfilesDrive.IsSupported()) {
             static Fs::OverlayDrive overlayDrive({&runfilesDrive, _drive});
-            Log::Debug("Runfiles drive for module '{}'", moduleName);
+            _logger.Debug("Runfiles drive for module '{}'", moduleName);
             _drive = &overlayDrive;
         } else {
-            Log::Debug("Default drive");
+            _logger.Debug("Default drive");
         }
         return _drive;
     }
 
     void Deputy::LoadFonts()
     {
-        auto* drive = GetModuleDataDrive();
+        auto* drive = GetDrive();
 
         bool font_loaded = false;
         for (const auto& font_name : DefaultFonts) {
