@@ -3,7 +3,7 @@
     // for the documentation about the tasks.json format
     "version": "2.0.0",
     "tasks": [
-        // ================ dev environment tasks
+        // ================ dev environment
         {
             "type": "shell",
             "label": "compile_commands :refresh_all (OS)",
@@ -16,6 +16,14 @@
             "type": "shell",
             "label": "compile_commands :refresh_all (WASM)",
             "command": "bazel run @hedron_compile_commands//:refresh_all -- --config=wasm",
+            "group": {
+                "kind": "build",
+            },
+        },
+        {
+            "type": "shell",
+            "label": "compile_commands :refresh_all (DROID)",
+            "command": "bazel run @hedron_compile_commands//:refresh_all -- --config=droid",
             "group": {
                 "kind": "build",
             },

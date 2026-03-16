@@ -24,6 +24,5 @@ multi_app(
     ],
     deps = [
         "@tx-pkg-aux//src/pkg/boot",
-        "@tx-pkg-aux//src/pkg/fs",
     ],
 )
