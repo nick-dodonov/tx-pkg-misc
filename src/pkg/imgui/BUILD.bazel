@@ -9,13 +9,13 @@ embedded_files(
 )
 
 multi_lib(
-    name = "pkg-imgui",
+    name = "imgui",
     srcs = glob(["**/*.cpp"]),
     hdrs = glob(["**/*.h"]),
     strip_include_prefix = ".",
     deps = [
-        "//src/pkg-sdl",
-        "@tx-pkg-aux//src/pkg-fs",
+        "//src/pkg/sdl",
+        "@tx-pkg-aux//src/pkg/fs",
 
         "@imgui//:imgui",
         "@imgui//backends:platform-sdl3",

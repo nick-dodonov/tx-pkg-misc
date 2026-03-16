@@ -5,7 +5,7 @@ multi_app(
     srcs = glob(["*.cpp", "*.h"]),
     data = [".env"],
     deps = [
-        "//src/pkg-sdl",
-        "@tx-pkg-aux//src/pkg-app-asio",
+        "//src/pkg/sdl",
+        "@tx-pkg-aux//src/pkg/app-asio",
     ],
 )

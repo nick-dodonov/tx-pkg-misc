@@ -1,7 +1,7 @@
 load("@tx-kit-ext//rules:multi_lib.bzl", "multi_lib")
 
 multi_lib(
-    name = "pkg-sdl",
+    name = "sdl",
     srcs = glob([
         "Sdl/**/*.cpp",
         "*.cc",
@@ -28,6 +28,6 @@ multi_lib(
     deps = [
         "@boost.describe",
         "@sdl3",
-        "@tx-pkg-aux//src/pkg-app",
+        "@tx-pkg-aux//src/pkg/app",
     ],
 )

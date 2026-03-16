@@ -5,6 +5,6 @@ multi_test(
     srcs = glob(["*.cpp", "*.h"]),
     deps = [
         "@googletest//:gtest_main",
-        "@tx-pkg-aux//src/pkg-log",
+        "@tx-pkg-aux//src/pkg/log",
     ],
 )

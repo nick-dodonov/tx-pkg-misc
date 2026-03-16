@@ -5,7 +5,7 @@ multi_app(
     srcs = glob(["*.cpp"]),
     data = [".env"],
     deps = [
-        "@tx-pkg-aux//src/pkg-boot",
+        "@tx-pkg-aux//src/pkg/boot",
         "//demo/try/sdl3-lib",
     ],
 )

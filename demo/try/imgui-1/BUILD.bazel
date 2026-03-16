@@ -11,7 +11,7 @@ multi_app(
     name = "imgui-1",
     srcs = glob(["*.cpp", "*.h"]),
     deps = [
-        "@tx-pkg-aux//src/pkg-boot",
+        "@tx-pkg-aux//src/pkg/boot",
         "@imgui//:imgui",
         "@imgui//backends:platform-sdl3",
         "@imgui//backends:renderer-sdlrenderer3",  #TODO: try SDL_GPU renderer as more modern and advanced
