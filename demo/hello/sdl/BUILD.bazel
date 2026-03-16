@@ -2,7 +2,10 @@ load("@tx-kit-ext//rules:multi_app.bzl", "multi_app")
 
 multi_app(
     name = "sdl",
-    srcs = glob(["*.cpp", "*.h"]),
+    srcs = glob([
+        "*.cpp",
+        "*.h",
+    ]),
     data = [".env"],
     deps = [
         "//src/pkg/sdl",

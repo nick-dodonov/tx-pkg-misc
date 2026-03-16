@@ -1,5 +1,5 @@
-load("@tx-kit-ext//rules:multi_app.bzl", "multi_app")
 load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
+load("@tx-kit-ext//rules:multi_app.bzl", "multi_app")
 
 copy_directory(
     name = "copy_data",
@@ -16,24 +16,26 @@ copy_directory(
 multi_app(
     name = "sdl3-2",
     srcs = glob(["*.cpp"]),
-    deps = [
-        "@tx-pkg-aux//src/pkg/boot",
-        "//demo/try/sdl3-lib",
-    ],
-    droid_assets = [":assets_copy_data"],
-    droid_assets_dir = "assets",
-
-    data = [
-        ".env",
-        ":copy_data",
-    ],
     additional_linker_inputs = select({
         "@platforms//cpu:wasm32": [":copy_data"],
         "//conditions:default": [],
     }),
+    data = [
+        ".env",
+        ":copy_data",
+    ],
+    droid_assets = [":assets_copy_data"],
+    droid_assets_dir = "assets",
     linkopts = select({
-        "@platforms//cpu:wasm32": ["--preload-file", "$(execpath :copy_data)@/data"],
+        "@platforms//cpu:wasm32": [
+            "--preload-file",
+            "$(execpath :copy_data)@/data",
+        ],
         "//conditions:default": [],
     }),
+    deps = [
+        "//demo/try/sdl3-lib",
+        "@tx-pkg-aux//src/pkg/boot",
+    ],
     # platforms = ["host", "wasm"],
 )

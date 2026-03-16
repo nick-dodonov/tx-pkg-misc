@@ -4,15 +4,9 @@ load("@tx-kit-ext//rules:multi_lib.bzl", "multi_lib")
 multi_lib(
     name = "sdl3-lib",
     srcs = glob(["*.cc"]),
-
     droid_library = True,
-    droid_srcs = glob(["*.java"]),
     droid_manifest = "AndroidManifest.xml",
-
-    deps = [
-        "@sdl3",
-    ],
-
+    droid_srcs = glob(["*.java"]),
     linkopts = select({
         "@platforms//os:android": [
             "-Wl,--undefined=SDL_main",
@@ -20,4 +14,7 @@ multi_lib(
         "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
+    deps = [
+        "@sdl3",
+    ],
 )
