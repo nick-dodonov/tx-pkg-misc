@@ -26,14 +26,14 @@ namespace Im
 
     private:
         void LoadFonts();
-        static Fs::Drive* GetDrive();
-        bool AddFontFromFileTTF(const Fs::Path& path, float size_pixels = 0.0f);
+        bool LoadFont(const Fs::Path& fontPath, const char* fontName, float fontSize);
 
         SDL_Window* _window;
         SDL_Renderer* _renderer;
 
         ImGuiContext* _context{};
         ImGuiIO* _io{};
+        std::vector<std::vector<uint8_t>> _fontData;
 
         // Update
         ImGuiID _dockSpaceId{};
