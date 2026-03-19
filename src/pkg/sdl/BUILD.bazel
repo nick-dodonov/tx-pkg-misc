@@ -10,8 +10,12 @@ multi_lib(
     name = "sdl",
     srcs = glob([
         "Sdl/**/*.cpp",
-        "*.cc",
-    ]),
+    ]) + select({
+        "@platforms//os:android": glob([
+            "*.cc",
+        ]),
+        "//conditions:default": [],
+    }),
     hdrs = glob(["Sdl/**/*.h"]),
     data = [":sdl_default_app_manifest"],
 
@@ -26,7 +30,9 @@ multi_lib(
     droid_srcs = glob(["*.java"]),
     linkopts = select({
         "@platforms//os:android": [
+            # Android native is built as a shared library, so we need to explicitly specify entry point symbols to prevent them from being stripped out.
             "-Wl,--undefined=SDL_main",
+            "-Wl,--undefined=main",
         ],
         "//conditions:default": [],
     }),
@@ -36,5 +42,10 @@ multi_lib(
         "@boost.describe",
         "@sdl3",
         "@tx-pkg-aux//src/pkg/app",
-    ],
+    ] + select({
+        "@platforms//os:android": [
+            "@tx-kit-ext//pkg/droid:droid_glue",
+        ],
+        "//conditions:default": [],
+    }),
 )

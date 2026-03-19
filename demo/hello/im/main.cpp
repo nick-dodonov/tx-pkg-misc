@@ -99,7 +99,7 @@ struct ImHandler
                     dockIdRight = ImGui::DockBuilderSplitNode(
                         dockSpaceId, 
                         ImGuiDir_Right, 
-                        0.3f,
+                        0.4f,
                          nullptr, 
                          nullptr);
                 }
