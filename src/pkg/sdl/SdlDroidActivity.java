@@ -50,6 +50,10 @@ public class SdlDroidActivity extends SDLActivity {
     protected void onDestroy() {
         Log.d(TAG, "<- onDestroy");
         super.onDestroy();
+
+        //TODO: share w/ configurable impl in DroidActivity.java and exitCode support
+        //  required for current droid.py runner implementation to detect finish now
+        System.exit(0);
     }
 
     @Override
