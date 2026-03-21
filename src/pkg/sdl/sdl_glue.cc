@@ -22,10 +22,16 @@ namespace
     {
         JNIEnv* _mainEnv{};
 
-        jobject _jAssetManagerRef;
+        jobject _jAssetManagerRef{};
         AAssetManager* _assetManager{};
 
     public:
+        SdlGlue() = default;
+        SdlGlue(const SdlGlue&) = delete;
+        SdlGlue& operator=(const SdlGlue&) = delete;
+        SdlGlue(SdlGlue&&) = delete;
+        SdlGlue& operator=(SdlGlue&&) = delete;
+
         void Init()
         {
             SetInternal(this);
@@ -89,11 +95,14 @@ __attribute__((weak)) int main(int argc, char* argv[])
     return 1;
 }
 
+#define TX_STRINGIFY(x) #x
+#define TX_TOSTRING(x) TX_STRINGIFY(x)
+
 // Weak for the case of SDL_MAIN_USE_CALLBACKS style - app will declare own SDL_main in that case.
 // In case of main() style it's used to call main() in application.
-__attribute__((weak)) extern "C" int SDLCALL SDL_main(int argc, char* argv[])
+__attribute__((weak, visibility("default"))) extern "C" int SDLCALL SDL_main(int argc, char* argv[])
 {
-    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "glue: SDL_main: argc=%d", argc);
+    SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "glue: SDL_main: argc=%d SDL_DECLSPEC=" TX_TOSTRING(SDL_DECLSPEC), argc);
     redirect_stdout_to_logcat();
 
     sdlGlue.Init();
