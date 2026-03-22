@@ -7,7 +7,7 @@
 #include "imgui_internal.h"
 
 struct ImHandler
-    : App::Loop::Handler
+    : RunLoop::Handler
     , Sdl::Loop::Sdl3Handler
 {
     std::shared_ptr<Im::Deputy> _imDeputy;
@@ -34,7 +34,7 @@ struct ImHandler
         _imDeputy.reset();
     }
 
-    void Update(const App::Loop::UpdateCtx& ctx) override
+    void Update(const RunLoop::UpdateCtx& ctx) override
     {
         auto& sdlRunner = static_cast<Sdl::Loop::Sdl3Runner&>(ctx.Runner);
         auto* renderer = sdlRunner.GetRenderer();

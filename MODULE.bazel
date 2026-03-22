@@ -53,8 +53,18 @@ single_version_override(
 _boost_version = "1.90.0.bcr.1"
 
 bazel_dep(name = "boost.describe", version = _boost_version)
-bazel_dep(name = "sdl3", version = "3.4.0-tx.2")  # private registry
 bazel_dep(name = "imgui", version = "1.92.5-docking-tx.1")  # private registry
 
 # test deps
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
+
+################################################################
+bazel_dep(name = "sdl3", version = "3.4.0-tx.2")  # private registry
+
+# git_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+# git_repository(
+#     name = "sdl3",
+#     build_file = "//repo:sdl3.BUILD.bazel",
+#     commit = "a962f40bbba175e9716557a25d5d7965f134a3d3",  # tag = "release-3.4.0",
+#     remote = "https://github.com/libsdl-org/SDL.git",
+# )

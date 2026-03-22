@@ -1,0 +1,801 @@
+# https://bazel-contrib.github.io/rules_foreign_cc/cmake.html
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
+load("@rules_android//rules:rules.bzl", "android_library")
+
+string_flag(
+    name = "build",
+    build_setting_default = "via_cmake",
+    values = [
+        "via_cmake",
+        "via_bazel",
+    ],
+    visibility = ["//visibility:public"],
+)
+config_setting(name = "via_cmake", flag_values = {":build": "via_cmake"})
+config_setting(name = "via_bazel", flag_values = {":build": "via_bazel"})
+
+################################
+# Build via CMake foreign rule
+################################
+filegroup(
+    name = "all_srcs",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:private"],
+)
+filegroup(
+    name = "all_android_java_srcs",
+    srcs = glob(["android-project/app/src/main/java/org/libsdl/app/*.java"]),
+    visibility = ["//visibility:public"],
+)
+filegroup(
+    name = "android_default_manifest",
+    srcs = ["android-project/app/src/main/AndroidManifest.xml"],
+    visibility = ["//visibility:public"],
+)
+
+genrule(
+    name = "CmakePreseedCache",
+    outs = ["CmakePreseedCache.cmake"],
+    cmd = """cat > $@ << 'EOF'
+message(STATUS "======== Preseeding SDL3 CMake cache build ========")
+# Setup already detected features to speedup builds (similar to cmake/PreseedEmscriptenCache.cmake in SDL3 sources)
+if(APPLE)
+  function(SDL_Preseed_CMakeCache)
+    message(STATUS "======== Filling APPLE")
+    set(HAVE_GCC_WALL                                    "1"   CACHE INTERNAL "Test HAVE_GCC_WALL")
+    set(HAVE_GCC_WUNDEF                                  "1"   CACHE INTERNAL "Test HAVE_GCC_WUNDEF")
+    set(HAVE_GCC_WFLOAT_CONVERSION                       "1"   CACHE INTERNAL "Test HAVE_GCC_WFLOAT_CONVERSION")
+    set(HAVE_GCC_NO_STRICT_ALIASING                      "1"   CACHE INTERNAL "Test HAVE_GCC_NO_STRICT_ALIASING")
+    set(HAVE_GCC_WDOCUMENTATION                          "1"   CACHE INTERNAL "Test HAVE_GCC_WDOCUMENTATION")
+    set(HAVE_GCC_WDOCUMENTATION_UNKNOWN_COMMAND          "1"   CACHE INTERNAL "Test HAVE_GCC_WDOCUMENTATION_UNKNOWN_COMMAND")
+    set(HAVE_GCC_COMMENT_BLOCK_COMMANDS                  "1"   CACHE INTERNAL "Test HAVE_GCC_COMMENT_BLOCK_COMMANDS")
+    set(HAVE_GCC_WSHADOW                                 "1"   CACHE INTERNAL "Test HAVE_GCC_WSHADOW")
+    set(HAVE_GCC_WUNUSED_LOCAL_TYPEDEFS                  "1"   CACHE INTERNAL "Test HAVE_GCC_WUNUSED_LOCAL_TYPEDEFS")
+    set(HAVE_GCC_WIMPLICIT_FALLTHROUGH                   "1"   CACHE INTERNAL "Test HAVE_GCC_WIMPLICIT_FALLTHROUGH")
+    set(COMPILER_SUPPORTS_FCOLOR_DIAGNOSTICS             "1"   CACHE INTERNAL "Test COMPILER_SUPPORTS_FCOLOR_DIAGNOSTICS")
+    set(LIBC_IS_GLIBC                                    ""   CACHE INTERNAL "Have symbol __GLIBC__")
+    set(HAVE_WL_VERSION_SCRIPT                           ""   CACHE INTERNAL "Test HAVE_WL_VERSION_SCRIPT")
+    set(COMPILER_SUPPORTS_GCC_ATOMICS                    ""   CACHE INTERNAL "Test COMPILER_SUPPORTS_GCC_ATOMICS")
+    set(COMPILER_SUPPORTS_SYNC_LOCK_TEST_AND_SET         "1"   CACHE INTERNAL "Test COMPILER_SUPPORTS_SYNC_LOCK_TEST_AND_SET")
+    set(HAVE_GCC_FVISIBILITY                             "1"   CACHE INTERNAL "Test HAVE_GCC_FVISIBILITY")
+    set(COMPILER_SUPPORTS_WNO_ERROR_DEPRECATED_DECLARATIONS  "1"   CACHE INTERNAL "Test COMPILER_SUPPORTS_WNO_ERROR_DEPRECATED_DECLARATIONS")
+    set(COMPILER_SUPPORTS_WNO_DEPRECATED_DECLARATIONS    "1"   CACHE INTERNAL "Test COMPILER_SUPPORTS_WNO_DEPRECATED_DECLARATIONS")
+    set(LINKER_SUPPORTS_WL_UNDEFINED_ERROR               "1"   CACHE INTERNAL "Test LINKER_SUPPORTS_WL_UNDEFINED_ERROR")
+
+    set(HAVE_ALLOCA_H                                    "1"   CACHE INTERNAL "Have include alloca.h")
+    set(LIBC_HAS_FLOAT_H                                 "1"   CACHE INTERNAL "Have include float.h")
+    set(LIBC_HAS_ICONV_H                                 "1"   CACHE INTERNAL "Have include iconv.h")
+    set(LIBC_HAS_INTTYPES_H                              "1"   CACHE INTERNAL "Have include inttypes.h")
+    set(LIBC_HAS_LIMITS_H                                "1"   CACHE INTERNAL "Have include limits.h")
+    set(LIBC_HAS_MALLOC_H                                ""   CACHE INTERNAL "Have include malloc.h")
+    set(LIBC_HAS_MATH_H                                  "1"   CACHE INTERNAL "Have include math.h")
+    set(LIBC_HAS_MEMORY_H                                "1"   CACHE INTERNAL "Have include memory.h")
+    set(LIBC_HAS_SIGNAL_H                                "1"   CACHE INTERNAL "Have include signal.h")
+    set(LIBC_HAS_STDARG_H                                "1"   CACHE INTERNAL "Have include stdarg.h")
+    set(LIBC_HAS_STDBOOL_H                               "1"   CACHE INTERNAL "Have include stdbool.h")
+    set(LIBC_HAS_STDDEF_H                                "1"   CACHE INTERNAL "Have include stddef.h")
+    set(LIBC_HAS_STDINT_H                                "1"   CACHE INTERNAL "Have include stdint.h")
+    set(LIBC_HAS_STDIO_H                                 "1"   CACHE INTERNAL "Have include stdio.h")
+    set(LIBC_HAS_STDLIB_H                                "1"   CACHE INTERNAL "Have include stdlib.h")
+    set(LIBC_HAS_STRING_H                                "1"   CACHE INTERNAL "Have include string.h")
+    set(LIBC_HAS_STRINGS_H                               "1"   CACHE INTERNAL "Have include strings.h")
+    set(LIBC_HAS_SYS_TYPES_H                             "1"   CACHE INTERNAL "Have include sys/types.h")
+    set(LIBC_HAS_TIME_H                                  "1"   CACHE INTERNAL "Have include time.h")
+    set(LIBC_HAS_WCHAR_H                                 "1"   CACHE INTERNAL "Have include wchar.h")
+
+    set(HAVE_LIBM                                        "1"   CACHE INTERNAL "Have library m")
+
+    set(LIBC_HAS_ABS                                "1"   CACHE INTERNAL "Have symbol abs")
+    set(LIBC_HAS_ACOS                               "1"   CACHE INTERNAL "Have symbol acos")
+    set(LIBC_HAS_ACOSF                              "1"   CACHE INTERNAL "Have symbol acosf")
+    set(LIBC_HAS_ASIN                               "1"   CACHE INTERNAL "Have symbol asin")
+    set(LIBC_HAS_ASINF                              "1"   CACHE INTERNAL "Have symbol asinf")
+    set(LIBC_HAS_ATAN                               "1"   CACHE INTERNAL "Have symbol atan")
+    set(LIBC_HAS_ATAN2                              "1"   CACHE INTERNAL "Have symbol atan2")
+    set(LIBC_HAS_ATAN2F                             "1"   CACHE INTERNAL "Have symbol atan2f")
+    set(LIBC_HAS_ATANF                              "1"   CACHE INTERNAL "Have symbol atanf")
+    set(LIBC_HAS_ATOF                               "1"   CACHE INTERNAL "Have symbol atof")
+    set(LIBC_HAS_ATOI                               "1"   CACHE INTERNAL "Have symbol atoi")
+    set(LIBC_HAS_BCOPY                              "1"   CACHE INTERNAL "Have symbol bcopy")
+    set(LIBC_HAS_CEIL                               "1"   CACHE INTERNAL "Have symbol ceil")
+    set(LIBC_HAS_CEILF                              "1"   CACHE INTERNAL "Have symbol ceilf")
+    set(LIBC_HAS_COPYSIGN                           "1"   CACHE INTERNAL "Have symbol copysign")
+    set(LIBC_HAS_COPYSIGNF                          "1"   CACHE INTERNAL "Have symbol copysignf")
+    set(LIBC_HAS_COS                                "1"   CACHE INTERNAL "Have symbol cos")
+    set(LIBC_HAS_COSF                               "1"   CACHE INTERNAL "Have symbol cosf")
+    set(LIBC_HAS__EXIT                              "1"   CACHE INTERNAL "Have symbol _Exit")
+    set(LIBC_HAS_EXP                                "1"   CACHE INTERNAL "Have symbol exp")
+    set(LIBC_HAS_EXPF                               "1"   CACHE INTERNAL "Have symbol expf")
+    set(LIBC_HAS_FABS                               "1"   CACHE INTERNAL "Have symbol fabs")
+    set(LIBC_HAS_FABSF                              "1"   CACHE INTERNAL "Have symbol fabsf")
+    set(LIBC_HAS_FLOOR                              "1"   CACHE INTERNAL "Have symbol floor")
+    set(LIBC_HAS_FLOORF                             "1"   CACHE INTERNAL "Have symbol floorf")
+    set(LIBC_HAS_FMOD                               "1"   CACHE INTERNAL "Have symbol fmod")
+    set(LIBC_HAS_FMODF                              "1"   CACHE INTERNAL "Have symbol fmodf")
+    set(LIBC_HAS_FOPEN64                            ""   CACHE INTERNAL "Have symbol fopen64")
+    set(LIBC_HAS_FSEEKO                             "1"   CACHE INTERNAL "Have symbol fseeko")
+    set(LIBC_HAS_FSEEKO64                           ""   CACHE INTERNAL "Have symbol fseeko64")
+    set(LIBC_HAS_GETENV                             "1"   CACHE INTERNAL "Have symbol getenv")
+    set(LIBC_HAS__I64TOA                            ""   CACHE INTERNAL "Have symbol _i64toa")
+    set(LIBC_HAS_INDEX                              "1"   CACHE INTERNAL "Have symbol index")
+    set(LIBC_HAS_ITOA                               ""   CACHE INTERNAL "Have symbol itoa")
+    set(LIBC_HAS_LOG                                "1"   CACHE INTERNAL "Have symbol log")
+    set(LIBC_HAS_LOG10                              "1"   CACHE INTERNAL "Have symbol log10")
+    set(LIBC_HAS_LOG10F                             "1"   CACHE INTERNAL "Have symbol log10f")
+    set(LIBC_HAS_LOGF                               "1"   CACHE INTERNAL "Have symbol logf")
+    set(LIBC_HAS_LROUND                             "1"   CACHE INTERNAL "Have symbol lround")
+    set(LIBC_HAS_LROUNDF                            "1"   CACHE INTERNAL "Have symbol lroundf")
+    set(LIBC_HAS__LTOA                              ""   CACHE INTERNAL "Have symbol _ltoa")
+    set(LIBC_HAS_MALLOC                             "1"   CACHE INTERNAL "Have symbol malloc")
+    set(LIBC_HAS_MEMCMP                             "1"   CACHE INTERNAL "Have symbol memcmp")
+    set(LIBC_HAS_MEMCPY                             "1"   CACHE INTERNAL "Have symbol memcpy")
+    set(LIBC_HAS_MEMMOVE                            "1"   CACHE INTERNAL "Have symbol memmove")
+    set(LIBC_HAS_MEMSET                             "1"   CACHE INTERNAL "Have symbol memset")
+    set(LIBC_HAS_MODF                               "1"   CACHE INTERNAL "Have symbol modf")
+    set(LIBC_HAS_MODFF                              "1"   CACHE INTERNAL "Have symbol modff")
+    set(LIBC_HAS_POW                                "1"   CACHE INTERNAL "Have symbol pow")
+    set(LIBC_HAS_POWF                               "1"   CACHE INTERNAL "Have symbol powf")
+    set(LIBC_HAS_PUTENV                             "1"   CACHE INTERNAL "Have symbol putenv")
+    set(LIBC_HAS_RINDEX                             "1"   CACHE INTERNAL "Have symbol rindex")
+    set(LIBC_HAS_ROUND                              "1"   CACHE INTERNAL "Have symbol round")
+    set(LIBC_HAS_ROUNDF                             "1"   CACHE INTERNAL "Have symbol roundf")
+    set(LIBC_HAS_SCALBN                             "1"   CACHE INTERNAL "Have symbol scalbn")
+    set(LIBC_HAS_SCALBNF                            "1"   CACHE INTERNAL "Have symbol scalbnf")
+    set(LIBC_HAS_SETENV                             "1"   CACHE INTERNAL "Have symbol setenv")
+    set(LIBC_HAS_SIN                                "1"   CACHE INTERNAL "Have symbol sin")
+    set(LIBC_HAS_SINF                               "1"   CACHE INTERNAL "Have symbol sinf")
+    set(LIBC_HAS_SQR                                ""   CACHE INTERNAL "Have symbol sqr")
+    set(LIBC_HAS_SQRT                               "1"   CACHE INTERNAL "Have symbol sqrt")
+    set(LIBC_HAS_SQRTF                              "1"   CACHE INTERNAL "Have symbol sqrtf")
+    set(LIBC_HAS_SSCANF                             "1"   CACHE INTERNAL "Have symbol sscanf")
+    set(LIBC_HAS_STRCHR                             "1"   CACHE INTERNAL "Have symbol strchr")
+    set(LIBC_HAS_STRCMP                             "1"   CACHE INTERNAL "Have symbol strcmp")
+    set(LIBC_HAS_STRLCAT                            "1"   CACHE INTERNAL "Have symbol strlcat")
+    set(LIBC_HAS_STRLCPY                            "1"   CACHE INTERNAL "Have symbol strlcpy")
+    set(LIBC_HAS_STRLEN                             "1"   CACHE INTERNAL "Have symbol strlen")
+    set(LIBC_HAS_STRNCMP                            "1"   CACHE INTERNAL "Have symbol strncmp")
+    set(LIBC_HAS_STRNLEN                            "1"   CACHE INTERNAL "Have symbol strnlen")
+    set(LIBC_HAS_STRPBRK                            "1"   CACHE INTERNAL "Have symbol strpbrk")
+    set(LIBC_HAS_STRRCHR                            "1"   CACHE INTERNAL "Have symbol strrchr")
+    set(LIBC_HAS_STRSTR                             "1"   CACHE INTERNAL "Have symbol strstr")
+    set(LIBC_HAS_STRNSTR                            "1"   CACHE INTERNAL "Have symbol strnstr")
+    set(LIBC_HAS_STRTOD                             "1"   CACHE INTERNAL "Have symbol strtod")
+    set(LIBC_HAS_STRTOK_R                           "1"   CACHE INTERNAL "Have symbol strtok_r")
+    set(LIBC_HAS_STRTOL                             "1"   CACHE INTERNAL "Have symbol strtol")
+    set(LIBC_HAS_STRTOLL                            "1"   CACHE INTERNAL "Have symbol strtoll")
+    set(LIBC_HAS_STRTOUL                            "1"   CACHE INTERNAL "Have symbol strtoul")
+    set(LIBC_HAS_STRTOULL                           "1"   CACHE INTERNAL "Have symbol strtoull")
+    set(LIBC_HAS_TAN                                "1"   CACHE INTERNAL "Have symbol tan")
+    set(LIBC_HAS_TANF                               "1"   CACHE INTERNAL "Have symbol tanf")
+    set(LIBC_HAS_TRUNC                              "1"   CACHE INTERNAL "Have symbol trunc")
+    set(LIBC_HAS_TRUNCF                             "1"   CACHE INTERNAL "Have symbol truncf")
+    set(LIBC_HAS_UNSETENV                           "1"   CACHE INTERNAL "Have symbol unsetenv")
+    set(LIBC_HAS_VSNPRINTF                          "1"   CACHE INTERNAL "Have symbol vsnprintf")
+    set(LIBC_HAS_VSSCANF                            "1"   CACHE INTERNAL "Have symbol vsscanf")
+    set(LIBC_HAS_WCSNLEN                            "1"   CACHE INTERNAL "Have symbol wcsnlen")
+    set(LIBC_HAS_WCSCMP                             "1"   CACHE INTERNAL "Have symbol wcscmp")
+    set(LIBC_HAS_WCSDUP                             "1"   CACHE INTERNAL "Have symbol wcsdup")
+    set(LIBC_HAS_WCSLCAT                            "1"   CACHE INTERNAL "Have symbol wcslcat")
+    set(LIBC_HAS_WCSLCPY                            "1"   CACHE INTERNAL "Have symbol wcslcpy")
+    set(LIBC_HAS_WCSLEN                             "1"   CACHE INTERNAL "Have symbol wcslen")
+    set(LIBC_HAS_WCSNCMP                            "1"   CACHE INTERNAL "Have symbol wcsncmp")
+    set(LIBC_HAS_WCSSTR                             "1"   CACHE INTERNAL "Have symbol wcsstr")
+    set(LIBC_HAS_WCSTOL                             "1"   CACHE INTERNAL "Have symbol wcstol")
+    set(LIBC_HAS_STRCASESTR                         "1"   CACHE INTERNAL "Have symbol strcasestr")
+
+    set(LIBC_HAS_ISINF                                   "1"   CACHE INTERNAL "Have include isinf(double)")
+    set(LIBC_ISINF_HANDLES_FLOAT                         "1"   CACHE INTERNAL "Have include isinf(float)")
+    set(LIBC_HAS_ISINFF                                  ""   CACHE INTERNAL "Have include isinff(float)")
+    set(LIBC_HAS_ISNAN                                   "1"   CACHE INTERNAL "Have include isnan(double)")
+    set(LIBC_ISNAN_HANDLES_FLOAT                         "1"   CACHE INTERNAL "Have include isnan(float)")
+    set(LIBC_HAS_ISNANF                                  ""   CACHE INTERNAL "Have include isnanf(float)")
+
+    set(HAVE_FDATASYNC                                   ""   CACHE INTERNAL "Have symbol fdatasync")
+    set(HAVE_GETHOSTNAME                                 "1"   CACHE INTERNAL "Have symbol gethostname")
+    set(HAVE_GETPAGESIZE                                 "1"   CACHE INTERNAL "Have symbol getpagesize")
+    set(HAVE_GETRESGID                                   ""   CACHE INTERNAL "Have symbol getresgid")
+    set(HAVE_GETRESUID                                   ""   CACHE INTERNAL "Have symbol getresuid")
+    set(HAVE_SIGACTION                                   "1"   CACHE INTERNAL "Have symbol sigaction")
+    set(HAVE_SIGTIMEDWAIT                                ""   CACHE INTERNAL "Have symbol sigtimedwait")
+    set(HAVE_SETJMP                                      "1"   CACHE INTERNAL "Have symbol setjmp")
+    set(HAVE_NANOSLEEP                                   "1"   CACHE INTERNAL "Have symbol nanosleep")
+    set(HAVE_GMTIME_R                                    "1"   CACHE INTERNAL "Have symbol gmtime_r")
+    set(HAVE_LOCALTIME_R                                 "1"   CACHE INTERNAL "Have symbol localtime_r")
+    set(HAVE_NL_LANGINFO                                 "1"   CACHE INTERNAL "Have symbol nl_langinfo")
+    set(HAVE_SYSCONF                                     "1"   CACHE INTERNAL "Have symbol sysconf")
+    set(HAVE_SYSCTLBYNAME                                "1"   CACHE INTERNAL "Have symbol sysctlbyname")
+    set(HAVE_GETAUXVAL                                   ""   CACHE INTERNAL "Have symbol getauxval")
+    set(HAVE_ELF_AUX_INFO                                ""   CACHE INTERNAL "Have symbol elf_aux_info")
+    set(HAVE_PPOLL                                       ""   CACHE INTERNAL "Have symbol ppoll")
+    set(HAVE_MEMFD_CREATE                                ""   CACHE INTERNAL "Have symbol memfd_create")
+    set(HAVE_POSIX_FALLOCATE                             ""   CACHE INTERNAL "Have symbol posix_fallocate")
+    set(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR           "1"   CACHE INTERNAL "Have symbol posix_spawn_file_actions_addchdir")
+    set(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR_NP        "1"   CACHE INTERNAL "Have symbol posix_spawn_file_actions_addchdir_np")
+
+    set(HAVE_SA_SIGACTION                                "1"   CACHE INTERNAL "Have symbol sa_sigaction")
+    set(HAVE_ST_MTIM                                     ""   CACHE INTERNAL "Test HAVE_ST_MTIM")
+    set(HAVE_DLOPEN_IN_LIBC                              "1"   CACHE INTERNAL "Have symbol dlopen")
+    set(HAVE_O_CLOEXEC                                   "1"   CACHE INTERNAL "Test HAVE_O_CLOEXEC")
+
+    set(HAVE_FRAMEWORK_GAMECONTROLLER                    "1"   CACHE INTERNAL "Test HAVE_FRAMEWORK_GAMECONTROLLER")
+    set(HAVE_FRAMEWORK_COREHAPTICS                       "1"   CACHE INTERNAL "Test HAVE_FRAMEWORK_COREHAPTICS")
+    set(HAVE_FRAMEWORK_METAL                             "1"   CACHE INTERNAL "Test HAVE_FRAMEWORK_METAL")
+
+    set(HAVE_PTHREADS                                    "1"   CACHE INTERNAL "Have pthreads")
+    set(HAVE_RECURSIVE_MUTEXES                           "1"   CACHE INTERNAL "Have recursive mutexes")
+    set(HAVE_PTHREADS_SEM                                "1"   CACHE INTERNAL "Have pthreads semaphores")
+    set(COMPILER_HAS_SEM_TIMEDWAIT                       "1"   CACHE INTERNAL "Test COMPILER_HAS_SEM_TIMEDWAIT")
+
+    set(HAVE_PTHREAD_H                                   "1"   CACHE INTERNAL "Have pthread.h")
+    set(HAVE_PTHREAD_NP_H                                ""   CACHE INTERNAL "Have pthread_np.h")
+    set(HAVE_PTHREAD_SETNAME_NP                          "1"   CACHE INTERNAL "Have pthread_setname_np")
+    set(HAVE_POSIX_SPAWN                                 "1"   CACHE INTERNAL "Have symbol posix_spawn")
+    set(COMPILER_SUPPORTS_FOBJC_ARC                      "1"   CACHE INTERNAL "Test COMPILER_SUPPORTS_FOBJC_ARC")
+
+    # Workaround to fix a lot of warning: if statement has empty body [-Wempty-body]
+    add_compile_options(-Wno-empty-body)
+  endfunction()
+endif()
+
+if(ANDROID)
+  function(SDL_Preseed_CMakeCache)
+    message(STATUS "======== Filling ANDROID")
+    set(HAVE_GCC_WALL                                    "1"   CACHE INTERNAL "Test HAVE_GCC_WALL")
+    set(HAVE_GCC_WUNDEF                                  "1"   CACHE INTERNAL "Test HAVE_GCC_WUNDEF")
+    set(HAVE_GCC_WFLOAT_CONVERSION                       "1"   CACHE INTERNAL "Test HAVE_GCC_WFLOAT_CONVERSION")
+    set(HAVE_GCC_NO_STRICT_ALIASING                      "1"   CACHE INTERNAL "Test HAVE_GCC_NO_STRICT_ALIASING")
+    set(HAVE_GCC_WDOCUMENTATION                          "1"   CACHE INTERNAL "Test HAVE_GCC_WDOCUMENTATION")
+    set(HAVE_GCC_WDOCUMENTATION_UNKNOWN_COMMAND          "1"   CACHE INTERNAL "Test HAVE_GCC_WDOCUMENTATION_UNKNOWN_COMMAND")
+    set(HAVE_GCC_COMMENT_BLOCK_COMMANDS                  "1"   CACHE INTERNAL "Test HAVE_GCC_COMMENT_BLOCK_COMMANDS")
+    set(HAVE_GCC_WSHADOW                                 "1"   CACHE INTERNAL "Test HAVE_GCC_WSHADOW")
+    set(HAVE_GCC_WUNUSED_LOCAL_TYPEDEFS                  "1"   CACHE INTERNAL "Test HAVE_GCC_WUNUSED_LOCAL_TYPEDEFS")
+    set(HAVE_GCC_WIMPLICIT_FALLTHROUGH                   "1"   CACHE INTERNAL "Test HAVE_GCC_WIMPLICIT_FALLTHROUGH")
+    set(COMPILER_SUPPORTS_FCOLOR_DIAGNOSTICS             "1"   CACHE INTERNAL "Test COMPILER_SUPPORTS_FCOLOR_DIAGNOSTICS")
+    set(LIBC_IS_GLIBC                                    ""   CACHE INTERNAL "Have symbol __GLIBC__")
+    set(HAVE_WL_VERSION_SCRIPT                           "1"   CACHE INTERNAL "Test HAVE_WL_VERSION_SCRIPT")
+    set(COMPILER_SUPPORTS_GCC_ATOMICS                    ""   CACHE INTERNAL "Test COMPILER_SUPPORTS_GCC_ATOMICS")
+    set(COMPILER_SUPPORTS_SYNC_LOCK_TEST_AND_SET         "1"   CACHE INTERNAL "Test COMPILER_SUPPORTS_SYNC_LOCK_TEST_AND_SET")
+    set(HAVE_GCC_FVISIBILITY                             "1"   CACHE INTERNAL "Test HAVE_GCC_FVISIBILITY")
+    set(LINKER_SUPPORTS_WL_UNDEFINED_ERROR               "1"   CACHE INTERNAL "Test LINKER_SUPPORTS_WL_UNDEFINED_ERROR")
+    set(LINKER_SUPPORTS_WL_NO_UNDEFINED                  "1"   CACHE INTERNAL "Test LINKER_SUPPORTS_WL_NO_UNDEFINED")
+
+    set(HAVE_ALLOCA_H                                    "1"   CACHE INTERNAL "Have include alloca.h")
+    set(LIBC_HAS_FLOAT_H                                 "1"   CACHE INTERNAL "Have include float.h")
+    set(LIBC_HAS_ICONV_H                                 "1"   CACHE INTERNAL "Have include iconv.h")
+    set(LIBC_HAS_INTTYPES_H                              "1"   CACHE INTERNAL "Have include inttypes.h")
+    set(LIBC_HAS_LIMITS_H                                "1"   CACHE INTERNAL "Have include limits.h")
+    set(LIBC_HAS_MALLOC_H                                "1"   CACHE INTERNAL "Have include malloc.h")
+    set(LIBC_HAS_MATH_H                                  "1"   CACHE INTERNAL "Have include math.h")
+    set(LIBC_HAS_MEMORY_H                                "1"   CACHE INTERNAL "Have include memory.h")
+    set(LIBC_HAS_SIGNAL_H                                "1"   CACHE INTERNAL "Have include signal.h")
+    set(LIBC_HAS_STDARG_H                                "1"   CACHE INTERNAL "Have include stdarg.h")
+    set(LIBC_HAS_STDBOOL_H                               "1"   CACHE INTERNAL "Have include stdbool.h")
+    set(LIBC_HAS_STDDEF_H                                "1"   CACHE INTERNAL "Have include stddef.h")
+    set(LIBC_HAS_STDINT_H                                "1"   CACHE INTERNAL "Have include stdint.h")
+    set(LIBC_HAS_STDIO_H                                 "1"   CACHE INTERNAL "Have include stdio.h")
+    set(LIBC_HAS_STDLIB_H                                "1"   CACHE INTERNAL "Have include stdlib.h")
+    set(LIBC_HAS_STRING_H                                "1"   CACHE INTERNAL "Have include string.h")
+    set(LIBC_HAS_STRINGS_H                               "1"   CACHE INTERNAL "Have include strings.h")
+    set(LIBC_HAS_SYS_TYPES_H                             "1"   CACHE INTERNAL "Have include sys/types.h")
+    set(LIBC_HAS_TIME_H                                  "1"   CACHE INTERNAL "Have include time.h")
+    set(LIBC_HAS_WCHAR_H                                 "1"   CACHE INTERNAL "Have include wchar.h")
+
+    set(HAVE_LIBM                                        "1"   CACHE INTERNAL "Have library m")
+
+    set(LIBC_HAS_ABS                                "1"   CACHE INTERNAL "Have symbol abs")
+    set(LIBC_HAS_ACOS                               "1"   CACHE INTERNAL "Have symbol acos")
+    set(LIBC_HAS_ACOSF                              "1"   CACHE INTERNAL "Have symbol acosf")
+    set(LIBC_HAS_ASIN                               "1"   CACHE INTERNAL "Have symbol asin")
+    set(LIBC_HAS_ASINF                              "1"   CACHE INTERNAL "Have symbol asinf")
+    set(LIBC_HAS_ATAN                               "1"   CACHE INTERNAL "Have symbol atan")
+    set(LIBC_HAS_ATAN2                              "1"   CACHE INTERNAL "Have symbol atan2")
+    set(LIBC_HAS_ATAN2F                             "1"   CACHE INTERNAL "Have symbol atan2f")
+    set(LIBC_HAS_ATANF                              "1"   CACHE INTERNAL "Have symbol atanf")
+    set(LIBC_HAS_ATOF                               "1"   CACHE INTERNAL "Have symbol atof")
+    set(LIBC_HAS_ATOI                               "1"   CACHE INTERNAL "Have symbol atoi")
+    set(LIBC_HAS_BCOPY                              "1"   CACHE INTERNAL "Have symbol bcopy")
+    set(LIBC_HAS_CEIL                               "1"   CACHE INTERNAL "Have symbol ceil")
+    set(LIBC_HAS_CEILF                              "1"   CACHE INTERNAL "Have symbol ceilf")
+    set(LIBC_HAS_COPYSIGN                           "1"   CACHE INTERNAL "Have symbol copysign")
+    set(LIBC_HAS_COPYSIGNF                          "1"   CACHE INTERNAL "Have symbol copysignf")
+    set(LIBC_HAS_COS                                "1"   CACHE INTERNAL "Have symbol cos")
+    set(LIBC_HAS_COSF                               "1"   CACHE INTERNAL "Have symbol cosf")
+    set(LIBC_HAS__EXIT                              "1"   CACHE INTERNAL "Have symbol _Exit")
+    set(LIBC_HAS_EXP                                "1"   CACHE INTERNAL "Have symbol exp")
+    set(LIBC_HAS_EXPF                               "1"   CACHE INTERNAL "Have symbol expf")
+    set(LIBC_HAS_FABS                               "1"   CACHE INTERNAL "Have symbol fabs")
+    set(LIBC_HAS_FABSF                              "1"   CACHE INTERNAL "Have symbol fabsf")
+    set(LIBC_HAS_FLOOR                              "1"   CACHE INTERNAL "Have symbol floor")
+    set(LIBC_HAS_FLOORF                             "1"   CACHE INTERNAL "Have symbol floorf")
+    set(LIBC_HAS_FMOD                               "1"   CACHE INTERNAL "Have symbol fmod")
+    set(LIBC_HAS_FMODF                              "1"   CACHE INTERNAL "Have symbol fmodf")
+    set(LIBC_HAS_FOPEN64                            "1"   CACHE INTERNAL "Have symbol fopen64")
+    set(LIBC_HAS_FSEEKO                             "1"   CACHE INTERNAL "Have symbol fseeko")
+    set(LIBC_HAS_FSEEKO64                           "1"   CACHE INTERNAL "Have symbol fseeko64")
+    set(LIBC_HAS_GETENV                             "1"   CACHE INTERNAL "Have symbol getenv")
+    set(LIBC_HAS__I64TOA                            ""   CACHE INTERNAL "Have symbol _i64toa")
+    set(LIBC_HAS_INDEX                              ""   CACHE INTERNAL "Have symbol index")
+    set(LIBC_HAS_ITOA                               ""   CACHE INTERNAL "Have symbol itoa")
+    set(LIBC_HAS_LOG                                "1"   CACHE INTERNAL "Have symbol log")
+    set(LIBC_HAS_LOG10                              "1"   CACHE INTERNAL "Have symbol log10")
+    set(LIBC_HAS_LOG10F                             "1"   CACHE INTERNAL "Have symbol log10f")
+    set(LIBC_HAS_LOGF                               "1"   CACHE INTERNAL "Have symbol logf")
+    set(LIBC_HAS_LROUND                             "1"   CACHE INTERNAL "Have symbol lround")
+    set(LIBC_HAS_LROUNDF                            "1"   CACHE INTERNAL "Have symbol lroundf")
+    set(LIBC_HAS__LTOA                              ""   CACHE INTERNAL "Have symbol _ltoa")
+    set(LIBC_HAS_MALLOC                             "1"   CACHE INTERNAL "Have symbol malloc")
+    set(LIBC_HAS_MEMCMP                             "1"   CACHE INTERNAL "Have symbol memcmp")
+    set(LIBC_HAS_MEMCPY                             "1"   CACHE INTERNAL "Have symbol memcpy")
+    set(LIBC_HAS_MEMMOVE                            "1"   CACHE INTERNAL "Have symbol memmove")
+    set(LIBC_HAS_MEMSET                             "1"   CACHE INTERNAL "Have symbol memset")
+    set(LIBC_HAS_MODF                               "1"   CACHE INTERNAL "Have symbol modf")
+    set(LIBC_HAS_MODFF                              "1"   CACHE INTERNAL "Have symbol modff")
+    set(LIBC_HAS_POW                                "1"   CACHE INTERNAL "Have symbol pow")
+    set(LIBC_HAS_POWF                               "1"   CACHE INTERNAL "Have symbol powf")
+    set(LIBC_HAS_PUTENV                             "1"   CACHE INTERNAL "Have symbol putenv")
+    set(LIBC_HAS_RINDEX                             ""   CACHE INTERNAL "Have symbol rindex")
+    set(LIBC_HAS_ROUND                              "1"   CACHE INTERNAL "Have symbol round")
+    set(LIBC_HAS_ROUNDF                             "1"   CACHE INTERNAL "Have symbol roundf")
+    set(LIBC_HAS_SCALBN                             "1"   CACHE INTERNAL "Have symbol scalbn")
+    set(LIBC_HAS_SCALBNF                            "1"   CACHE INTERNAL "Have symbol scalbnf")
+    set(LIBC_HAS_SETENV                             "1"   CACHE INTERNAL "Have symbol setenv")
+    set(LIBC_HAS_SIN                                "1"   CACHE INTERNAL "Have symbol sin")
+    set(LIBC_HAS_SINF                               "1"   CACHE INTERNAL "Have symbol sinf")
+    set(LIBC_HAS_SQR                                ""   CACHE INTERNAL "Have symbol sqr")
+    set(LIBC_HAS_SQRT                               "1"   CACHE INTERNAL "Have symbol sqrt")
+    set(LIBC_HAS_SQRTF                              "1"   CACHE INTERNAL "Have symbol sqrtf")
+    set(LIBC_HAS_SSCANF                             "1"   CACHE INTERNAL "Have symbol sscanf")
+    set(LIBC_HAS_STRCHR                             "1"   CACHE INTERNAL "Have symbol strchr")
+    set(LIBC_HAS_STRCMP                             "1"   CACHE INTERNAL "Have symbol strcmp")
+    set(LIBC_HAS_STRLCAT                            "1"   CACHE INTERNAL "Have symbol strlcat")
+    set(LIBC_HAS_STRLCPY                            "1"   CACHE INTERNAL "Have symbol strlcpy")
+    set(LIBC_HAS_STRLEN                             "1"   CACHE INTERNAL "Have symbol strlen")
+    set(LIBC_HAS_STRNCMP                            "1"   CACHE INTERNAL "Have symbol strncmp")
+    set(LIBC_HAS_STRNLEN                            "1"   CACHE INTERNAL "Have symbol strnlen")
+    set(LIBC_HAS_STRPBRK                            "1"   CACHE INTERNAL "Have symbol strpbrk")
+    set(LIBC_HAS_STRRCHR                            "1"   CACHE INTERNAL "Have symbol strrchr")
+    set(LIBC_HAS_STRSTR                             "1"   CACHE INTERNAL "Have symbol strstr")
+    set(LIBC_HAS_STRNSTR                            ""   CACHE INTERNAL "Have symbol strnstr")
+    set(LIBC_HAS_STRTOD                             "1"   CACHE INTERNAL "Have symbol strtod")
+    set(LIBC_HAS_STRTOK_R                           "1"   CACHE INTERNAL "Have symbol strtok_r")
+    set(LIBC_HAS_STRTOL                             "1"   CACHE INTERNAL "Have symbol strtol")
+    set(LIBC_HAS_STRTOLL                            "1"   CACHE INTERNAL "Have symbol strtoll")
+    set(LIBC_HAS_STRTOUL                            "1"   CACHE INTERNAL "Have symbol strtoul")
+    set(LIBC_HAS_STRTOULL                           "1"   CACHE INTERNAL "Have symbol strtoull")
+    set(LIBC_HAS_TAN                                "1"   CACHE INTERNAL "Have symbol tan")
+    set(LIBC_HAS_TANF                               "1"   CACHE INTERNAL "Have symbol tanf")
+    set(LIBC_HAS_TRUNC                              "1"   CACHE INTERNAL "Have symbol trunc")
+    set(LIBC_HAS_TRUNCF                             "1"   CACHE INTERNAL "Have symbol truncf")
+    set(LIBC_HAS_UNSETENV                           "1"   CACHE INTERNAL "Have symbol unsetenv")
+    set(LIBC_HAS_VSNPRINTF                          "1"   CACHE INTERNAL "Have symbol vsnprintf")
+    set(LIBC_HAS_VSSCANF                            "1"   CACHE INTERNAL "Have symbol vsscanf")
+    set(LIBC_HAS_WCSNLEN                            "1"   CACHE INTERNAL "Have symbol wcsnlen")
+    set(LIBC_HAS_WCSCMP                             "1"   CACHE INTERNAL "Have symbol wcscmp")
+    set(LIBC_HAS_WCSDUP                             "1"   CACHE INTERNAL "Have symbol wcsdup")
+    set(LIBC_HAS_WCSLCAT                            "1"   CACHE INTERNAL "Have symbol wcslcat")
+    set(LIBC_HAS_WCSLCPY                            "1"   CACHE INTERNAL "Have symbol wcslcpy")
+    set(LIBC_HAS_WCSLEN                             "1"   CACHE INTERNAL "Have symbol wcslen")
+    set(LIBC_HAS_WCSNCMP                            "1"   CACHE INTERNAL "Have symbol wcsncmp")
+    set(LIBC_HAS_WCSSTR                             "1"   CACHE INTERNAL "Have symbol wcsstr")
+    set(LIBC_HAS_WCSTOL                             "1"   CACHE INTERNAL "Have symbol wcstol")
+    set(LIBC_HAS_STRCASESTR                         "1"   CACHE INTERNAL "Have symbol strcasestr")
+
+    set(LIBC_HAS_ISINF                                   "1"   CACHE INTERNAL "Have include isinf(double)")
+    set(LIBC_ISINF_HANDLES_FLOAT                         "1"   CACHE INTERNAL "Have include isinf(float)")
+    set(LIBC_HAS_ISINFF                                  "1"   CACHE INTERNAL "Have include isinff(float)")
+    set(LIBC_HAS_ISNAN                                   "1"   CACHE INTERNAL "Have include isnan(double)")
+    set(LIBC_ISNAN_HANDLES_FLOAT                         "1"   CACHE INTERNAL "Have include isnan(float)")
+    set(LIBC_HAS_ISNANF                                  "1"   CACHE INTERNAL "Have include isnanf(float)")
+
+    set(HAVE_FDATASYNC                                   "1"   CACHE INTERNAL "Have symbol fdatasync")
+    set(HAVE_GETHOSTNAME                                 "1"   CACHE INTERNAL "Have symbol gethostname")
+    set(HAVE_GETPAGESIZE                                 "1"   CACHE INTERNAL "Have symbol getpagesize")
+    set(HAVE_GETRESGID                                   "1"   CACHE INTERNAL "Have symbol getresgid")
+    set(HAVE_GETRESUID                                   "1"   CACHE INTERNAL "Have symbol getresuid")
+    set(HAVE_SIGACTION                                   "1"   CACHE INTERNAL "Have symbol sigaction")
+    set(HAVE_SIGTIMEDWAIT                                "1"   CACHE INTERNAL "Have symbol sigtimedwait")
+    set(HAVE_SETJMP                                      "1"   CACHE INTERNAL "Have symbol setjmp")
+    set(HAVE_NANOSLEEP                                   "1"   CACHE INTERNAL "Have symbol nanosleep")
+    set(HAVE_GMTIME_R                                    "1"   CACHE INTERNAL "Have symbol gmtime_r")
+    set(HAVE_LOCALTIME_R                                 "1"   CACHE INTERNAL "Have symbol localtime_r")
+    set(HAVE_NL_LANGINFO                                 "1"   CACHE INTERNAL "Have symbol nl_langinfo")
+    set(HAVE_SYSCONF                                     "1"   CACHE INTERNAL "Have symbol sysconf")
+    set(HAVE_SYSCTLBYNAME                                ""   CACHE INTERNAL "Have symbol sysctlbyname")
+    set(HAVE_GETAUXVAL                                   "1"   CACHE INTERNAL "Have symbol getauxval")
+    set(HAVE_ELF_AUX_INFO                                ""   CACHE INTERNAL "Have symbol elf_aux_info")
+    set(HAVE_PPOLL                                       "1"   CACHE INTERNAL "Have symbol ppoll")
+    set(HAVE_MEMFD_CREATE                                "1"   CACHE INTERNAL "Have symbol memfd_create")
+    set(HAVE_POSIX_FALLOCATE                             "1"   CACHE INTERNAL "Have symbol posix_fallocate")
+    set(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR           ""   CACHE INTERNAL "Have symbol posix_spawn_file_actions_addchdir")
+    set(HAVE_POSIX_SPAWN_FILE_ACTIONS_ADDCHDIR_NP        ""   CACHE INTERNAL "Have symbol posix_spawn_file_actions_addchdir_np")
+
+    set(ICONV_IN_LIBC                                    "1"   CACHE INTERNAL "Test ICONV_IN_LIBC")
+    set(ICONV_IN_LIBICONV                                ""   CACHE INTERNAL "Test ICONV_IN_LIBICONV")
+    set(HAVE_SA_SIGACTION                                "1"   CACHE INTERNAL "Have symbol sa_sigaction")
+    set(HAVE_ST_MTIM                                     "1"   CACHE INTERNAL "Test HAVE_ST_MTIM")
+    set(HAVE_DLOPEN_IN_LIBC                              "1"   CACHE INTERNAL "Have symbol dlopen")
+    set(HAVE_O_CLOEXEC                                   "1"   CACHE INTERNAL "Test HAVE_O_CLOEXEC")
+
+    set(HAVE_PTHREADS                                    "1"   CACHE INTERNAL "Have pthreads")
+    set(HAVE_RECURSIVE_MUTEXES                           "1"   CACHE INTERNAL "Have recursive mutexes")
+    set(HAVE_PTHREADS_SEM                                "1"   CACHE INTERNAL "Have pthreads semaphores")
+    set(COMPILER_HAS_SEM_TIMEDWAIT                       "1"   CACHE INTERNAL "Test COMPILER_HAS_SEM_TIMEDWAIT")
+
+    set(HAVE_PTHREAD_H                                   "1"   CACHE INTERNAL "Have pthread.h")
+    set(HAVE_PTHREAD_NP_H                                ""   CACHE INTERNAL "Have pthread_np.h")
+    set(HAVE_PTHREAD_SETNAME_NP                          "1"   CACHE INTERNAL "Have pthread_setname_np")
+  endfunction()
+endif()
+EOF
+""",
+    visibility = ["//visibility:private"],
+)
+
+# https://github.com/bazel-contrib/rules_foreign_cc/blob/main/docs/README.md#cmake
+cmake(
+    name = "sdl3_cmake_base",
+    lib_source = ":all_srcs",
+    data = [":CmakePreseedCache"],
+    env = {
+        "PRESEED_CACHE": "$(execpath :CmakePreseedCache)",
+
+        #TODO: determine optimal value for parallel build
+        "CMAKE_BUILD_PARALLEL_LEVEL": "8", 
+    },
+    generate_args = [
+        "-DSDL_STATIC=true",
+        "-DSDL_SHARED=false",
+        "-DSDL_PTHREADS=true",
+
+        "-DSDL_TEST_LIBRARY=OFF",  #TODO: config_setting with default ON, and disable only for Android where it fails to link now
+
+        "-DCMAKE_PROJECT_INCLUDE=$PRESEED_CACHE",
+    ] + select({
+        "@platforms//os:android": ["-DSDL_TEST_LIBRARY=OFF"],  # test libcheckkeys.so fails to link on Android now
+        "@platforms//cpu:wasm32": ["-DEMSCRIPTEN=true"],
+        "@platforms//os:wasi": ["-DEMSCRIPTEN=true"],
+        "@bazel_tools//src/conditions:darwin": [
+            "-DCMAKE_PREFIX_PATH=/opt/homebrew",
+        ],
+        "//conditions:default": []
+    }),
+    defines = select({
+        "@bazel_tools//src/conditions:darwin": [
+            "CMAKE_OSX_DEPLOYMENT_TARGET=10.13",
+        ],
+        "//conditions:default": []
+    }),
+    out_include_dir = "include",
+    out_static_libs = select({
+        "@bazel_tools//src/conditions:windows": ["SDL3-static.lib"],
+        "//conditions:default": ["libSDL3.a"],
+    }),
+    visibility = ["//visibility:private"],
+)
+
+# linkopts in cmake rule w/ space isn't passed to dependents correctly, so declare wrapped cc_library to pass them
+cc_library(
+    name = "sdl3_cmake_cc",
+    deps = [":sdl3_cmake_base"],
+
+    # includes/strip_include_prefix only for hedron_compile_commands to generate correct value for SDL3/SDL.h, etc
+    #   cmake rule generates them correctly, but they aren't passed there
+    strip_include_prefix = "include",
+    includes = ["include"],
+
+    # link options to be passed up to the dependencies of this library
+    linkopts = select({
+        "@platforms//os:android": [
+            "-lOpenSLES",  # slCreateEngine, SL_IID_VOLUME, etc (OpenSL ES)
+            "-lGLESv2",    # glActiveTexture, etc (GLES 2.0/3.0)
+        ],
+        "@bazel_tools//src/conditions:darwin": [
+            "-framework", "CoreGraphics",
+            "-framework", "CoreAudio",
+            "-framework", "CoreHaptics",
+            "-framework", "CoreMedia",
+            "-framework", "CoreVideo",
+            "-framework", "AVFoundation",
+            "-framework", "AudioToolbox",
+            "-framework", "ForceFeedback",
+            "-framework", "GameController",
+            "-framework", "IOKit",
+            "-framework", "Carbon",
+            "-framework", "Metal",
+            "-framework", "AppKit",
+            "-framework", "QuartzCore",
+            "-framework", "UniformTypeIdentifiers",
+        ],
+        "@bazel_tools//src/conditions:windows": [
+            "User32.lib",   # Window functions (CreateWindow, MessageBox, etc.)
+            "Gdi32.lib",    # GDI functions (CreateDC, SelectObject, BitBlt, GetDeviceCaps, etc.)
+            "Advapi32.lib", # Registry functions (RegOpenKeyExW, etc.)
+            "Shell32.lib",  # Shell functions (ShellExecuteW, SHGetFolderPathW, etc.)
+            "Ole32.lib",    # COM functions (CoInitializeEx, CoCreateInstance, etc.)
+            "Oleaut32.lib", # OLE Automation functions (IDispatch, VARIANT, SysFreeString, etc.)
+            "Imm32.lib",    # IME Input Method Manager functions
+            "Winmm.lib",    # Windows Multimedia functions (timeBeginPeriod, etc.)
+            "Version.lib",  # Version functions (GetFileVersionInfo, etc.)
+            "Setupapi.lib", # Device Setup API functions (SetupDiGetClassDevs, etc.)
+            #"Cfgmgr32.lib", # Configuration Manager functions
+        ],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+)
+
+################################
+# Build via pure Bazel rules
+# TODO: version generation / android support / etc configurable via features and config_settings
+################################
+GENERAL_SRCS = [
+    "src/*.c",
+    "src/atomic/*.c",
+    "src/audio/*.c",
+    "src/camera/*.c",
+    "src/core/*.c",
+    "src/cpuinfo/*.c",
+    "src/dynapi/*.c",
+    "src/events/*.c",
+    "src/io/*.c",
+    "src/io/generic/*.c",
+    "src/filesystem/*.c",
+    "src/gpu/*.c",
+    "src/joystick/*.c",
+    "src/haptic/*.c",
+    "src/hidapi/*.c",
+    "src/locale/*.c",
+    "src/main/*.c",
+    "src/misc/*.c",
+    "src/power/*.c",
+    "src/render/*.c",
+    "src/render/*/*.c",
+    "src/sensor/*.c",
+    "src/stdlib/*.c",
+    "src/storage/*.c",
+    "src/thread/*.c",
+    "src/time/*.c",
+    "src/timer/*.c",
+    "src/video/*.c",
+    "src/video/yuv2rgb/*.c",
+]
+GENERAL_MAIN_SRCS = ["src/main/generic/*.c"]
+
+# if(SDL_AUDIO)
+#   if(SDL_DUMMYAUDIO)
+DUMMYAUDIO_SRCS = ["src/audio/dummy/*.c"]
+#   if(SDL_DISKAUDIO)
+DISKAUDIO_SRCS = ["src/audio/disk/*.c"]
+
+# if(SDL_CAMERA)
+#   if(SDL_DUMMYCAMERA)
+DUMMYCAMERA_SRCS = ["src/camera/dummy/*.c"]
+#   if(UNIX OR APPLE)
+DLOPEN_SRCS = ["src/loadso/dlopen/*.c"]
+
+# if(SDL_JOYSTICK) && if(SDL_JOYSTICK_VIRTUAL)
+VIRTUAL_JOYSTICK_SRCS = ["src/joystick/virtual/*.c"]
+
+# if(SDL_VIDEO) && if(SDL_DUMMYVIDEO)
+DUMMYVIDEO_SRCS = ["src/video/dummy/*.c"]
+
+# if(APPLE)
+#   if(SDL_CAMERA) && if(MACOS OR IOS)
+APPLE_CAMERA_SRCS = ["src/camera/coremedia/*.m"]
+#   !if(IOS OR TVOS OR VISIONOS OR WATCHOS)
+DARWIN_MISC_SRCS = ["src/misc/macos/*.m"]
+#   if(SDL_AUDIO)
+APPLE_AUDIO_SRCS = ["src/audio/coreaudio/*.m"]
+#   if(SDL_JOYSTICK)
+APPLE_JOYSTICK_SRCS = ["src/joystick/apple/*.m"]
+#   if(SDL_JOYSTICK) && !if(IOS OR TVOS OR VISIONOS OR WATCHOS)
+DARWIN_JOYSTICK_SRCS = ["src/joystick/darwin/*.c"]
+#   if(SDL_HAPTIC) && !if(IOS OR TVOS OR VISIONOS OR WATCHOS)
+DARWIN_HAPTIC_SRCS = ["src/haptic/darwin/*.c"]
+#   if(SDL_POWER) && !if(IOS OR TVOS OR VISIONOS OR WATCHOS)
+DARWIN_POWER_SRCS = ["src/power/macos/*.c"]
+#   General Apple platform sources
+APPLE_GENERAL_SRCS = [
+    "src/locale/macos/*.m",
+    "src/time/unix/*.c",
+    "src/timer/unix/*.c",
+    "src/filesystem/cocoa/*.m",
+    "src/storage/generic/*.c",
+    "src/filesystem/posix/*.c",
+]
+#   if(SDL_SENSOR) && if(IOS OR VISIONOS OR WATCHOS)
+COREMOTION_SENSOR_SRCS = ["src/sensor/coremotion/*.m"]
+#   if(SDL_VULKAN OR SDL_METAL OR SDL_RENDER_METAL)
+#       if(HAVE_FRAMEWORK_METAL) && if (SDL_GPU)
+METAL_FRAMEWORK_SRCS = [
+    "src/render/metal/*.m",
+    "src/gpu/metal/*.m",
+]
+#   if(MACOS)
+MACOS_TRAY_SRCS = ["src/tray/cocoa/*.m"]
+#   if(SDL_COCOA)
+COCOA_VIDEO_SRCS = ["src/video/cocoa/*.m"]
+
+# if (SDL_DIALOG)
+GENERAL_DIALOG_SRCS = ["src/dialog/*.c"]
+#   if(MACOS)
+MACOS_DIALOG_SRCS = ["src/dialog/cocoa/*.m"]
+
+GENERAL_PROCESS_SRCS = ["src/process/*.c"]
+POSIX_PROCESS_SRCS = ["src/process/posix/*.c"]
+
+# if(SDL_PTHREADS)
+PTHREAD_THREAD_SRCS = ["src/thread/pthread/*.c"]
+
+# if(SDL_VIDEO) && if(SDL_OFFSCREEN)
+GENERAL_OFFSCREEN_SRCS = ["src/video/offscreen/*.c"]
+
+GENERAL_TRAY_SRCS = ["src/tray/*.c"]
+
+DUMMY_SENSOR_SRCS = ["src/sensor/dummy/*.c"]
+
+HIDAPI_JOYSTICK_SRCS = ["src/joystick/hidapi/*.c"]
+
+VULKAN_GPU_SRCS = ["src/gpu/vulkan/*.c"]
+
+HIDAPI_HAPTIC_SRCS = ["src/haptic/hidapi/*.c"]
+
+objc_library(
+    name = "sdl3_darwin",
+    srcs = glob(
+        GENERAL_SRCS
+        + GENERAL_MAIN_SRCS
+        + DUMMYAUDIO_SRCS
+        + DISKAUDIO_SRCS
+        + DUMMYCAMERA_SRCS
+        + VIRTUAL_JOYSTICK_SRCS
+        + DUMMYVIDEO_SRCS
+
+        + DLOPEN_SRCS
+        + APPLE_CAMERA_SRCS
+        + DARWIN_MISC_SRCS
+        + APPLE_AUDIO_SRCS
+        + APPLE_JOYSTICK_SRCS
+        + DARWIN_JOYSTICK_SRCS
+        + DARWIN_HAPTIC_SRCS
+        + DARWIN_POWER_SRCS
+        + APPLE_GENERAL_SRCS
+        + METAL_FRAMEWORK_SRCS
+        + GENERAL_TRAY_SRCS
+        + MACOS_TRAY_SRCS
+        + COCOA_VIDEO_SRCS
+        + COREMOTION_SENSOR_SRCS
+        + HIDAPI_JOYSTICK_SRCS
+
+        + GENERAL_DIALOG_SRCS
+        + MACOS_DIALOG_SRCS
+        + GENERAL_PROCESS_SRCS
+        + POSIX_PROCESS_SRCS
+        + PTHREAD_THREAD_SRCS
+        + GENERAL_OFFSCREEN_SRCS
+        + DUMMY_SENSOR_SRCS
+        + VULKAN_GPU_SRCS
+
+        + HIDAPI_HAPTIC_SRCS
+    ),
+    hdrs = glob(["include/**/*.h"]),
+    copts = [
+        # lot of warning: '<name>' is deprecated: first deprecated in macOS 13.0 - Use MTLGPUFamily instead [-Wdeprecated-declarations]
+        "-Wno-deprecated-declarations",
+        # SDL_tray.m:379:98: warning: undeclared selector 'menu:' [-Wundeclared-selector]
+        "-Wno-undeclared-selector",
+    ],
+    includes = [
+        "src",
+        "include",
+        "include/build_config",
+        "src/video/khronos",
+    ],
+    linkopts = [
+        "-framework", "CoreGraphics",
+        "-framework", "CoreAudio",
+        "-framework", "CoreHaptics",
+        "-framework", "CoreMedia",
+        "-framework", "CoreVideo",
+        "-framework", "AVFoundation",
+        "-framework", "AudioToolbox",
+        "-framework", "ForceFeedback",
+        "-framework", "GameController",
+        "-framework", "IOKit",
+        "-framework", "Carbon",
+        "-framework", "Metal",
+        "-framework", "AppKit",
+        "-framework", "QuartzCore",
+        "-framework", "UniformTypeIdentifiers",
+    ],
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "sdl3_wasm",
+    srcs = glob(
+        GENERAL_SRCS
+        + DUMMYAUDIO_SRCS
+        + DUMMYCAMERA_SRCS
+        + GENERAL_TRAY_SRCS
+        + DUMMY_SENSOR_SRCS
+        + [
+            "src/main/emscripten/*.c",
+            "src/thread/generic/*.c",
+            "src/tray/dummy/*.c",
+            "src/libm/*.c",
+            "src/timer/unix/*.c",
+            "src/video/dummy/*.c",
+            "src/video/emscripten/*.c",
+
+            "src/joystick/dummy/*.c",
+            "src/misc/*.c",
+            "src/misc/emscripten/*.c",
+            "src/filesystem/emscripten/*.c",
+        ]
+    ),
+    copts = [
+        "-DHAVE_STDIO_H",
+        "-DSDL_TIMER_UNIX",
+        "-DSDL_VIDEO_DRIVER_EMSCRIPTEN",
+        "-DSDL_FILESYSTEM_EMSCRIPTEN",
+    ],
+    hdrs = glob(["include/**/*.h"]),
+    includes = [
+        "src",
+        "include",
+        "include/build_config",
+    ],
+    visibility = ["//visibility:private"],
+)
+
+alias(
+    name = "sdl3_bazel_cc",
+    actual = select({
+        "@bazel_tools//src/conditions:darwin": ":sdl3_darwin",
+        "@platforms//cpu:wasm32": ":sdl3_wasm",
+
+        # fallback on undone platform - via cmake rule
+        "//conditions:default": ":sdl3_cmake_cc",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+################################
+# Convenience target depending on selected config setting
+################################
+# cc_library(
+#     name = "sdl3",
+#     deps = select({
+#         ":via_cmake": [":sdl3_cmake_cc"],
+#         ":via_bazel": [":sdl3_bazel_cc"],
+#     }),
+#     visibility = ["//visibility:public"],
+# )
+alias(
+    name = "sdl3_cc",
+    actual = select({
+        ":via_cmake": ":sdl3_cmake_cc",
+        ":via_bazel": ":sdl3_bazel_cc",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+android_library(
+    name = "sdl3_android",
+    srcs = [":all_android_java_srcs"],
+    deps = [":sdl3_cc"],
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "sdl3",
+    actual = select({
+        "@platforms//os:android": ":sdl3_android",
+        "//conditions:default": ":sdl3_cc",
+    }),
+    visibility = ["//visibility:public"],
+)

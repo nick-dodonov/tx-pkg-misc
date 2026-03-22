@@ -44,12 +44,12 @@ namespace
 
 
 struct MyHandler
-    : App::Loop::Handler
+    : RunLoop::Handler
     , Sdl::Loop::Sdl3Handler
 {
     FpsCounter fpsCounter;
 
-    void Update(const App::Loop::UpdateCtx& ctx) override
+    void Update(const RunLoop::UpdateCtx& ctx) override
     {
         auto* renderer = (dynamic_cast<Sdl::Loop::Sdl3Runner&>(ctx.Runner)).GetRenderer();
 
@@ -100,7 +100,7 @@ struct MyHandler
         RenderDebugText(renderer, ctx);
     }
 
-    void RenderDebugText(SDL_Renderer* renderer, const App::Loop::UpdateCtx& ctx) const
+    void RenderDebugText(SDL_Renderer* renderer, const RunLoop::UpdateCtx& ctx) const
     {
         // Render debug text with session and frame info - scaled 2x
         float scaleX = {};
@@ -162,7 +162,7 @@ int main(const int argc, const char* argv[])
     auto timeoutSeconds = args.GetIntArg(1).value_or(DefaultTimeoutSeconds);
 
     // Configure SDL3 runner
-    auto composite = std::make_shared<App::Loop::CompositeHandler>();
+    auto composite = std::make_shared<RunLoop::CompositeHandler>();
     auto handler = std::make_shared<MyHandler>();
     composite->Add(*handler);
     auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
