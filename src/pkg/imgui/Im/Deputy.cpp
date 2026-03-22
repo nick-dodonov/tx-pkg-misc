@@ -109,7 +109,7 @@ namespace Im
         }
 
         auto& data = _fontData.emplace_back(*sizeResult);
-        auto readResult = drive.ReadAllTo(fontPath, {data.data(), data.size()});
+        auto readResult = drive.ReadAllTo(fontPath, data);
         if (!readResult) {
             _fontData.pop_back();
             _logger.Debug("ReadAllTo failed: {} ({})", fontPath.c_str(), readResult.error().message());

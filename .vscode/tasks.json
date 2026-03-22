@@ -6,7 +6,7 @@
         // ================ dev environment
         {
             "type": "shell",
-            "label": "compile_commands :refresh_all (OS)",
+            "label": "compile_commands :refresh_all (HOST)",
             "command": "bazel run @hedron_compile_commands//:refresh_all",
             "group": {
                 "kind": "build",
