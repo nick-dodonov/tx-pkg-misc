@@ -8,7 +8,7 @@ multi_app(
     ]),
     data = [".env"],
     deps = [
-        "//src/pkg/sdl",
-        "@tx-pkg-aux//src/pkg/asio",
+        "//pkg/sdl",
+        "@tx-pkg-aux//pkg/asio",
     ],
 )

@@ -6,6 +6,6 @@ multi_app(
     data = [".env"],
     deps = [
         "//demo/try/sdl3-lib",
-        "@tx-pkg-aux//src/pkg/boot",
+        "@tx-pkg-aux//pkg/boot",
     ],
 )

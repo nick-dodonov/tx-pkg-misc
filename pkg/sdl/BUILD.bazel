@@ -41,7 +41,7 @@ multi_lib(
     deps = [
         "@boost.describe",
         "@sdl3",
-        "@tx-pkg-aux//src/pkg/app",
+        "@tx-pkg-aux//pkg/app",
     ] + select({
         "@platforms//os:android": [
             "@tx-kit-ext//pkg/droid:droid_glue",

@@ -16,10 +16,10 @@ multi_lib(
     strip_include_prefix = ".",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/pkg/sdl",
+        "//pkg/sdl",
         "@imgui",
         "@imgui//backends:platform-sdl3",
         "@imgui//backends:renderer-sdlrenderer3",  #TODO: try SDL_GPU renderer as more modern and advanced
-        "@tx-pkg-aux//src/pkg/fs",
+        "@tx-pkg-aux//pkg/fs",
     ],
 )
