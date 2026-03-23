@@ -9,6 +9,6 @@ multi_app(
     data = [".env"],
     deps = [
         "//src/pkg/sdl",
-        "@tx-pkg-aux//src/pkg/app-asio",
+        "@tx-pkg-aux//src/pkg/asio",
     ],
 )
