@@ -2,21 +2,23 @@
 #include "Boot/Boot.h"
 #include "FpsCounter.h"
 #include "Log/Log.h"
+#include "RunLoop/CompositeHandler.h"
 #include "Sdl/Loop/Sdl3Runner.h"
 #include <boost/asio/experimental/awaitable_operators.hpp>
 
 namespace
 {
-    static constexpr int DefaultTimeoutSeconds = 20; // 0 means no timeout, wait for quit event
+    static constexpr int DefaultTimeoutSeconds = 10; // 0 means no timeout, wait for quit event
     static constexpr float DebugTextLineHeight = 8.0f; // SDL_RenderDebugText line height in scaled coordinates
     static constexpr float DebugTextScale = 3.0f; // Scale applied to debug text rendering
 }
 
-[[maybe_unused]] static boost::asio::awaitable<int> CoroMain(std::shared_ptr<Asio::AsioDomain> domain, std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
+[[maybe_unused]] static boost::asio::awaitable<int> CoroMain(
+    std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
 {
     if (timeoutSeconds <= 0) {
         Log::Info("WAITING: stop signal...");
-        co_await domain->AsyncStopped();
+        co_await Asio::AsyncCancelled();
         Log::Info("EXITING: stop signal received");
     } else {
         namespace asio = boost::asio;
@@ -29,7 +31,7 @@ namespace
 
         auto timer = asio::steady_timer(executor);
         timer.expires_after(std::chrono::seconds(timeoutSeconds));
-        auto result = co_await (domain->AsyncStopped() || timer.async_wait(asio::as_tuple(asio::use_awaitable)));
+        auto result = co_await (Asio::AsyncCancelled() || timer.async_wait(asio::as_tuple(asio::use_awaitable)));
 
         if (result.index() == 0) {
             auto ec = std::get<0>(result);
@@ -178,7 +180,7 @@ int main(const int argc, const char* argv[])
     );
 
     // Create domain with custom runner
-    auto domain = std::make_shared<Asio::AsioDomain>();
+    auto domain = std::make_shared<Asio::AsioDomain>(CoroMain(runner, timeoutSeconds));
     composite->Add(*domain);
-    return domain->RunCoroMain(runner, CoroMain(domain, runner, timeoutSeconds));
+    return runner->Run();
 }
