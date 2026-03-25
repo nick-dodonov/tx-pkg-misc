@@ -73,7 +73,7 @@ namespace Sdl::Loop
 #endif
 
         auto exitResult = GetExitCode();
-        auto exitCode = exitResult.value_or(SuccessExitCode);
+        auto exitCode = exitResult.value_or(RunLoop::ExitCode::Success);
         Log::Debug("exiting: {}", exitCode);
         return exitCode;
     }
@@ -209,9 +209,9 @@ namespace Sdl::Loop
             const char* resultStr = boost::describe::enum_to_string(result, "Unknown");
             Log::Debug("quit result {}({})", resultStr, static_cast<int>(result));
             if (result == SDL_APP_SUCCESS) {
-                exitCode = SuccessExitCode;
+                exitCode = RunLoop::ExitCode::Success;
             } else {
-                exitCode = FailureExitCode;
+                exitCode = RunLoop::ExitCode::Failure;
             }
             SetExitCode(exitCode);
         } else {
@@ -236,7 +236,7 @@ namespace Sdl::Loop
         emscripten_async_call(
             [](void* state) {
                 auto* runner = static_cast<Sdl3Runner*>(state);
-                auto exitCode = runner->GetExitCode().value_or(SuccessExitCode);
+                auto exitCode = runner->GetExitCode().value_or(RunLoop::ExitCode::Success);
                 Log::Trace("emscripten_force_exit({})", exitCode);
                 runner->_selfRef.reset(); // Release self-reference
                 emscripten_force_exit(exitCode);
