@@ -357,6 +357,14 @@ namespace Im
             ImGui::SetScrollHereY(1.0f);
         }
 
+        // Enable left mouse button drag scrolling
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.0f)) {
+            const ImVec2 delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left, 0.0f);
+            ImGui::SetScrollX(ImGui::GetScrollX() - delta.x);
+            ImGui::SetScrollY(ImGui::GetScrollY() - delta.y);
+            ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+        }
+
         if (_monoFont) {
             ImGui::SetWindowFontScale(1.0f); // BeginChild starts with scale 1.0f by default
             ImGui::PopFont();

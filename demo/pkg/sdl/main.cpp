@@ -1,22 +1,24 @@
+#include "Asio/AsioDomain.h"
 #include "Boot/Boot.h"
-#include "App/Domain.h"
 #include "FpsCounter.h"
 #include "Log/Log.h"
+#include "RunLoop/CompositeHandler.h"
 #include "Sdl/Loop/Sdl3Runner.h"
 #include <boost/asio/experimental/awaitable_operators.hpp>
 
 namespace
 {
-    static constexpr int DefaultTimeoutSeconds = 20; // 0 means no timeout, wait for quit event
+    static constexpr int DefaultTimeoutSeconds = 10; // 0 means no timeout, wait for quit event
     static constexpr float DebugTextLineHeight = 8.0f; // SDL_RenderDebugText line height in scaled coordinates
     static constexpr float DebugTextScale = 3.0f; // Scale applied to debug text rendering
 }
 
-[[maybe_unused]] static boost::asio::awaitable<int> CoroMain(std::shared_ptr<App::Domain> domain, std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
+[[maybe_unused]] static boost::asio::awaitable<int> CoroMain(
+    std::shared_ptr<Sdl::Loop::Sdl3Runner> runner, int timeoutSeconds)
 {
     if (timeoutSeconds <= 0) {
         Log::Info("WAITING: stop signal...");
-        co_await domain->AsyncStopped();
+        co_await Asio::AsyncCancelled();
         Log::Info("EXITING: stop signal received");
     } else {
         namespace asio = boost::asio;
@@ -29,7 +31,7 @@ namespace
 
         auto timer = asio::steady_timer(executor);
         timer.expires_after(std::chrono::seconds(timeoutSeconds));
-        auto result = co_await (domain->AsyncStopped() || timer.async_wait(asio::as_tuple(asio::use_awaitable)));
+        auto result = co_await (Asio::AsyncCancelled() || timer.async_wait(asio::as_tuple(asio::use_awaitable)));
 
         if (result.index() == 0) {
             auto ec = std::get<0>(result);
@@ -44,12 +46,12 @@ namespace
 
 
 struct MyHandler
-    : App::Loop::Handler
+    : RunLoop::Handler
     , Sdl::Loop::Sdl3Handler
 {
     FpsCounter fpsCounter;
 
-    void Update(const App::Loop::UpdateCtx& ctx) override
+    void Update(const RunLoop::UpdateCtx& ctx) override
     {
         auto* renderer = (dynamic_cast<Sdl::Loop::Sdl3Runner&>(ctx.Runner)).GetRenderer();
 
@@ -100,7 +102,7 @@ struct MyHandler
         RenderDebugText(renderer, ctx);
     }
 
-    void RenderDebugText(SDL_Renderer* renderer, const App::Loop::UpdateCtx& ctx) const
+    void RenderDebugText(SDL_Renderer* renderer, const RunLoop::UpdateCtx& ctx) const
     {
         // Render debug text with session and frame info - scaled 2x
         float scaleX = {};
@@ -162,7 +164,7 @@ int main(const int argc, const char* argv[])
     auto timeoutSeconds = args.GetIntArg(1).value_or(DefaultTimeoutSeconds);
 
     // Configure SDL3 runner
-    auto composite = std::make_shared<App::Loop::CompositeHandler>();
+    auto composite = std::make_shared<RunLoop::CompositeHandler>();
     auto handler = std::make_shared<MyHandler>();
     composite->Add(*handler);
     auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
@@ -178,7 +180,7 @@ int main(const int argc, const char* argv[])
     );
 
     // Create domain with custom runner
-    auto domain = std::make_shared<App::Domain>();
+    auto domain = std::make_shared<Asio::AsioDomain>(CoroMain(runner, timeoutSeconds));
     composite->Add(*domain);
-    return domain->RunCoroMain(runner, CoroMain(domain, runner, timeoutSeconds));
+    return runner->Run();
 }

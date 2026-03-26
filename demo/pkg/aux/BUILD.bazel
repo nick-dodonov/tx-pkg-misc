@@ -20,10 +20,9 @@ multi_app(
     ],
     toolchains = [
         ":my_vars",
-        "@tx-pkg-aux//src/pkg-build:build_vars",
+        "@tx-pkg-aux//pkg/build:build_vars",
     ],
     deps = [
-        "@tx-pkg-aux//src/pkg-boot",
-        "@tx-pkg-aux//src/pkg-fs",
+        "@tx-pkg-aux//pkg/boot",
     ],
 )

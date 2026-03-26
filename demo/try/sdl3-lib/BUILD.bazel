@@ -1,18 +1,18 @@
+load("@tx-kit-ext//rules:droid_deps.bzl", "droid_default_app_manifest")
 load("@tx-kit-ext//rules:multi_lib.bzl", "multi_lib")
+
+droid_default_app_manifest(
+    name = "sdl_default_app_manifest",
+    default_app_manifest = "AndroidManifest.xml",
+)
 
 # SDL3 wrapper library with Android glue code, allowing to declare simple main() function in C++ app
 multi_lib(
     name = "sdl3-lib",
     srcs = glob(["*.cc"]),
-
-    droid_library = True,
-    droid_srcs = glob(["*.java"]),
+    data = [":sdl_default_app_manifest"],
     droid_manifest = "AndroidManifest.xml",
-
-    deps = [
-        "@sdl3",
-    ],
-
+    droid_srcs = glob(["*.java"]),
     linkopts = select({
         "@platforms//os:android": [
             "-Wl,--undefined=SDL_main",
@@ -20,4 +20,7 @@ multi_lib(
         "//conditions:default": [],
     }),
     visibility = ["//visibility:public"],
+    deps = [
+        "@sdl3",
+    ],
 )

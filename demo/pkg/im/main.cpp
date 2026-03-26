@@ -1,13 +1,14 @@
 #include "Boot/Boot.h"
+#include "Fs/System.h"
+#include "Im/Console/QuakeConsole.h"
+#include "Im/Deputy.h"
 #include "Log/Log.h"
 #include "Sdl/Loop/Sdl3Runner.h"
-#include "Im/Deputy.h"
-#include "Im/Console/QuakeConsole.h"
 
 #include "imgui_internal.h"
 
 struct ImHandler
-    : App::Loop::Handler
+    : RunLoop::Handler
     , Sdl::Loop::Sdl3Handler
 {
     std::shared_ptr<Im::Deputy> _imDeputy;
@@ -18,7 +19,11 @@ struct ImHandler
     {
         Log::Info("SDL3 Runner initialized");
         auto& sdlRunner = *static_cast<Sdl::Loop::Sdl3Runner*>(GetRunner());
-        _imDeputy = std::make_shared<Im::Deputy>(sdlRunner.GetWindow(), sdlRunner.GetRenderer());
+        _imDeputy = std::make_shared<Im::Deputy>(Im::Deputy::Config{
+            .window=sdlRunner.GetWindow(),
+            .renderer=sdlRunner.GetRenderer(),
+            .drive=Fs::System::MakeDefaultDrive(),
+        });
         
         // Initialize Quake-style console (visible by default)
         _console = std::make_unique<Im::QuakeConsole>(true);
@@ -34,7 +39,7 @@ struct ImHandler
         _imDeputy.reset();
     }
 
-    void Update(const App::Loop::UpdateCtx& ctx) override
+    void Update(const RunLoop::UpdateCtx& ctx) override
     {
         auto& sdlRunner = static_cast<Sdl::Loop::Sdl3Runner&>(ctx.Runner);
         auto* renderer = sdlRunner.GetRenderer();
@@ -99,7 +104,7 @@ struct ImHandler
                     dockIdRight = ImGui::DockBuilderSplitNode(
                         dockSpaceId, 
                         ImGuiDir_Right, 
-                        0.3f,
+                        0.4f,
                          nullptr, 
                          nullptr);
                 }

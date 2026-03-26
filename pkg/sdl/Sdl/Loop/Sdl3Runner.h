@@ -1,6 +1,6 @@
 #pragma once
-#include "App/Loop/Handler.h"
-#include "App/Loop/Runner.h"
+#include "RunLoop/Handler.h"
+#include "RunLoop/Runner.h"
 #include "Sdl/Sdl3Ptr.h"
 #include <atomic>
 
@@ -19,7 +19,7 @@ namespace Sdl::Loop
     };
 
     /// SDL3-based runner that uses SDL events for cross-platform support
-    class Sdl3Runner final : public App::Loop::Runner
+    class Sdl3Runner final : public RunLoop::Runner
     {
     public:
         struct WindowConfig
@@ -73,7 +73,7 @@ namespace Sdl::Loop
         Window _window;
         Renderer _renderer;
 
-        App::Loop::UpdateCtx _updateCtx;
+        RunLoop::UpdateCtx _updateCtx;
         std::atomic<bool> _running{false};
 
         static SDL_AppResult SDLCALL AppInit(void** appstate, int argc, char** argv);

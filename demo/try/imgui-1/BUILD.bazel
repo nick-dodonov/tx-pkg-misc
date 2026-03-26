@@ -1,5 +1,5 @@
-load("@tx-kit-ext//rules:multi_app.bzl", "multi_app")
 load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
+load("@tx-kit-ext//rules:multi_app.bzl", "multi_app")
 
 copy_directory(
     name = "assets_copy_data",
@@ -9,27 +9,32 @@ copy_directory(
 
 multi_app(
     name = "imgui-1",
-    srcs = glob(["*.cpp", "*.h"]),
-    deps = [
-        "@tx-pkg-aux//src/pkg-boot",
-        "@imgui//:imgui",
-        "@imgui//backends:platform-sdl3",
-        "@imgui//backends:renderer-sdlrenderer3",  #TODO: try SDL_GPU renderer as more modern and advanced
-        "//demo/try/sdl3-lib",
-    ],
-    droid_assets = [":assets_copy_data"],
-    droid_assets_dir = "assets",
-
-    data = [
-        ".env",
-        "//data:fonts_dir",
-    ],
+    srcs = glob([
+        "*.cpp",
+        "*.h",
+    ]),
     additional_linker_inputs = select({
         "@platforms//cpu:wasm32": ["//data:fonts_dir"],
         "//conditions:default": [],
     }),
+    data = [
+        ".env",
+        "//data:fonts_dir",
+    ],
+    droid_assets = [":assets_copy_data"],
+    droid_assets_dir = "assets",
     linkopts = select({
-        "@platforms//cpu:wasm32": ["--preload-file", "$(execpath //data:fonts_dir)@/data/fonts"],
+        "@platforms//cpu:wasm32": [
+            "--preload-file",
+            "$(execpath //data:fonts_dir)@/data/fonts",
+        ],
         "//conditions:default": [],
     }),
+    deps = [
+        "//demo/try/sdl3-lib",
+        "@imgui",
+        "@imgui//backends:platform-sdl3",
+        "@imgui//backends:renderer-sdlrenderer3",  #TODO: try SDL_GPU renderer as more modern and advanced
+        "@tx-pkg-aux//pkg/boot",
+    ],
 )

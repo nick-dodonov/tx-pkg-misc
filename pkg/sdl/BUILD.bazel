@@ -1,0 +1,51 @@
+load("@tx-kit-ext//rules:droid_deps.bzl", "droid_default_app_manifest")
+load("@tx-kit-ext//rules:multi_lib.bzl", "multi_lib")
+
+droid_default_app_manifest(
+    name = "sdl_default_app_manifest",
+    default_app_manifest = "AndroidManifest.xml",
+)
+
+multi_lib(
+    name = "sdl",
+    srcs = glob([
+        "Sdl/**/*.cpp",
+    ]) + select({
+        "@platforms//os:android": glob([
+            "*.cc",
+        ]),
+        "//conditions:default": [],
+    }),
+    hdrs = glob(["Sdl/**/*.h"]),
+    data = [":sdl_default_app_manifest"],
+
+    # By default the package is inferred from the directory where the BUILD file containing the rule is.
+    #   In case of src/ parent folder it becomes invalid "pkg-sdl" ("sub.pkg-sdl" is invalid too).
+    #   So we need to specify it explicitly otherwise PackageAndroidResources command will fail on processing AndroidManifest.xml with such value.
+    droid_custom_package = "org.tx.sdl",
+
+    # SDL3 wrapper library with Android glue code, allowing to declare simple main() function for C++ app (or SDL3 events based entry)
+    droid_manifest = "AndroidManifest.xml",  # manifest attribute is required when resource_files, assets, or exports_manifest are specified.
+    droid_resource_files = glob(["java/res/**"]),
+    droid_srcs = glob(["*.java"]),
+    linkopts = select({
+        "@platforms//os:android": [
+            # Android native is built as a shared library, so we need to explicitly specify entry point symbols to prevent them from being stripped out.
+            "-Wl,--undefined=SDL_main",
+            "-Wl,--undefined=main",
+        ],
+        "//conditions:default": [],
+    }),
+    strip_include_prefix = ".",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@boost.describe",
+        "@sdl3",
+        "@tx-pkg-aux//pkg/app",
+    ] + select({
+        "@platforms//os:android": [
+            "@tx-kit-ext//pkg/droid:droid_glue",
+        ],
+        "//conditions:default": [],
+    }),
+)
