@@ -1,7 +1,8 @@
 #pragma once
-#include "imgui.h"
-#include "Log/Log.h"
 #include "Fs/Drive.h"
+#include "Log/Log.h"
+#include "imgui.h"
+#include <memory>
 
 struct SDL_Window;
 struct SDL_Renderer;
@@ -14,7 +15,14 @@ namespace Im
         static Log::Logger _logger;
 
     public:
-        Deputy(SDL_Window* window, SDL_Renderer* renderer);
+        struct Config
+        {
+            SDL_Window* window;
+            SDL_Renderer* renderer;
+            std::shared_ptr<Fs::Drive> drive;
+        };
+
+        Deputy(Config config);
         ~Deputy();
 
         void UpdateBegin();
@@ -30,6 +38,7 @@ namespace Im
 
         SDL_Window* _window;
         SDL_Renderer* _renderer;
+        std::shared_ptr<Fs::Drive> _drive;
 
         ImGuiContext* _context{};
         ImGuiIO* _io{};

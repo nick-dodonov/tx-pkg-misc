@@ -1,8 +1,9 @@
 #include "Boot/Boot.h"
+#include "Fs/System.h"
+#include "Im/Console/QuakeConsole.h"
+#include "Im/Deputy.h"
 #include "Log/Log.h"
 #include "Sdl/Loop/Sdl3Runner.h"
-#include "Im/Deputy.h"
-#include "Im/Console/QuakeConsole.h"
 
 #include "imgui_internal.h"
 
@@ -18,7 +19,11 @@ struct ImHandler
     {
         Log::Info("SDL3 Runner initialized");
         auto& sdlRunner = *static_cast<Sdl::Loop::Sdl3Runner*>(GetRunner());
-        _imDeputy = std::make_shared<Im::Deputy>(sdlRunner.GetWindow(), sdlRunner.GetRenderer());
+        _imDeputy = std::make_shared<Im::Deputy>(Im::Deputy::Config{
+            .window=sdlRunner.GetWindow(),
+            .renderer=sdlRunner.GetRenderer(),
+            .drive=Fs::System::MakeDefaultDrive(),
+        });
         
         // Initialize Quake-style console (visible by default)
         _console = std::make_unique<Im::QuakeConsole>(true);

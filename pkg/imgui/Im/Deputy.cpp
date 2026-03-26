@@ -25,9 +25,10 @@ namespace Im
     static Log::Logger _internalImGuiLogger{"ImGui"};
     Log::Logger Deputy::_logger = Log::Logger("Im.Deputy");
 
-    Deputy::Deputy(SDL_Window* window, SDL_Renderer* renderer)
-        : _window(window)
-        , _renderer(renderer)
+    Deputy::Deputy(Config config)
+        : _window(config.window)
+        , _renderer(config.renderer)
+        , _drive(std::move(config.drive))
     {
         // context
         IMGUI_CHECKVERSION();
@@ -100,16 +101,14 @@ namespace Im
 
     bool Deputy::LoadFont(const Fs::Path& fontPath, const char* fontName, float fontSize)
     {
-        auto& drive = Fs::System::GetDefaultDrive();
-
-        auto sizeResult = drive.GetSize(fontPath);
+        auto sizeResult = _drive->GetSize(fontPath);
         if (!sizeResult) {
             _logger.Debug("GetSize failed: {} ({})", fontPath.c_str(), sizeResult.error().message());
             return false;
         }
 
         auto& data = _fontData.emplace_back(*sizeResult);
-        auto readResult = drive.ReadAllTo(fontPath, data);
+        auto readResult = _drive->ReadAllTo(fontPath, data);
         if (!readResult) {
             _fontData.pop_back();
             _logger.Debug("ReadAllTo failed: {} ({})", fontPath.c_str(), readResult.error().message());
