@@ -41,6 +41,10 @@ genrule(
     outs = ["CmakePreseedCache.cmake"],
     cmd = """cat > $@ << 'EOF'
 message(STATUS "======== Preseeding SDL3 CMake cache build ========")
+message(STATUS "CMAKE_VERSION: $${CMAKE_VERSION}")
+message(STATUS "CMAKE_COMMAND: $${CMAKE_COMMAND}")
+message(STATUS "CMAKE_ROOT: $${CMAKE_ROOT}")
+# message(FATAL_ERROR "======== DEBUG BREAK ========")
 # Setup already detected features to speedup builds (similar to cmake/PreseedEmscriptenCache.cmake in SDL3 sources)
 if(APPLE)
   function(SDL_Preseed_CMakeCache)

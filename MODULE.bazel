@@ -5,7 +5,6 @@ module(
     version = "0.0.0",
 )
 
-#TODO: setup Renovate to auto-update https://github.com/renovatebot/renovate
 bazel_dep(name = "apple_support", version = "2.2.0")
 bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "bazel_lib", version = "3.2.2")
@@ -14,7 +13,21 @@ bazel_dep(name = "rules_cc", version = "0.2.16")
 bazel_dep(name = "rules_foreign_cc", version = "0.15.1")
 bazel_dep(name = "rules_python", version = "1.8.4")
 bazel_dep(name = "rules_android", version = "0.7.1")
-bazel_dep(name = "emsdk", version = "4.0.17-tx.1")  # private registry (custom version with C++23 support)
+bazel_dep(name = "emsdk", version = "5.0.4")
+
+# https://bazel.build/versions/8.6.0/rules/lib/repo/git
+# git_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+# https://bazel.build/versions/8.6.0/rules/lib/repo/local
+# local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "local_repository")
+
+# emsdk - fixed 5.0.4 version (latest main changes w/o warnings and cmake issue)
+git_override(
+    module_name = "emsdk",
+    commit = "a491c4092412c9c12d26c572fd2e7ac792e8b733",  # tx/5.0.4
+    remote = "https://github.com/nick-dodonov/emsdk.git",
+    strip_prefix = "bazel",
+    # verbose = True,
+)
 
 # Hedron's Compile Commands Extractor for Bazel
 # - https://github.com/hedronvision/bazel-compile-commands-extractor
@@ -61,10 +74,15 @@ bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
 ################################################################
 bazel_dep(name = "sdl3", version = "3.4.0-tx.2")  # private registry
 
-# git_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 # git_repository(
 #     name = "sdl3",
 #     build_file = "//repo:sdl3.BUILD.bazel",
 #     commit = "a962f40bbba175e9716557a25d5d7965f134a3d3",  # tag = "release-3.4.0",
 #     remote = "https://github.com/libsdl-org/SDL.git",
 # )
+git_override(
+    module_name = "sdl3",
+    commit = "cfebd27b6b12cff8500443057c5c3a10cd2abc70",
+    remote = "https://github.com/nick-dodonov/SDL.git",
+    # verbose = True,
+)
