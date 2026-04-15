@@ -74,15 +74,19 @@ bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
 ################################################################
 bazel_dep(name = "sdl3", version = "3.4.0-tx.2")  # private registry
 
-# git_repository(
+# git_repository( # can be used only when imgui is removed from bzlmode, otherwise it will cause a conflict due to imgui's dependency on sdl3
 #     name = "sdl3",
 #     build_file = "//repo:sdl3.BUILD.bazel",
 #     commit = "a962f40bbba175e9716557a25d5d7965f134a3d3",  # tag = "release-3.4.0",
 #     remote = "https://github.com/libsdl-org/SDL.git",
 # )
+# local_path_override(
+#     module_name = "sdl3",
+#     path = "/Users/nik/p/t/gh/libsdl-org/SDL",
+# )
 git_override(
     module_name = "sdl3",
-    commit = "cfebd27b6b12cff8500443057c5c3a10cd2abc70",
+    commit = "f38aff66367a7ba32da680c038330874a9920fd6",  # branch = "local/bazel-3.4.0",
     remote = "https://github.com/nick-dodonov/SDL.git",
     # verbose = True,
 )
