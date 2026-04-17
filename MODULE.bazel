@@ -66,7 +66,6 @@ single_version_override(
 _boost_version = "1.90.0.bcr.1"
 
 bazel_dep(name = "boost.describe", version = _boost_version)
-bazel_dep(name = "imgui", version = "1.92.5-docking-tx.1")  # private registry
 
 # test deps
 bazel_dep(name = "googletest", version = "1.17.0.bcr.2", dev_dependency = True)
@@ -89,4 +88,16 @@ git_override(
     commit = "f38aff66367a7ba32da680c038330874a9920fd6",  # branch = "local/bazel-3.4.0",
     remote = "https://github.com/nick-dodonov/SDL.git",
     # verbose = True,
+)
+
+bazel_dep(name = "imgui", version = "1.92.5-docking-tx.1")  # private registry
+
+# local_path_override(
+#     module_name = "imgui",
+#     path = "../ext/imgui",
+# )
+git_override(
+    module_name = "imgui",
+    commit = "605884f768b294d54188dada38d1390f76d8a719",  # tag = "tx/v1.92.7-docking",
+    remote = "https://github.com/nick-dodonov/imgui.git",
 )
