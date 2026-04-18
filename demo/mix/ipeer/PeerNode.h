@@ -25,7 +25,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace IPeer
+namespace Demo
 {
     /// Per-link bridge: transport callbacks enqueue messages for the coroutine.
     struct LinkBridge

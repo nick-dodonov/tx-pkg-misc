@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace IPeer
+namespace Demo
 {
     /// Managed peer entry: peer data + coroutine node + exec domain.
     struct ManagedPeer
@@ -58,18 +58,19 @@ namespace IPeer
 
             Log::Info("created {} (id={}, peerId={})", peer->name, peer->id, peerId);
 
-            auto& entry = _entries.emplace_back(ManagedPeer{
-                .peer = std::move(peer),
-                .node = std::move(node),
-                .domain = std::move(domain),
-            });
+            auto& entry = _entries.emplace_back(
+                ManagedPeer{
+                    .peer = std::move(peer),
+                    .node = std::move(node),
+                    .domain = std::move(domain),
+                }
+            );
             return *entry.peer;
         }
 
         void RemovePeer(int peerId)
         {
-            auto it = std::find_if(_entries.begin(), _entries.end(),
-                [peerId](const auto& e) { return e.peer->id == peerId; });
+            auto it = std::find_if(_entries.begin(), _entries.end(), [peerId](const auto& e) { return e.peer->id == peerId; });
             if (it == _entries.end()) {
                 return;
             }
@@ -79,7 +80,7 @@ namespace IPeer
         }
 
         /// Request a connection between two peers (by peer ID).
-        void Connect(Peer& a, Peer& b)
+        void Connect(Peer& a, Peer& b) const
         {
             auto* nodeA = FindNode(a.id);
             auto* nodeB = FindNode(b.id);
@@ -93,7 +94,7 @@ namespace IPeer
         }
 
         /// Request disconnection between two peers.
-        void Disconnect(Peer& a, Peer& b)
+        void Disconnect(Peer& a, Peer& b) const
         {
             auto* nodeA = FindNode(a.id);
             auto* nodeB = FindNode(b.id);

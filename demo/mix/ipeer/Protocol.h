@@ -7,7 +7,7 @@
 #include <span>
 #include <vector>
 
-namespace IPeer
+namespace Demo
 {
     /// Application-level message type tag (first byte of every message).
     enum class MsgType : std::uint8_t

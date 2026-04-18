@@ -7,7 +7,7 @@
 #include <chrono>
 #include <cstdio>
 
-namespace IPeer
+namespace Demo
 {
     /// Per-peer ImGui window: canvas, connections table, sync diagnostics, controls.
     class PeerWindow

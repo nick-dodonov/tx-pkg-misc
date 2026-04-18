@@ -2,17 +2,16 @@
 
 #include "Rtt/Rtc/LocalSigClient.h"
 #include "Rtt/Rtc/RtcClient.h"
-#include "Rtt/Rtc/RtcServer.h"
 #include "Rtt/Rtc/SigHub.h"
 #include "Rtt/Transport.h"
 
 #include <memory>
 #include <string>
 
-namespace IPeer
+namespace Demo
 {
     /// Available transport modes for peer communication.
-    enum class TransportMode : int
+    enum class TransportMode : std::uint8_t
     {
         InProcessRtc = 0, ///< WebRTC via in-process SigHub (no network).
     };

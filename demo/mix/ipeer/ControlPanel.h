@@ -2,11 +2,11 @@
 
 #include "PeerManager.h"
 
-#include "imgui.h"
 #include "SynTm/Types.h"
+#include "imgui.h"
 #include <string>
 
-namespace IPeer
+namespace Demo
 {
     /// Global control panel: peer creation, connection matrix, transport info, stats overview.
     class ControlPanel
@@ -35,10 +35,7 @@ namespace IPeer
     private:
         char _newPeerName[64] = {};
 
-        void RenderTransportInfo(const PeerManager& mgr)
-        {
-            ImGui::Text("Transport: %s", TransportModeName(mgr.GetTransportMode()));
-        }
+        void RenderTransportInfo(const PeerManager& mgr) { ImGui::Text("Transport: %s", TransportModeName(mgr.GetTransportMode())); }
 
         void RenderPeerCreation(PeerManager& mgr)
         {
@@ -63,10 +60,7 @@ namespace IPeer
 
                     auto qualityStr = SynTm::SyncQualityToString(peer.consensus.Quality());
                     bool synced = peer.consensus.IsSynced();
-                    ImGui::Text("%s (id=%d) [%s%s]",
-                        peer.name.c_str(), peer.id,
-                        synced ? "sync:" : "",
-                        qualityStr.data());
+                    ImGui::Text("%s (id=%d) [%s%s]", peer.name.c_str(), peer.id, synced ? "sync:" : "", qualityStr.data());
 
                     ImGui::PopID();
                 }
@@ -92,8 +86,7 @@ namespace IPeer
 
                     bool connected = mgr.AreConnected(a.id, b.id);
                     if (connected) {
-                        ImGui::ColorButton("##state", {0.26f, 0.85f, 0.42f, 1.0f},
-                            ImGuiColorEditFlags_NoTooltip, {12, 12});
+                        ImGui::ColorButton("##state", {0.26f, 0.85f, 0.42f, 1.0f}, ImGuiColorEditFlags_NoTooltip, {12, 12});
                         ImGui::SameLine();
                         ImGui::Text("%s <-> %s", a.name.c_str(), b.name.c_str());
                         ImGui::SameLine();

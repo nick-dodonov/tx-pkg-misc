@@ -4,11 +4,11 @@
 #include "SynTm/Consensus.h"
 #include "SynTm/SyncClock.h"
 
-#include <cmath>
 #include "imgui.h"
+#include <cmath>
 #include <string>
 
-namespace IPeer
+namespace Demo
 {
     /// Color palette for visually distinguishing peers.
     inline constexpr ImVec4 PeerColors[] = {
