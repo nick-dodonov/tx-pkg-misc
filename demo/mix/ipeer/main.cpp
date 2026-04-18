@@ -12,9 +12,9 @@ struct PeerWindow
 
     void Render(const RunLoop::UpdateCtx& ctx, const std::shared_ptr<Im::Deputy>& imDeputy) const
     {
-        auto* mainViewport = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(ImVec2(mainViewport->Size.x / 10, 4 * mainViewport->Size.y / 10), ImGuiCond_FirstUseEver);
-        auto flags = 0;//ImGuiWindowFlags_AlwaysAutoResize;
+        // auto* mainViewport = ImGui::GetMainViewport();
+        // ImGui::SetNextWindowPos(ImVec2(mainViewport->Size.x / 10, 4 * mainViewport->Size.y / 10), ImGuiCond_FirstUseEver);
+        auto flags = 0; //ImGuiWindowFlags_AlwaysAutoResize;
         if (ImGui::Begin(name.c_str(), nullptr, flags)) {
             ImGui::Text("Session Time: %.2f s", ctx.session.passedSeconds);
             //ImGui::Spring();
@@ -39,10 +39,9 @@ struct ImHandler
     bool Start() override
     {
         Log::Info("SDL3 Runner initialized");
-        auto& sdlRunner = *static_cast<Sdl::Loop::Sdl3Runner*>(GetRunner());
         _imDeputy = std::make_shared<Im::Deputy>(Im::Deputy::Config{
-            .window=sdlRunner.GetWindow(),
-            .renderer=sdlRunner.GetRenderer(),
+            .window=GetWindow(),
+            .renderer=GetRenderer(),
             .drive=Fs::System::MakeDefaultDrive(),
         });
         
@@ -62,8 +61,7 @@ struct ImHandler
 
     void Update(const RunLoop::UpdateCtx& ctx) override
     {
-        auto& sdlRunner = static_cast<Sdl::Loop::Sdl3Runner&>(ctx.Runner);
-        auto* renderer = sdlRunner.GetRenderer();
+        auto* renderer = GetRenderer();
 
         // Clear with dark blue
         SDL_SetRenderDrawColor(renderer, 30, 30, 130, 255);

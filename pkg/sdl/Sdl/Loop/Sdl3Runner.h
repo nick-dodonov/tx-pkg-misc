@@ -8,14 +8,30 @@ namespace Sdl::Loop
 {
     class Sdl3Runner;
 
-    /// SDL3 runner handler w/ event except base (Start/Stop/Update)
+    /// SDL3 runner handler w/ event except base (Start/Stop/Update).
+    /// Receives a typed Sdl3Runner pointer via injection (set by the runner
+    /// constructor/destructor), so derived classes can access SDL resources
+    /// without casting.
     class Sdl3Handler
     {
+        friend class Sdl3Runner;
+        Sdl3Runner* _sdl3Runner{};
+        void SetSdl3Runner(Sdl3Runner* runner) { _sdl3Runner = runner; }
+
     public:
         virtual ~Sdl3Handler() = default;
 
         /// SDL3-specific event callback
         virtual SDL_AppResult Sdl3Event(Sdl3Runner& runner, const SDL_Event& event) { return SDL_APP_CONTINUE; }
+
+    protected:
+        /// Typed accessor for the owning Sdl3Runner (available after construction)
+        [[nodiscard]] Sdl3Runner& GetSdl3Runner() { return *_sdl3Runner; }
+        [[nodiscard]] const Sdl3Runner& GetSdl3Runner() const { return *_sdl3Runner; }
+
+        /// Convenience accessors forwarded from the owning Sdl3Runner
+        [[nodiscard]] SDL_Window* GetWindow() const;
+        [[nodiscard]] SDL_Renderer* GetRenderer() const;
     };
 
     /// SDL3-based runner that uses SDL events for cross-platform support
@@ -84,4 +100,8 @@ namespace Sdl::Loop
         SDL_AppResult DoIterate();
         SDL_AppResult DoEvent(SDL_Event* event);
     };
+
+    // Inline definitions for Sdl3Handler convenience accessors (require complete Sdl3Runner type)
+    inline SDL_Window* Sdl3Handler::GetWindow() const { return _sdl3Runner->GetWindow(); }
+    inline SDL_Renderer* Sdl3Handler::GetRenderer() const { return _sdl3Runner->GetRenderer(); }
 }

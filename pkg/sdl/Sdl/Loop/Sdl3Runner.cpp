@@ -30,11 +30,13 @@ namespace Sdl::Loop
         , _options{std::move(options)}
         , _updateCtx{*this}
     {
+        _sdlHandler->SetSdl3Runner(this);
         Log::Trace("created");
     }
 
     Sdl3Runner::~Sdl3Runner()
     {
+        _sdlHandler->SetSdl3Runner(nullptr);
         Log::Trace("destroy");
     }
 

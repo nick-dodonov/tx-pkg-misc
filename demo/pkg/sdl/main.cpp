@@ -53,7 +53,7 @@ struct MyHandler
 
     void Update(const RunLoop::UpdateCtx& ctx) override
     {
-        auto* renderer = (dynamic_cast<Sdl::Loop::Sdl3Runner&>(ctx.Runner)).GetRenderer();
+        auto* renderer = GetRenderer();
 
         // FPS counter
         fpsCounter.AddFrame(ctx.frame.deltaSeconds);

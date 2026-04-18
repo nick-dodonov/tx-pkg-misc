@@ -18,10 +18,9 @@ struct ImHandler
     bool Start() override
     {
         Log::Info("SDL3 Runner initialized");
-        auto& sdlRunner = *static_cast<Sdl::Loop::Sdl3Runner*>(GetRunner());
         _imDeputy = std::make_shared<Im::Deputy>(Im::Deputy::Config{
-            .window=sdlRunner.GetWindow(),
-            .renderer=sdlRunner.GetRenderer(),
+            .window=GetWindow(),
+            .renderer=GetRenderer(),
             .drive=Fs::System::MakeDefaultDrive(),
         });
         
@@ -41,8 +40,7 @@ struct ImHandler
 
     void Update(const RunLoop::UpdateCtx& ctx) override
     {
-        auto& sdlRunner = static_cast<Sdl::Loop::Sdl3Runner&>(ctx.Runner);
-        auto* renderer = sdlRunner.GetRenderer();
+        auto* renderer = GetRenderer();
         auto elapsed = ctx.session.passedSeconds;
 
         // Clear with dark blue
