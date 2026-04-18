@@ -5,11 +5,10 @@
 #include "imgui.h"
 #include "SynTm/Types.h"
 #include <chrono>
-#include <cstdio>
 
 namespace Demo
 {
-    /// Per-peer ImGui window: canvas, connections table, sync diagnostics, controls.
+    /// Per-peer ImGui window: canvas, connection table, sync diagnostics, controls.
     class PeerWindow
     {
     public:
@@ -19,6 +18,10 @@ namespace Demo
 
         void Render(PeerManager& mgr, double sessionTime)
         {
+            if (_firstRender) {
+                ImGui::SetNextWindowFocus();
+                _firstRender = false;
+            }
             bool open = true;
             if (!ImGui::Begin(_peer.name.c_str(), &open)) {
                 ImGui::End();
@@ -45,9 +48,10 @@ namespace Demo
     private:
         Peer& _peer;
         bool _wantClose = false;
+        bool _firstRender = true;
 
         /// Map normalized [-0.5, 0.5] coordinates to canvas pixel coordinates.
-        static ImVec2 ToCanvas(Vec2 pos, ImVec2 canvasMin, ImVec2 canvasSize)
+        static ImVec2 ToCanvas(const Vec2 pos, const ImVec2 canvasMin, const ImVec2 canvasSize)
         {
             return {
                 canvasMin.x + (pos.x + 0.5f) * canvasSize.x,

@@ -22,7 +22,7 @@ namespace Im
             std::shared_ptr<Fs::Drive> drive;
         };
 
-        Deputy(Config config);
+        explicit Deputy(Config config);
         ~Deputy();
 
         void UpdateBegin();

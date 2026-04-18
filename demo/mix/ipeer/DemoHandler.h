@@ -1,5 +1,4 @@
 #pragma once
-
 #include "ControlPanel.h"
 #include "PeerManager.h"
 #include "PeerWindow.h"
@@ -9,7 +8,6 @@
 #include "Im/Console/QuakeConsole.h"
 #include "Im/Deputy.h"
 #include "Log/Log.h"
-#include "RunLoop/CompositeHandler.h"
 #include "Sdl/Loop/Sdl3Runner.h"
 
 #include "imgui_internal.h"
@@ -17,16 +15,16 @@
 namespace Demo
 {
     /// ImGui/SDL handler — renders UI and drives peer simulation on the main thread.
-    struct DemoHandler
-        : RunLoop::Handler
-        , Sdl::Loop::Sdl3Handler
+    class DemoHandler
+        : public RunLoop::Handler
+        , public Sdl::Loop::Sdl3Handler
     {
-        RunLoop::CompositeHandler& _composite;
         TransportFactory _transportFactory;
         PeerManager _peerManager;
 
         std::shared_ptr<Im::Deputy> _imDeputy;
         std::unique_ptr<Im::QuakeConsole> _console;
+
         ControlPanel _controlPanel;
         std::vector<std::unique_ptr<PeerWindow>> _peerWindows;
 
@@ -34,9 +32,9 @@ namespace Demo
         ImGuiID _dockIdTop = 0;
         ImGuiID _dockIdBottom = 0;
 
+    public:
         explicit DemoHandler(RunLoop::CompositeHandler& composite)
-            : _composite(composite)
-            , _peerManager(composite, _transportFactory)
+            : _peerManager(composite, _transportFactory)
         {}
 
         bool Start() override
@@ -52,10 +50,8 @@ namespace Demo
             _console->Initialize();
 
             // Create two initial peers for immediate demo.
-            auto& p1 = _peerManager.CreatePeer();
-            auto& p2 = _peerManager.CreatePeer();
-            _peerWindows.push_back(std::make_unique<PeerWindow>(p1));
-            _peerWindows.push_back(std::make_unique<PeerWindow>(p2));
+            _peerManager.CreatePeer();
+            _peerManager.CreatePeer();
 
             return true;
         }
@@ -86,8 +82,7 @@ namespace Demo
             if (ImGui::BeginMainMenuBar()) {
                 if (ImGui::BeginMenu("Peers")) {
                     if (ImGui::MenuItem("Create New", "Ctrl+N")) {
-                        auto& peer = _peerManager.CreatePeer();
-                        _peerWindows.push_back(std::make_unique<PeerWindow>(peer));
+                        _peerManager.CreatePeer();
                     }
                     ImGui::Separator();
                     if (ImGui::MenuItem("Quit", "Escape")) {
@@ -104,19 +99,23 @@ namespace Demo
             }
             _controlPanel.Render(_peerManager);
 
-            // Sync peer windows with peer list.
-            SyncPeerWindows();
+            // Process window closures: remove peers whose window was closed.
+            for (const auto& win : _peerWindows) {
+                if (win->WantClose()) {
+                    _peerManager.RemovePeer(win->GetPeerId());
+                }
+            }
+
+            // Reconcile windows with model: create missing, remove orphaned.
+            ReconcileWindows();
 
             // Render all peer windows.
-            for (auto& win : _peerWindows) {
+            for (const auto& win : _peerWindows) {
                 if (_dockIdBottom != 0) {
                     ImGui::SetNextWindowDockID(_dockIdBottom, ImGuiCond_FirstUseEver);
                 }
                 win->Render(_peerManager, ctx.session.passedSeconds);
             }
-
-            // Remove closed windows.
-            std::erase_if(_peerWindows, [](const auto& w) { return w->WantClose(); });
 
             _console->Render();
             _imDeputy->UpdateEnd();
@@ -152,14 +151,33 @@ namespace Demo
         }
 
     private:
-        /// Set up programmatic docking layout: top 40% for ControlPanel, bottom 60% for PeerWindows.
+        /// Reconcile peer windows with PeerManager state each frame.
+        /// Creates windows for new peers, removes windows for deleted peers.
+        void ReconcileWindows()
+        {
+            // Remove windows whose peer no longer exists.
+            std::erase_if(_peerWindows, [this](const auto& w) {
+                return !_peerManager.FindPeer(w->GetPeerId());
+            });
+
+            // Create windows for peers that have no window yet.
+            for (const auto& entry : _peerManager.Entries()) {
+                bool hasWindow = std::any_of(_peerWindows.begin(), _peerWindows.end(),
+                    [id = entry.peer->id](const auto& w) { return w->GetPeerId() == id; });
+                if (!hasWindow) {
+                    _peerWindows.push_back(std::make_unique<PeerWindow>(*entry.peer));
+                }
+            }
+        }
+
+        /// Set up a programmatic docking layout: top 40% for ControlPanel, bottom 60% for PeerWindows.
         void SetupDocking()
         {
             if (_dockingInitialized) {
                 return;
             }
 
-            ImGuiID dockspaceId = _imDeputy->GetDockSpaceId();
+            const auto dockspaceId = _imDeputy->GetDockSpaceId();
             if (dockspaceId == 0) {
                 return;
             }
@@ -177,35 +195,17 @@ namespace Demo
 
             ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Up, 0.40f, &_dockIdTop, &_dockIdBottom);
 
-            ImGui::DockBuilderDockWindow("Control Panel", _dockIdTop);
+            ImGui::DockBuilderDockWindow(ControlPanel::WindowName, _dockIdTop);
 
             // Dock existing peer windows into the bottom area.
-            for (auto& win : _peerWindows) {
-                auto* peer = _peerManager.FindPeer(win->GetPeerId());
-                if (peer) {
+            for (const auto& win : _peerWindows) {
+                if (const auto* peer = _peerManager.FindPeer(win->GetPeerId())) {
                     ImGui::DockBuilderDockWindow(peer->name.c_str(), _dockIdBottom);
                 }
             }
 
             ImGui::DockBuilderFinish(dockspaceId);
             _dockingInitialized = true;
-        }
-
-        /// Ensure every peer has a corresponding window.
-        void SyncPeerWindows()
-        {
-            for (const auto& entry : _peerManager.Entries()) {
-                bool hasWindow = false;
-                for (auto& win : _peerWindows) {
-                    if (win->GetPeerId() == entry.peer->id) {
-                        hasWindow = true;
-                        break;
-                    }
-                }
-                if (!hasWindow) {
-                    _peerWindows.push_back(std::make_unique<PeerWindow>(*entry.peer));
-                }
-            }
         }
     };
 } // namespace Demo

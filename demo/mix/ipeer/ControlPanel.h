@@ -2,8 +2,9 @@
 
 #include "PeerManager.h"
 
-#include "SynTm/Types.h"
 #include "imgui.h"
+#include "imgui_internal.h"
+#include "SynTm/Types.h"
 #include <string>
 
 namespace Demo
@@ -12,9 +13,16 @@ namespace Demo
     class ControlPanel
     {
     public:
+        constexpr static const char* WindowName = "Control Panel";
+        
         void Render(PeerManager& mgr)
         {
-            if (!ImGui::Begin("Control Panel")) {
+            // if (auto* w = ImGui::FindWindowByName(WindowName); !w || !w->DockIsActive) {
+            //     ImGuiWindowClass wc;
+            //     wc.DockNodeFlagsOverrideSet = static_cast<ImGuiDockNodeFlags>(ImGuiDockNodeFlags_NoDockingOverMe | ImGuiDockNodeFlags_NoDockingSplit);
+            //     ImGui::SetNextWindowClass(&wc);
+            // }
+            if (!ImGui::Begin(WindowName)) {
                 ImGui::End();
                 return;
             }
@@ -35,7 +43,10 @@ namespace Demo
     private:
         char _newPeerName[64] = {};
 
-        void RenderTransportInfo(const PeerManager& mgr) { ImGui::Text("Transport: %s", TransportModeName(mgr.GetTransportMode())); }
+        void RenderTransportInfo(const PeerManager& mgr)
+        {
+            ImGui::Text("Transport: %s", TransportModeName(mgr.GetTransportMode()));
+        }
 
         void RenderPeerCreation(PeerManager& mgr)
         {
@@ -49,7 +60,7 @@ namespace Demo
             }
         }
 
-        void RenderPeerList(const PeerManager& mgr)
+        void RenderPeerList(PeerManager& mgr)
         {
             if (ImGui::TreeNodeEx("Peers", ImGuiTreeNodeFlags_DefaultOpen)) {
                 for (const auto& entry : mgr.Entries()) {
@@ -60,7 +71,17 @@ namespace Demo
 
                     auto qualityStr = SynTm::SyncQualityToString(peer.consensus.Quality());
                     bool synced = peer.consensus.IsSynced();
-                    ImGui::Text("%s (id=%d) [%s%s]", peer.name.c_str(), peer.id, synced ? "sync:" : "", qualityStr.data());
+                    ImGui::Text("%s (id=%d) [%s%s]",
+                        peer.name.c_str(), peer.id,
+                        synced ? "sync:" : "",
+                        qualityStr.data());
+
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("Remove")) {
+                        mgr.RemovePeer(peer.id);
+                        ImGui::PopID();
+                        break;
+                    }
 
                     ImGui::PopID();
                 }
@@ -86,7 +107,8 @@ namespace Demo
 
                     bool connected = mgr.AreConnected(a.id, b.id);
                     if (connected) {
-                        ImGui::ColorButton("##state", {0.26f, 0.85f, 0.42f, 1.0f}, ImGuiColorEditFlags_NoTooltip, {12, 12});
+                        ImGui::ColorButton("##state", {0.26f, 0.85f, 0.42f, 1.0f},
+                            ImGuiColorEditFlags_NoTooltip, {12, 12});
                         ImGui::SameLine();
                         ImGui::Text("%s <-> %s", a.name.c_str(), b.name.c_str());
                         ImGui::SameLine();

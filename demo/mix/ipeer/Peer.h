@@ -21,7 +21,7 @@ namespace Demo
         {0.95f, 0.55f, 0.65f, 1.0f}, // Pink
         {0.60f, 0.80f, 0.30f, 1.0f}, // Lime
     };
-    inline constexpr int PeerColorCount = sizeof(PeerColors) / sizeof(PeerColors[0]);
+    inline constexpr int PeerColorCount = std::size(PeerColors);
 
     struct Vec2
     {
