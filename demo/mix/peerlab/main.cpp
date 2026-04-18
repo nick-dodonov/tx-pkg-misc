@@ -17,7 +17,7 @@ int main(const int argc, const char* argv[])
         handler,
         Sdl::Loop::Sdl3Runner::Options{
             .Window = {
-                .Title = "Peer Mix Demo",
+                .Title = "Peer Lab Demo",
                 .Width = 1200,
                 .Height = 800,
                 .Flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_FILL_DOCUMENT,
