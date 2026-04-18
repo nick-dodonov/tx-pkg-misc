@@ -3,10 +3,17 @@ load("@tx-kit-ext//rules:multi_app.bzl", "multi_app")
 multi_app(
     name = "ipeer",
     srcs = glob(["**/*.cpp", "**/*.h"]),
+    cxxopts = ["-fexceptions"],
     data = [
         ".env",
     ],
+    platforms = ["host"],
     deps = [
         "//pkg/imgui",
+        "@tx-pkg-aux//pkg/asio",
+        "@tx-pkg-aux//pkg/exec",
+        "@tx-pkg-aux//pkg/rtt",
+        "@tx-pkg-aux//pkg/rtt/rtc",
+        "@tx-pkg-aux//pkg/syntm",
     ],
 )

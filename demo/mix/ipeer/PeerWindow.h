@@ -3,11 +3,13 @@
 #include "PeerManager.h"
 
 #include "imgui.h"
+#include "SynTm/Types.h"
+#include <chrono>
 #include <cstdio>
 
 namespace IPeer
 {
-    /// Per-peer ImGui window: canvas, connections table, diagnostics, controls.
+    /// Per-peer ImGui window: canvas, connections table, sync diagnostics, controls.
     class PeerWindow
     {
     public:
@@ -18,7 +20,6 @@ namespace IPeer
         void Render(PeerManager& mgr, double sessionTime)
         {
             bool open = true;
-            //ImGui::SetNextWindowSize({360, 480}, ImGuiCond_FirstUseEver);
             if (!ImGui::Begin(_peer.name.c_str(), &open)) {
                 ImGui::End();
                 _wantClose = !open;
@@ -26,13 +27,15 @@ namespace IPeer
             }
             _wantClose = !open;
 
-            RenderCanvas(mgr, sessionTime);
+            auto* node = mgr.FindNode(_peer.id);
+
+            RenderCanvas(node, sessionTime);
             ImGui::Separator();
-            RenderConnections(mgr);
+            RenderConnections(node);
             ImGui::Separator();
-            RenderDiagnostics(mgr);
+            RenderSyncDiagnostics();
             ImGui::Separator();
-            RenderControls(mgr);
+            RenderControls(mgr, node);
 
             ImGui::End();
         }
@@ -52,18 +55,17 @@ namespace IPeer
             };
         }
 
-        void RenderCanvas(PeerManager& mgr, double sessionTime) const
+        void RenderCanvas(PeerNode* node, double sessionTime) const
         {
             ImVec2 canvasSize{200, 200};
             ImVec2 canvasMin = ImGui::GetCursorScreenPos();
 
-            // Draw canvas background
             auto* drawList = ImGui::GetWindowDrawList();
             ImVec2 canvasMax{canvasMin.x + canvasSize.x, canvasMin.y + canvasSize.y};
             drawList->AddRectFilled(canvasMin, canvasMax, IM_COL32(20, 20, 40, 255));
             drawList->AddRect(canvasMin, canvasMax, IM_COL32(80, 80, 100, 255));
 
-            // Draw grid
+            // Grid
             for (int i = 1; i < 4; ++i) {
                 float x = canvasMin.x + canvasSize.x * (static_cast<float>(i) / 4.0f);
                 float y = canvasMin.y + canvasSize.y * (static_cast<float>(i) / 4.0f);
@@ -71,19 +73,28 @@ namespace IPeer
                 drawList->AddLine({canvasMin.x, y}, {canvasMax.x, y}, IM_COL32(40, 40, 60, 255));
             }
 
-            // Draw remote peer positions from connected links
-            auto links = mgr.GetLinksFor(_peer.id);
-            for (auto* link : links) {
-                auto& remote = link->GetRemotePeer(_peer.id);
-                Vec2 remotePos = link->EstimateRemotePosition(_peer.id, sessionTime);
-                ImVec2 px = ToCanvas(remotePos, canvasMin, canvasSize);
-                ImU32 col = ImGui::ColorConvertFloat4ToU32(remote.color);
-                drawList->AddCircleFilled(px, 5.0f, col);
-                // Label
-                drawList->AddText({px.x + 7, px.y - 6}, col, remote.name.c_str());
+            // Draw remote peer positions from connected links (dead-reckoning).
+            if (node) {
+                for (const auto& [remotePeerId, ls] : node->Links()) {
+                    if (!ls.hasPayload) {
+                        continue;
+                    }
+                    // Dead-reckoning extrapolation.
+                    auto syncNow = _peer.syncClock.Now();
+                    auto dt = static_cast<float>(
+                        std::chrono::duration<double>(syncNow - SynTm::Ticks{ls.lastPayload.syncTimeNs}).count());
+                    Vec2 remotePos{
+                        .x = ls.lastPayload.x + ls.lastPayload.vx * dt,
+                        .y = ls.lastPayload.y + ls.lastPayload.vy * dt,
+                    };
+                    ImVec2 px = ToCanvas(remotePos, canvasMin, canvasSize);
+                    drawList->AddCircleFilled(px, 5.0f, IM_COL32(200, 200, 200, 200));
+                    drawList->AddText({px.x + 7, px.y - 6}, IM_COL32(200, 200, 200, 200),
+                        remotePeerId.c_str());
+                }
             }
 
-            // Draw local peer position (larger, on top)
+            // Draw local peer position (larger, on top).
             {
                 ImVec2 px = ToCanvas(_peer.position, canvasMin, canvasSize);
                 ImU32 col = ImGui::ColorConvertFloat4ToU32(_peer.color);
@@ -91,149 +102,129 @@ namespace IPeer
                 drawList->AddCircle(px, 8.0f, IM_COL32(255, 255, 255, 180), 0, 1.5f);
             }
 
-            // Reserve the canvas space
             ImGui::Dummy(canvasSize);
         }
 
-        void RenderConnections(PeerManager& mgr) const
+        void RenderConnections(PeerNode* node) const
         {
-            auto links = mgr.GetLinksFor(_peer.id);
-            if (links.empty()) {
+            if (!node || node->Links().empty()) {
                 ImGui::TextDisabled("No connections");
                 return;
             }
 
-            if (ImGui::BeginTable("##conns", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders)) {
-                ImGui::TableSetupColumn("Peer");
-                ImGui::TableSetupColumn("State");
-                ImGui::TableSetupColumn("RTT");
-                ImGui::TableSetupColumn("Offset");
-                ImGui::TableSetupColumn("Quality");
+            if (ImGui::BeginTable("##conns", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders)) {
+                ImGui::TableSetupColumn("Remote");
+                ImGui::TableSetupColumn("Connected");
+                ImGui::TableSetupColumn("Has Payload");
+                ImGui::TableSetupColumn("Sync Quality");
                 ImGui::TableHeadersRow();
 
-                for (auto* link : links) {
-                    auto& remote = link->GetRemotePeer(_peer.id);
-                    const auto& dir = link->GetDirectionFor(_peer.id);
-
+                for (const auto& [remotePeerId, ls] : node->Links()) {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    ImGui::ColorButton("##c", remote.color, ImGuiColorEditFlags_NoTooltip, {10, 10});
-                    ImGui::SameLine();
-                    ImGui::Text("%s", remote.name.c_str());
+                    ImGui::Text("%s", remotePeerId.c_str());
 
                     ImGui::TableNextColumn();
-                    ImVec4 stateCol = StateColor(link->GetState());
-                    ImGui::TextColored(stateCol, "%s", StateName(link->GetState()));
+                    ImGui::TextColored(
+                        ls.connected ? ImVec4{0.26f, 0.85f, 0.42f, 1.0f} : ImVec4{0.98f, 0.39f, 0.26f, 1.0f},
+                        "%s", ls.connected ? "yes" : "no");
 
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.1f ms", dir.rtt * 1000.0);
+                    ImGui::Text("%s", ls.hasPayload ? "yes" : "no");
 
                     ImGui::TableNextColumn();
-                    ImGui::Text("%.2f ms", dir.offset * 1000.0);
-
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%.0f%%", dir.quality * 100.0);
+                    auto* session = _peer.consensus.GetSession(remotePeerId);
+                    if (session) {
+                        auto q = session->Quality();
+                        ImGui::Text("%s", SynTm::SyncQualityToString(q).data());
+                    } else {
+                        ImGui::TextDisabled("N/A");
+                    }
                 }
                 ImGui::EndTable();
             }
         }
 
-        void RenderDiagnostics(PeerManager& mgr) const
+        void RenderSyncDiagnostics() const
         {
-            if (!ImGui::TreeNode("Diagnostics")) {
+            if (!ImGui::TreeNode("Sync Diagnostics")) {
                 return;
             }
 
             ImGui::Text("Position: (%.3f, %.3f)", _peer.position.x, _peer.position.y);
             ImGui::Text("Velocity: (%.3f, %.3f)", _peer.velocity.x, _peer.velocity.y);
+            ImGui::Separator();
 
-            auto links = mgr.GetLinksFor(_peer.id);
-            for (auto* link : links) {
-                auto& remote = link->GetRemotePeer(_peer.id);
-                const auto& dir = link->GetDirectionFor(_peer.id);
-                if (ImGui::TreeNode(remote.name.c_str())) {
-                    ImGui::Text("Probes sent: %d", dir.probesSent);
-                    ImGui::Text("Probes received: %d", dir.probesReceived);
-                    ImGui::Text("Messages sent: %d", dir.messagesSent);
-                    ImGui::Text("Messages received: %d", dir.messagesReceived);
-                    ImGui::Text("Has payload: %s", dir.hasPayload ? "yes" : "no");
-                    if (dir.hasPayload) {
-                        ImGui::Text("Last payload pos: (%.3f, %.3f)",
-                            dir.lastPayload.x, dir.lastPayload.y);
-                    }
-                    ImGui::TreePop();
-                }
+            bool synced = _peer.consensus.IsSynced();
+            auto quality = _peer.consensus.Quality();
+            auto syncNow = _peer.syncClock.Now();
+            double syncSeconds = std::chrono::duration<double>(syncNow).count();
+
+            ImGui::Text("Synced: %s", synced ? "yes" : "no");
+            ImGui::Text("Quality: %s", SynTm::SyncQualityToString(quality).data());
+            ImGui::Text("Sync time: %.3f s", syncSeconds);
+            ImGui::Text("Peer count: %zu", _peer.consensus.PeerCount());
+
+            const auto& epoch = _peer.consensus.Epoch();
+            if (epoch.IsValid()) {
+                ImGui::Text("Epoch ID: %llu", static_cast<unsigned long long>(epoch.id));
+                ImGui::Text("Epoch members: %u", epoch.memberCount);
+            } else {
+                ImGui::TextDisabled("No epoch");
             }
+
             ImGui::TreePop();
         }
 
-        void RenderControls(PeerManager& mgr)
+        void RenderControls(PeerManager& mgr, PeerNode* node)
         {
             if (!ImGui::TreeNodeEx("Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
                 return;
             }
 
-            // Quick-connect combo to unconnected peers
-            const auto& peers = mgr.GetPeers();
+            const auto& entries = mgr.Entries();
             bool hasUnconnected = false;
-            for (const auto& other : peers) {
-                if (other->id != _peer.id && !mgr.AreConnected(_peer.id, other->id)) {
+            for (const auto& entry : entries) {
+                if (entry.peer->id != _peer.id && !mgr.AreConnected(_peer.id, entry.peer->id)) {
                     hasUnconnected = true;
                     break;
                 }
             }
 
             if (hasUnconnected) {
-                for (const auto& other : peers) {
-                    if (other->id == _peer.id || mgr.AreConnected(_peer.id, other->id)) {
+                for (const auto& entry : entries) {
+                    if (entry.peer->id == _peer.id || mgr.AreConnected(_peer.id, entry.peer->id)) {
                         continue;
                     }
-                    ImGui::PushID(other->id);
+                    ImGui::PushID(entry.peer->id);
                     char label[64];
-                    std::snprintf(label, sizeof(label), "Connect to %s", other->name.c_str());
+                    std::snprintf(label, sizeof(label), "Connect to %s", entry.peer->name.c_str());
                     if (ImGui::SmallButton(label)) {
-                        mgr.Connect(_peer, *other);
+                        mgr.Connect(_peer, *entry.peer);
                     }
                     ImGui::PopID();
                 }
-            } else if (peers.size() > 1) {
+            } else if (entries.size() > 1) {
                 ImGui::TextDisabled("Connected to all peers");
             }
 
-            // Disconnect buttons for existing links
-            auto links = mgr.GetLinksFor(_peer.id);
-            for (auto* link : links) {
-                auto& remote = link->GetRemotePeer(_peer.id);
-                ImGui::PushID(remote.id + 10000);
-                char label[64];
-                std::snprintf(label, sizeof(label), "Disconnect %s", remote.name.c_str());
-                if (ImGui::SmallButton(label)) {
-                    mgr.Disconnect(_peer, remote);
+            // Disconnect buttons for existing links.
+            if (node) {
+                for (const auto& [remotePeerId, ls] : node->Links()) {
+                    if (!ls.connected) {
+                        continue;
+                    }
+                    ImGui::PushID(remotePeerId.c_str());
+                    char label[64];
+                    std::snprintf(label, sizeof(label), "Disconnect %s", remotePeerId.c_str());
+                    if (ImGui::SmallButton(label)) {
+                        node->DisconnectFrom(remotePeerId);
+                    }
+                    ImGui::PopID();
                 }
-                ImGui::PopID();
             }
 
             ImGui::TreePop();
-        }
-
-        static const char* StateName(LinkState state)
-        {
-            switch (state) {
-                case LinkState::Connected: return "Connected";
-                case LinkState::Syncing:   return "Syncing";
-                case LinkState::Synced:    return "Synced";
-            }
-            return "Unknown";
-        }
-
-        static ImVec4 StateColor(LinkState state)
-        {
-            switch (state) {
-                case LinkState::Connected: return {0.5f, 0.5f, 0.5f, 1.0f};
-                case LinkState::Syncing:   return {0.95f, 0.75f, 0.2f, 1.0f};
-                case LinkState::Synced:    return {0.26f, 0.85f, 0.42f, 1.0f};
-            }
-            return {1, 1, 1, 1};
         }
     };
 }

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "SynTm/Clock.h"
+#include "SynTm/Consensus.h"
+#include "SynTm/SyncClock.h"
+
 #include <cmath>
 #include "imgui.h"
 #include <string>
@@ -25,15 +29,21 @@ namespace IPeer
         float y = 0.0f;
     };
 
-    /// A single peer with identity, animated position, and velocity.
+    /// A single peer with identity, animated position, sync state, and velocity.
     struct Peer
     {
         int id = 0;
         std::string name;
+        std::string peerId; ///< String ID used by transport/signaling.
         ImVec4 color{1, 1, 1, 1};
 
         Vec2 position{};
         Vec2 velocity{};
+
+        // SynTm time synchronization stack (one per peer).
+        SynTm::AppClock clock;
+        SynTm::Consensus consensus{clock};
+        SynTm::SyncClock syncClock{consensus};
 
         /// Update position using Lissajous curve animation.
         /// Each peer gets a unique pattern based on its id.
@@ -56,6 +66,9 @@ namespace IPeer
 
             position.x = newX;
             position.y = newY;
+
+            // Refresh atomic snapshot for thread-safe reads.
+            syncClock.Update();
         }
     };
 }
