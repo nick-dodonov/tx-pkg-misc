@@ -28,7 +28,6 @@ namespace Sdl::Loop
         : Runner{std::move(handler)}
         , _sdlHandler{std::move(sdlHandler)}
         , _options{std::move(options)}
-        , _updateCtx{*this}
     {
         _sdlHandler->SetSdl3Runner(this);
         Log::Trace("created");
