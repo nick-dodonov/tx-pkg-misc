@@ -1,33 +1,13 @@
+#include "ControlPanel.h"
+#include "PeerManager.h"
+#include "PeerWindow.h"
+
 #include "Boot/Boot.h"
 #include "Fs/System.h"
 #include "Im/Console/QuakeConsole.h"
 #include "Im/Deputy.h"
 #include "Log/Log.h"
 #include "Sdl/Loop/Sdl3Runner.h"
-
-struct PeerWindow
-{
-    std::string name;
-    explicit PeerWindow(std::string name = "Window") : name(std::move(name)) {}
-
-    void Render(const RunLoop::UpdateCtx& ctx, const std::shared_ptr<Im::Deputy>& imDeputy) const
-    {
-        // auto* mainViewport = ImGui::GetMainViewport();
-        // ImGui::SetNextWindowPos(ImVec2(mainViewport->Size.x / 10, 4 * mainViewport->Size.y / 10), ImGuiCond_FirstUseEver);
-        auto flags = 0; //ImGuiWindowFlags_AlwaysAutoResize;
-        if (ImGui::Begin(name.c_str(), nullptr, flags)) {
-            ImGui::Text("Session Time: %.2f s", ctx.session.passedSeconds);
-            //ImGui::Spring();
-            ImGui::Spacing();
-            ImGui::Text("Frame Index: %llu", static_cast<unsigned long long>(ctx.frame.index));
-            ImGui::Text("Delta: %.3f ms", ctx.frame.deltaSeconds * 1000.0f);
-
-            auto framerate = imDeputy->GetImGuiIO().Framerate;
-            ImGui::Text("ImGUI FPS: %.3f ms/frame (%.1f FPS)", 1000.0f / framerate, framerate);
-        }
-        ImGui::End();
-    }
-};
 
 struct ImHandler
     : RunLoop::Handler
@@ -36,25 +16,35 @@ struct ImHandler
     std::shared_ptr<Im::Deputy> _imDeputy;
     std::unique_ptr<Im::QuakeConsole> _console;
 
+    IPeer::PeerManager _peerManager;
+    IPeer::ControlPanel _controlPanel;
+    std::vector<std::unique_ptr<IPeer::PeerWindow>> _peerWindows;
+
     bool Start() override
     {
         Log::Info("SDL3 Runner initialized");
         _imDeputy = std::make_shared<Im::Deputy>(Im::Deputy::Config{
-            .window=GetWindow(),
-            .renderer=GetRenderer(),
-            .drive=Fs::System::MakeDefaultDrive(),
+            .window = GetWindow(),
+            .renderer = GetRenderer(),
+            .drive = Fs::System::MakeDefaultDrive(),
         });
-        
-        // Initialize Quake-style console (visible by default)
+
         _console = std::make_unique<Im::QuakeConsole>(true);
         _console->Initialize();
-        
+
+        // Create two initial peers for immediate demo
+        auto& p1 = _peerManager.CreatePeer();
+        auto& p2 = _peerManager.CreatePeer();
+        _peerWindows.push_back(std::make_unique<IPeer::PeerWindow>(p1));
+        _peerWindows.push_back(std::make_unique<IPeer::PeerWindow>(p2));
+
         return true;
     }
 
     void Stop() override
     {
         Log::Info("SDL3 Runner quitting");
+        _peerWindows.clear();
         _console.reset();
         _imDeputy.reset();
     }
@@ -62,28 +52,43 @@ struct ImHandler
     void Update(const RunLoop::UpdateCtx& ctx) override
     {
         auto* renderer = GetRenderer();
-
-        // Clear with dark blue
-        SDL_SetRenderDrawColor(renderer, 30, 30, 130, 255);
+        SDL_SetRenderDrawColor(renderer, 30, 30, 50, 255);
         SDL_RenderClear(renderer);
+
+        // Advance simulation
+        _peerManager.Update(ctx.frame.deltaSeconds, ctx.session.passedSeconds);
 
         _imDeputy->UpdateBegin();
 
-        // Main sample windows for peers
-        {
-            if (ImGui::BeginMainMenuBar()) {
-                if (ImGui::BeginMenu("Peer")) {
-                    if (ImGui::MenuItem("New", "Ctrl+N")) {
-                        //TODO: peer creation logic
-                    }
-                    ImGui::EndMenu();
+        // Main menu bar
+        if (ImGui::BeginMainMenuBar()) {
+            if (ImGui::BeginMenu("Peers")) {
+                if (ImGui::MenuItem("Create New", "Ctrl+N")) {
+                    auto& peer = _peerManager.CreatePeer();
+                    _peerWindows.push_back(std::make_unique<IPeer::PeerWindow>(peer));
                 }
-                ImGui::EndMainMenuBar();
+                ImGui::Separator();
+                if (ImGui::MenuItem("Quit", "Escape")) {
+                    GetRunner()->Exit(0);
+                }
+                ImGui::EndMenu();
             }
-    
-            PeerWindow window1{"peer1"};
-            window1.Render(ctx, _imDeputy);
+            ImGui::EndMainMenuBar();
         }
+
+        // Control panel
+        _controlPanel.Render(_peerManager);
+
+        // Sync peer windows with peer list (create windows for new peers)
+        SyncPeerWindows();
+
+        // Render all peer windows
+        for (auto& win : _peerWindows) {
+            win->Render(_peerManager, ctx.session.passedSeconds);
+        }
+
+        // Remove closed windows
+        std::erase_if(_peerWindows, [](const auto& w) { return w->WantClose(); });
 
         _console->Render();
         _imDeputy->UpdateEnd();
@@ -91,13 +96,11 @@ struct ImHandler
 
     SDL_AppResult Sdl3Event(Sdl::Loop::Sdl3Runner& runner, const SDL_Event& event) override
     {
-        // Handle console toggle before ImGui to prevent ` from appearing in input
         if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_GRAVE) {
             _console->Toggle();
             return SDL_APP_CONTINUE;
         }
-        
-        // Block text input for ` character always (to prevent it from appearing anywhere)
+
         if (event.type == SDL_EVENT_TEXT_INPUT) {
             const char* text = event.text.text;
             if (text && (text[0] == '`' || text[0] == '~')) {
@@ -112,13 +115,30 @@ struct ImHandler
             return SDL_APP_SUCCESS;
         }
         if (event.type == SDL_EVENT_KEY_DOWN) {
-            // Log::Trace("Key pressed: {}", static_cast<int>(event.key.key));
             if (event.key.key == SDLK_ESCAPE) {
                 Log::Debug("ESC pressed, quitting");
                 return SDL_APP_SUCCESS;
             }
         }
         return SDL_APP_CONTINUE;
+    }
+
+private:
+    /// Ensure every peer has a corresponding window.
+    void SyncPeerWindows()
+    {
+        for (const auto& peer : _peerManager.GetPeers()) {
+            bool hasWindow = false;
+            for (auto& win : _peerWindows) {
+                if (win->GetPeerId() == peer->id) {
+                    hasWindow = true;
+                    break;
+                }
+            }
+            if (!hasWindow) {
+                _peerWindows.push_back(std::make_unique<IPeer::PeerWindow>(*peer));
+            }
+        }
     }
 };
 
@@ -131,12 +151,12 @@ int main(const int argc, const char* argv[])
         handler,
         Sdl::Loop::Sdl3Runner::Options{
             .Window = {
-                .Title = "Hello Peer",
-                .Width = 1000,
+                .Title = "IPeer",
+                .Width = 1200,
                 .Height = 800,
-                .Flags = 
-                    SDL_WINDOW_RESIZABLE 
-                    | SDL_WINDOW_HIGH_PIXEL_DENSITY 
+                .Flags =
+                    SDL_WINDOW_RESIZABLE
+                    | SDL_WINDOW_HIGH_PIXEL_DENSITY
                     | SDL_WINDOW_FILL_DOCUMENT,
             },
         }
