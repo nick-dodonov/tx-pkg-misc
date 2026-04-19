@@ -53,7 +53,9 @@ namespace Demo
             _console->Initialize();
 
             // Create two initial peers for immediate demo.
-            _peerManager.CreatePeer();
+            // First peer gets a 100s head start so the two clocks differ visually.
+            auto& p0 = _peerManager.CreatePeer();
+            p0.clock.Advance(std::chrono::seconds{1000});
             _peerManager.CreatePeer();
 
             return true;
