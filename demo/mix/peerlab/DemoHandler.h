@@ -1,4 +1,6 @@
 #pragma once
+#include <algorithm>
+
 #include "ControlPanel.h"
 #include "PeerManager.h"
 #include "PeerWindow.h"
@@ -31,6 +33,7 @@ namespace Demo
         bool _dockingInitialized = false;
         ImGuiID _dockIdTop = 0;
         ImGuiID _dockIdBottom = 0;
+        ImGuiID _dockIdLastSlot = 0; // last assigned peer slot, split-right for each new peer
 
     public:
         explicit DemoHandler(RunLoop::CompositeHandler& composite)
@@ -85,6 +88,10 @@ namespace Demo
                         _peerManager.CreatePeer();
                     }
                     ImGui::Separator();
+                    if (ImGui::MenuItem("Reset Layout")) {
+                        _dockingInitialized = false;
+                    }
+                    ImGui::Separator();
                     if (ImGui::MenuItem("Quit", "Escape")) {
                         GetRunner()->Exit(0);
                     }
@@ -111,9 +118,6 @@ namespace Demo
 
             // Render all peer windows.
             for (const auto& win : _peerWindows) {
-                if (_dockIdBottom != 0) {
-                    ImGui::SetNextWindowDockID(_dockIdBottom, ImGuiCond_FirstUseEver);
-                }
                 win->Render(_peerManager, ctx.session.passedSeconds);
             }
 
@@ -162,9 +166,16 @@ namespace Demo
 
             // Create windows for peers that have no window yet.
             for (const auto& entry : _peerManager.Entries()) {
-                bool hasWindow = std::any_of(_peerWindows.begin(), _peerWindows.end(),
+                bool hasWindow = std::ranges::any_of(_peerWindows,
                     [id = entry.peer->id](const auto& w) { return w->GetPeerId() == id; });
                 if (!hasWindow) {
+                    // Place new peer to the right of the last slot.
+                    if (_dockingInitialized && _dockIdLastSlot != 0) {
+                        ImGuiID newSlot;
+                        ImGui::DockBuilderSplitNode(_dockIdLastSlot, ImGuiDir_Right, 0.5f, &newSlot, nullptr);
+                        ImGui::DockBuilderDockWindow(entry.peer->name.c_str(), newSlot);
+                        _dockIdLastSlot = newSlot;
+                    }
                     _peerWindows.push_back(std::make_unique<PeerWindow>(*entry.peer));
                 }
             }
@@ -197,10 +208,20 @@ namespace Demo
 
             ImGui::DockBuilderDockWindow(ControlPanel::WindowName, _dockIdTop);
 
-            // Dock existing peer windows into the bottom area.
-            for (const auto& win : _peerWindows) {
-                if (const auto* peer = _peerManager.FindPeer(win->GetPeerId())) {
-                    ImGui::DockBuilderDockWindow(peer->name.c_str(), _dockIdBottom);
+            // Dock peer windows side-by-side: first in _dockIdBottom, each next splits right.
+            _dockIdLastSlot = _dockIdBottom;
+            for (size_t i = 0; i < _peerWindows.size(); ++i) {
+                const auto* peer = _peerManager.FindPeer(_peerWindows[i]->GetPeerId());
+                if (!peer) {
+                    continue;
+                }
+                if (i == 0) {
+                    ImGui::DockBuilderDockWindow(peer->name.c_str(), _dockIdLastSlot);
+                } else {
+                    ImGuiID newSlot;
+                    ImGui::DockBuilderSplitNode(_dockIdLastSlot, ImGuiDir_Right, 0.5f, &newSlot, nullptr);
+                    ImGui::DockBuilderDockWindow(peer->name.c_str(), newSlot);
+                    _dockIdLastSlot = newSlot;
                 }
             }
 

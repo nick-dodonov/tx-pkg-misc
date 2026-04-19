@@ -50,8 +50,7 @@ namespace Demo
 
         void RenderPeerCreation(PeerManager& mgr)
         {
-            ImGui::Text("Create Peer");
-            ImGui::SetNextItemWidth(160);
+            ImGui::SetNextItemWidth(100);
             ImGui::InputTextWithHint("##name", "Name (optional)", _newPeerName, sizeof(_newPeerName));
             ImGui::SameLine();
             if (ImGui::Button("Create")) {
