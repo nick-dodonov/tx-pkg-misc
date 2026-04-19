@@ -120,7 +120,7 @@ namespace Demo
 
             // Render all peer windows.
             for (const auto& win : _peerWindows) {
-                win->Render(_peerManager, ctx.session.passedSeconds);
+                win->Render(_peerManager);
             }
 
             _console->Render();
@@ -183,7 +183,7 @@ namespace Demo
             }
         }
 
-        /// Set up a programmatic docking layout: top 40% for ControlPanel, bottom 60% for PeerWindows.
+        /// Set up a programmatic docking layout: top for ControlPanel, bottom for PeerWindows.
         void SetupDocking()
         {
             if (_dockingInitialized) {
@@ -206,7 +206,7 @@ namespace Demo
             ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_PassthruCentralNode);
             ImGui::DockBuilderSetNodeSize(dockspaceId, ImGui::GetMainViewport()->Size);
 
-            ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Up, 0.40f, &_dockIdTop, &_dockIdBottom);
+            ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Up, 0.4f, &_dockIdTop, &_dockIdBottom);
 
             ImGui::DockBuilderDockWindow(ControlPanel::WindowName, _dockIdTop);
 
@@ -217,14 +217,12 @@ namespace Demo
                 if (!peer) {
                     continue;
                 }
-                if (i == 0) {
-                    ImGui::DockBuilderDockWindow(peer->name.c_str(), _dockIdLastSlot);
-                } else {
+                if (i > 0) {
                     ImGuiID newSlot;
                     ImGui::DockBuilderSplitNode(_dockIdLastSlot, ImGuiDir_Right, 0.5f, &newSlot, nullptr);
-                    ImGui::DockBuilderDockWindow(peer->name.c_str(), newSlot);
                     _dockIdLastSlot = newSlot;
                 }
+                ImGui::DockBuilderDockWindow(peer->name.c_str(), _dockIdLastSlot);
             }
 
             ImGui::DockBuilderFinish(dockspaceId);

@@ -40,7 +40,7 @@ namespace Demo
             if (name.empty()) {
                 name = "Peer-" + std::to_string(id);
             }
-            std::string peerId = "ipeer-" + std::to_string(id);
+            std::string peerId = "p" + std::to_string(id);
 
             auto peer = std::make_unique<Peer>();
             peer->id = id;

@@ -155,7 +155,7 @@ namespace Demo
             // Open transport and get connector for outbound connections.
             _connector = _transport->Open(_acceptor);
 
-            constexpr auto tick = std::chrono::milliseconds(50);
+            constexpr auto tick = std::chrono::milliseconds(200);
 
             while (true) {
                 co_await exec::schedule_after(sched, tick);

@@ -16,7 +16,7 @@ namespace Demo
 
         [[nodiscard]] int GetPeerId() const { return _peer.id; }
 
-        void Render(PeerManager& mgr, double sessionTime)
+        void Render(PeerManager& mgr)
         {
             if (_firstRender) {
                 ImGui::SetNextWindowFocus();
@@ -32,7 +32,16 @@ namespace Demo
 
             auto* node = mgr.FindNode(_peer.id);
 
-            RenderCanvas(node, sessionTime);
+            ImGui::BeginGroup();
+            RenderCanvas(node);
+            ImGui::EndGroup();
+
+            ImGui::SameLine();
+
+            ImGui::BeginGroup();
+            RenderPeerState();
+            ImGui::EndGroup();
+
             ImGui::Separator();
             RenderConnections(node);
             ImGui::Separator();
@@ -59,9 +68,9 @@ namespace Demo
             };
         }
 
-        void RenderCanvas(PeerNode* node, double sessionTime) const
+        void RenderCanvas(const PeerNode* node) const
         {
-            ImVec2 canvasSize{200, 200};
+            ImVec2 canvasSize{100, 100};
             ImVec2 canvasMin = ImGui::GetCursorScreenPos();
 
             auto* drawList = ImGui::GetWindowDrawList();
@@ -83,13 +92,13 @@ namespace Demo
                     if (!ls.hasPayload) {
                         continue;
                     }
-                    // Dead-reckoning extrapolation.
-                    auto syncNow = _peer.syncClock.Now();
-                    auto dt = static_cast<float>(
-                        std::chrono::duration<double>(syncNow - SynTm::Ticks{ls.lastPayload.syncTimeNs}).count());
+                    //TODO: Dead-reckoning extrapolation when dt will be correctly calculated
+                    //auto syncNow = _peer.syncClock.Now();
+                    // auto dt = static_cast<float>(
+                    //     std::chrono::duration<double>(syncNow - SynTm::Ticks{ls.lastPayload.syncTimeNs}).count());
                     Vec2 remotePos{
-                        .x = ls.lastPayload.x + ls.lastPayload.vx * dt,
-                        .y = ls.lastPayload.y + ls.lastPayload.vy * dt,
+                        .x = ls.lastPayload.x,// + ls.lastPayload.vx * dt,
+                        .y = ls.lastPayload.y,// + ls.lastPayload.vy * dt,
                     };
                     ImVec2 px = ToCanvas(remotePos, canvasMin, canvasSize);
                     drawList->AddCircleFilled(px, 5.0f, IM_COL32(200, 200, 200, 200));
@@ -107,6 +116,21 @@ namespace Demo
             }
 
             ImGui::Dummy(canvasSize);
+        }
+
+        void RenderPeerState() const
+        {
+            ImGui::Text("peerId: %s", _peer.peerId.c_str());
+            ImGui::Text("position: (%.3f, %.3f)", _peer.position.x, _peer.position.y);
+            ImGui::Text("velocity: (%.3f, %.3f)", _peer.velocity.x, _peer.velocity.y);
+
+            auto localNow = _peer.clock.Now();
+            double localSeconds = std::chrono::duration<double>(localNow).count();
+            ImGui::Text("clock: %.3f s", localSeconds);
+
+            auto syncNow = _peer.syncClock.Now();
+            double syncSeconds = std::chrono::duration<double>(syncNow).count();
+            ImGui::Text("syncClock: %.3f s", syncSeconds);
         }
 
         void RenderConnections(PeerNode* node) const
@@ -151,22 +175,15 @@ namespace Demo
 
         void RenderSyncDiagnostics() const
         {
-            if (!ImGui::TreeNode("Sync Diagnostics")) {
+            if (!ImGui::TreeNodeEx("Sync Diagnostics", ImGuiTreeNodeFlags_DefaultOpen)) {
                 return;
             }
 
-            ImGui::Text("Position: (%.3f, %.3f)", _peer.position.x, _peer.position.y);
-            ImGui::Text("Velocity: (%.3f, %.3f)", _peer.velocity.x, _peer.velocity.y);
-            ImGui::Separator();
-
             bool synced = _peer.consensus.IsSynced();
             auto quality = _peer.consensus.Quality();
-            auto syncNow = _peer.syncClock.Now();
-            double syncSeconds = std::chrono::duration<double>(syncNow).count();
 
             ImGui::Text("Synced: %s", synced ? "yes" : "no");
             ImGui::Text("Quality: %s", SynTm::SyncQualityToString(quality).data());
-            ImGui::Text("Sync time: %.3f s", syncSeconds);
             ImGui::Text("Peer count: %zu", _peer.consensus.PeerCount());
 
             const auto& epoch = _peer.consensus.Epoch();
@@ -180,7 +197,7 @@ namespace Demo
             ImGui::TreePop();
         }
 
-        void RenderControls(PeerManager& mgr, PeerNode* node)
+        void RenderControls(const PeerManager& mgr, PeerNode* node) const
         {
             if (!ImGui::TreeNodeEx("Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
                 return;
