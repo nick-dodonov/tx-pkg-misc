@@ -79,31 +79,30 @@ namespace Demo
             _entries.erase(it);
         }
 
-        /// Request a connection between two peers (by peer ID).
-        void Connect(Peer& a, Peer& b) const
+        /// Request a connection from initiator to responder.
+        ///
+        /// Only the initiator sends a WebRTC offer; the responder waits for it and
+        /// answers.  Calling ConnectTo on both sides simultaneously was the root
+        /// cause of glare (concurrent cross-offers).
+        void Connect(Peer& initiator, Peer& responder) const
         {
-            auto* nodeA = FindNode(a.id);
-            auto* nodeB = FindNode(b.id);
-            if (!nodeA || !nodeB) {
+            auto* initiatorNode = FindNode(initiator.id);
+            if (!initiatorNode) {
                 return;
             }
-            // Each peer connects to the other via transport.
-            nodeA->ConnectTo(b.peerId);
-            nodeB->ConnectTo(a.peerId);
-            Log::Info("connecting {} <-> {}", a.name, b.name);
+            initiatorNode->ConnectTo(responder.peerId);
+            Log::Info("connecting {} -> {}", initiator.name, responder.name);
         }
 
-        /// Request disconnection between two peers.
-        void Disconnect(Peer& a, Peer& b) const
+        /// Request disconnection initiated by one peer; the other side detects it via onDisconnected.
+        void Disconnect(Peer& initiator, Peer& responder) const
         {
-            auto* nodeA = FindNode(a.id);
-            auto* nodeB = FindNode(b.id);
-            if (!nodeA || !nodeB) {
+            auto* initiatorNode = FindNode(initiator.id);
+            if (!initiatorNode) {
                 return;
             }
-            nodeA->DisconnectFrom(b.peerId);
-            nodeB->DisconnectFrom(a.peerId);
-            Log::Info("disconnecting {} <-> {}", a.name, b.name);
+            initiatorNode->DisconnectFrom(responder.peerId);
+            Log::Info("disconnecting {} -> {}", initiator.name, responder.name);
         }
 
         /// Advance all peer positions (physics simulation on UI thread).

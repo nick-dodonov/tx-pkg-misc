@@ -244,7 +244,7 @@ namespace Demo
                     auto& msg = msgs.front();
                     if (!msg) {
                         ls.connected = false;
-                        Log::Info("link disconnected {} <-> {}", _peer.peerId, peerId);
+                        Log::Info("link disconnected {} -> {}", _peer.peerId, peerId);
                         break;
                     }
                     HandleMessage(peerId, *msg);
@@ -369,7 +369,7 @@ namespace Demo
             for (auto it = _links.begin(); it != _links.end(); ) {
                 if (!it->second.connected) {
                     _peer.consensus.RemovePeer(it->first);
-                    Log::Info("removed link {} <-> {}", _peer.peerId, it->first);
+                    Log::Info("removed link {} -> {}", _peer.peerId, it->first);
                     it = _links.erase(it);
                 } else {
                     ++it;

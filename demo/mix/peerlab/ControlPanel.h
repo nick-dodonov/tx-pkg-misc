@@ -113,20 +113,20 @@ namespace Demo
         void RenderConnectionElement(PeerManager& mgr, int i, int j) const
         {
             const auto& entries = mgr.Entries();
-            auto& a = *entries[i].peer;
-            auto& b = *entries[j].peer;
+            auto& initiator = *entries[i].peer;
+            auto& responder = *entries[j].peer;
             ImGui::PushID(i * entries.size() + j);
-            bool connected = mgr.AreConnected(a.id, b.id);
+            bool connected = mgr.AreConnected(initiator.id, responder.id);
             if (connected) {
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.2f, 0.65f, 0.3f, 0.8f});
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{0.2f, 0.65f, 0.3f, 1.0f});
                 if (ImGui::SmallButton("Dis")) {
-                    mgr.Disconnect(a, b);
+                    mgr.Disconnect(initiator, responder);
                 }
                 ImGui::PopStyleColor(2);
             } else {
                 if (ImGui::SmallButton("Con")) {
-                    mgr.Connect(a, b);
+                    mgr.Connect(initiator, responder);
                 }
             }
             ImGui::PopID();
