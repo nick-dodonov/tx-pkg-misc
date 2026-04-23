@@ -154,8 +154,8 @@ namespace Demo
 
                     ImGui::TableNextColumn();
                     ImGui::TextColored(
-                        ls.connected ? ImVec4{0.26f, 0.85f, 0.42f, 1.0f} : ImVec4{0.98f, 0.39f, 0.26f, 1.0f},
-                        "%s", ls.connected ? "yes" : "no");
+                        ls.link ? ImVec4{0.26f, 0.85f, 0.42f, 1.0f} : ImVec4{0.98f, 0.39f, 0.26f, 1.0f},
+                        "%s", ls.link ? "yes" : "no");
 
                     ImGui::TableNextColumn();
                     ImGui::Text("%s", ls.hasPayload ? "yes" : "no");
@@ -232,7 +232,7 @@ namespace Demo
             // Disconnect buttons for existing links.
             if (node) {
                 for (const auto& [remotePeerId, ls] : node->Links()) {
-                    if (!ls.connected) {
+                    if (!ls.link) {
                         continue;
                     }
                     ImGui::PushID(remotePeerId.c_str());

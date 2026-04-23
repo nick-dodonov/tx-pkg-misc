@@ -28,7 +28,7 @@
 namespace Demo
 {
     /// Per-link bridge: transport callbacks enqueue messages for the coroutine.
-    struct LinkBridge
+    struct LinkBridge : std::enable_shared_from_this<LinkBridge>
     {
         using Msg = std::optional<std::vector<std::byte>>;
 
@@ -37,14 +37,19 @@ namespace Demo
 
         [[nodiscard]] Rtt::LinkHandler MakeHandler()
         {
+            std::weak_ptr<LinkBridge> self = weak_from_this();
             return {
-                .onReceived = [this](std::span<const std::byte> data) {
-                    std::lock_guard lock(mutex);
-                    pending.push(std::vector<std::byte>{data.begin(), data.end()});
+                .onReceived = [self](std::span<const std::byte> data) {
+                    if (auto bridge = self.lock()) {
+                        std::lock_guard lock(bridge->mutex);
+                        bridge->pending.emplace(std::vector<std::byte>{data.begin(), data.end()});
+                    }
                 },
-                .onDisconnected = [this]() {
-                    std::lock_guard lock(mutex);
-                    pending.push(std::nullopt);
+                .onDisconnected = [self]() {
+                    if (auto bridge = self.lock()) {
+                        std::lock_guard lock(bridge->mutex);
+                        bridge->pending.emplace(std::nullopt);
+                    }
                 },
             };
         }
@@ -64,7 +69,6 @@ namespace Demo
         std::string remotePeerId;
         std::shared_ptr<Rtt::ILink> link;
         std::shared_ptr<LinkBridge> bridge;
-        bool connected = true;
 
         // Remote peer view (dead-reckoning)
         PayloadUpdateMsg lastPayload{};
@@ -205,10 +209,10 @@ namespace Demo
             while (!disconnects.empty()) {
                 auto& target = disconnects.front();
                 auto it = _links.find(target);
-                if (it != _links.end()) {
-                    it->second.link->Disconnect();
-                    it->second.connected = false;
+                if (it != _links.end() && it->second.link) {
                     Log::Info("disconnecting {} -> {}", _peer.peerId, target);
+                    it->second.link->Disconnect();
+                    it->second.link = nullptr;
                 }
                 disconnects.pop();
             }
@@ -227,7 +231,6 @@ namespace Demo
                     .remotePeerId = remotePeerId,
                     .link = std::move(p.link),
                     .bridge = std::move(p.bridge),
-                    .connected = true,
                 };
                 pending.pop();
             }
@@ -236,14 +239,14 @@ namespace Demo
         void ProcessAllMessages()
         {
             for (auto& [peerId, ls] : _links) {
-                if (!ls.connected) {
+                if (!ls.link) {
                     continue;
                 }
                 auto msgs = ls.bridge->Drain();
                 while (!msgs.empty()) {
                     auto& msg = msgs.front();
                     if (!msg) {
-                        ls.connected = false;
+                        ls.link = nullptr;
                         Log::Info("link disconnected {} -> {}", _peer.peerId, peerId);
                         break;
                     }
@@ -312,7 +315,7 @@ namespace Demo
         void ProbeAll()
         {
             for (auto& [peerId, ls] : _links) {
-                if (!ls.connected) {
+                if (!ls.link) {
                     continue;
                 }
                 if (!_peer.consensus.ShouldProbe(peerId)) {
@@ -343,7 +346,7 @@ namespace Demo
                 .syncTimeNs = syncNow.count(),
             });
             for (auto& [peerId, ls] : _links) {
-                if (!ls.connected) {
+                if (!ls.link) {
                     continue;
                 }
                 SendTo(peerId, msg);
@@ -353,7 +356,7 @@ namespace Demo
         void SendTo(const std::string& peerId, std::span<const std::byte> data)
         {
             auto it = _links.find(peerId);
-            if (it == _links.end() || !it->second.connected || !it->second.link) {
+            if (it == _links.end() || !it->second.link) {
                 return;
             }
             auto copy = std::vector<std::byte>(data.begin(), data.end());
@@ -367,7 +370,7 @@ namespace Demo
         void RemoveDisconnected()
         {
             for (auto it = _links.begin(); it != _links.end(); ) {
-                if (!it->second.connected) {
+                if (!it->second.link) {
                     _peer.consensus.RemovePeer(it->first);
                     Log::Info("removed link {} -> {}", _peer.peerId, it->first);
                     it = _links.erase(it);
