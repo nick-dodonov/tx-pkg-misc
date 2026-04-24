@@ -36,21 +36,14 @@ namespace Demo
 
         Peer& CreatePeer(std::string name = "")
         {
-            int id = _nextId++;
+            auto id = _nextId++;
             if (name.empty()) {
                 name = "Peer-" + std::to_string(id);
             }
-            std::string peerId = "p" + std::to_string(id);
-
-            auto peer = std::make_unique<Peer>();
-            peer->logger = Log::Logger(std::format("[{}]", peerId));
-            peer->id = id;
-            peer->name = std::move(name);
-            peer->peerId = peerId;
-            peer->color = PeerColors[id % PeerColorCount];
+            auto peer = std::make_unique<Peer>(id, std::move(name), "p" + std::to_string(id));
 
             // Create transport and PeerNode coroutine.
-            auto transport = _transportFactory.CreateTransport(peerId, peer->logger);
+            auto transport = _transportFactory.CreateTransport(peer->peerId, peer->logger);
             auto node = std::make_unique<PeerNode>(*peer, std::move(transport));
 
             // Create Domain from the coroutine and register with composite handler.
@@ -59,7 +52,7 @@ namespace Demo
             });
             _composite.Add(*domain);
 
-            Log::Info("created {} (id={}, peerId={})", peer->name, peer->id, peerId);
+            Log::Info("created {} (id={}, peerId={})", peer->name, peer->id, peer->peerId);
 
             auto& entry = _entries.emplace_back(
                 ManagedPeer{

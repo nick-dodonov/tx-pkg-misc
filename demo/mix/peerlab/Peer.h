@@ -32,6 +32,14 @@ namespace Demo
     /// A single peer with identity, animated position, sync state, and velocity.
     struct Peer
     {
+        Peer(int id, std::string name, std::string peerId)
+            : logger{std::format("[{}]", peerId)}
+            , id{id}
+            , name{std::move(name)}
+            , peerId{std::move(peerId)}
+            , color{PeerColors[id % PeerColorCount]}
+        {}
+
         Log::Logger logger;
 
         int id = 0;
@@ -44,7 +52,9 @@ namespace Demo
 
         // SynTm time synchronization stack (one per peer).
         SynTm::AppClock clock;
-        SynTm::Consensus consensus{clock};
+        SynTm::Consensus consensus{clock, SynTm::ConsensusMode::Voter, SynTm::SessionConfig {
+            .parentLogger = logger,
+        }};
         SynTm::SyncClock syncClock{consensus};
 
         /// Update position using Lissajous curve animation.
