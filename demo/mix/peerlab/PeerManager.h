@@ -53,7 +53,9 @@ namespace Demo
             auto node = std::make_unique<PeerNode>(*peer, std::move(transport));
 
             // Create Domain from the coroutine and register with composite handler.
-            auto domain = std::make_shared<Exec::Domain>(node->Run());
+            auto domain = std::make_shared<Exec::Domain>(node->Run(), Exec::Domain::Options{
+                .logAreaPrefix = std::format("[{}] ", peerId)
+            });
             _composite.Add(*domain);
 
             Log::Info("created {} (id={}, peerId={})", peer->name, peer->id, peerId);
