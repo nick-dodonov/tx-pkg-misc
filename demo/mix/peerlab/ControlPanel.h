@@ -68,37 +68,20 @@ namespace Demo
             int n = static_cast<int>(entries.size());
             int pendingRemove = -1;
 
-            if (ImGui::BeginTable("##connmatrix", n + 1,
-                    ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit)) {
-                ImGui::TableSetupColumn("Peer");
-                for (const auto& entry : entries) {
-                    ImGui::TableSetupColumn(entry.peer->name.c_str());
-                }
-                ImGui::TableHeadersRow();
+            auto columnsCount = 1 // Row header
+                + n // Peer columns
+                + 1 // Local clock column
+                + 1 // Synced clock column (optional)
+                ;
+            constexpr auto tableFlags = 
+                ImGuiTableFlags_Borders 
+                | ImGuiTableFlags_SizingFixedFit;
+            if (ImGui::BeginTable("##connmatrix", columnsCount, tableFlags)) {
+                RenderConnectionHeaders(mgr);
 
                 for (int i = 0; i < n; ++i) {
                     ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-
-                    auto& peer = *entries[i].peer;
-                    ImGui::PushID(peer.id);
-                    ImGui::ColorButton("##color", peer.color, ImGuiColorEditFlags_NoTooltip, {12, 12});
-                    ImGui::SameLine();
-                    ImGui::TextUnformatted(peer.name.c_str());
-                    ImGui::SameLine();
-                    if (ImGui::SmallButton("X")) {
-                        pendingRemove = peer.id;
-                    }
-                    ImGui::PopID();
-
-                    for (int j = 0; j < n; ++j) {
-                        ImGui::TableNextColumn();
-                        if (i == j) {
-                            ImGui::TextDisabled(" - ");
-                            continue;
-                        }
-                        RenderConnectionElement(mgr, i, j);
-                    }
+                    RenderConnectionRow(mgr, i, n, pendingRemove);
                 }
                 ImGui::EndTable();
             }
@@ -108,6 +91,59 @@ namespace Demo
             }
 
             ImGui::TreePop();
+        }
+
+        void RenderConnectionHeaders(PeerManager& mgr)
+        {
+            ImGui::TableSetupColumn("");
+
+            const auto& entries = mgr.Entries();
+            for (const auto& entry : entries) {
+                ImGui::TableSetupColumn(entry.peer->name.c_str());
+            }
+
+            ImGui::TableSetupColumn("local");
+            ImGui::TableSetupColumn("synced");
+
+            ImGui::TableHeadersRow();
+        }
+
+        void RenderConnectionRow(PeerManager& mgr, int i, int n, int& pendingRemove)
+        {
+            ImGui::TableNextColumn();
+
+            const auto& entries = mgr.Entries();
+            auto& peer = *entries[i].peer;
+            ImGui::PushID(peer.id);
+            ImGui::ColorButton("##color", peer.color, ImGuiColorEditFlags_NoTooltip, {12, 12});
+            ImGui::SameLine();
+            ImGui::TextUnformatted(peer.name.c_str());
+            ImGui::SameLine();
+            if (ImGui::SmallButton("X")) {
+                pendingRemove = peer.id;
+            }
+            ImGui::PopID();
+
+            for (int j = 0; j < n; ++j) {
+                ImGui::TableNextColumn();
+                if (i == j) {
+                    ImGui::TextDisabled(" - ");
+                    continue;
+                }
+                RenderConnectionElement(mgr, i, j);
+            }
+
+            // local time
+            ImGui::TableNextColumn();
+            auto localNow = peer.clock.Now();
+            double localSeconds = std::chrono::duration<double>(localNow).count();
+            ImGui::Text("%.3f s", localSeconds);
+
+            // synced time
+            ImGui::TableNextColumn();
+            auto syncNow = peer.syncClock.Now();
+            double syncSeconds = std::chrono::duration<double>(syncNow).count();
+            ImGui::Text("%.3f s", syncSeconds);
         }
 
         void RenderConnectionElement(PeerManager& mgr, int i, int j) const

@@ -126,11 +126,11 @@ namespace Demo
 
             auto localNow = _peer.clock.Now();
             double localSeconds = std::chrono::duration<double>(localNow).count();
-            ImGui::Text("clock: %.3f s", localSeconds);
+            ImGui::Text("local: %.3f s", localSeconds);
 
             auto syncNow = _peer.syncClock.Now();
             double syncSeconds = std::chrono::duration<double>(syncNow).count();
-            ImGui::Text("syncClock: %.3f s", syncSeconds);
+            ImGui::Text("sync: %.3f s", syncSeconds);
         }
 
         void RenderConnections(PeerNode* node) const

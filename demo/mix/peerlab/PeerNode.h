@@ -41,13 +41,13 @@ namespace Demo
             return {
                 .onReceived = [self](std::span<const std::byte> data) {
                     if (auto bridge = self.lock()) {
-                        std::lock_guard lock(bridge->mutex);
+                        std::scoped_lock lock(bridge->mutex);
                         bridge->pending.emplace(std::vector<std::byte>{data.begin(), data.end()});
                     }
                 },
                 .onDisconnected = [self]() {
                     if (auto bridge = self.lock()) {
-                        std::lock_guard lock(bridge->mutex);
+                        std::scoped_lock lock(bridge->mutex);
                         bridge->pending.emplace(std::nullopt);
                     }
                 },
@@ -56,7 +56,7 @@ namespace Demo
 
         [[nodiscard]] std::queue<Msg> Drain()
         {
-            std::lock_guard lock(mutex);
+            std::scoped_lock lock(mutex);
             std::queue<Msg> result;
             std::swap(result, pending);
             return result;
@@ -95,15 +95,15 @@ namespace Demo
             auto link = *result;
             auto bridge = std::make_shared<LinkBridge>();
             {
-                std::lock_guard lock(mutex);
-                pendingLinks.push({link, bridge});
+                std::scoped_lock lock(mutex);
+                pendingLinks.push({.link=link, .bridge=bridge});
             }
             return bridge->MakeHandler();
         }
 
         [[nodiscard]] std::queue<PendingLink> DrainPending()
         {
-            std::lock_guard lock(mutex);
+            std::scoped_lock lock(mutex);
             std::queue<PendingLink> result;
             std::swap(result, pendingLinks);
             return result;
@@ -117,11 +117,14 @@ namespace Demo
     /// payload broadcasting, and message dispatch on a 50ms tick loop.
     class PeerNode
     {
+        Log::Logger _logger;
+
     public:
         PeerNode(
             Peer& peer,
             std::shared_ptr<Rtt::ITransport> transport)
-            : _peer(peer)
+            : _logger(std::format("PeerNode/{}", peer.peerId))
+            , _peer(peer)
             , _transport(std::move(transport))
             , _acceptor(std::make_shared<PeerAcceptor>())
         {}
@@ -138,21 +141,21 @@ namespace Demo
         /// Request connection to a remote peer (thread-safe, enqueues).
         void ConnectTo(const std::string& remotePeerId)
         {
-            std::lock_guard lock(_connectMutex);
+            std::scoped_lock lock(_connectMutex);
             _pendingConnects.push(remotePeerId);
         }
 
         /// Request disconnection from a remote peer (thread-safe, enqueues).
         void DisconnectFrom(const std::string& remotePeerId)
         {
-            std::lock_guard lock(_connectMutex);
+            std::scoped_lock lock(_connectMutex);
             _pendingDisconnects.push(remotePeerId);
         }
 
         /// The main async coroutine.
         Exec::RunTask<int> Run()
         {
-            Log::Info("starting peer node {}", _peer.peerId);
+            _logger.Info("start processing");
 
             const auto sched = co_await stdexec::read_env(stdexec::get_scheduler);
 
@@ -161,6 +164,7 @@ namespace Demo
 
             constexpr auto tick = std::chrono::milliseconds(200);
 
+            // ReSharper disable once CppDFAEndlessLoop
             while (true) {
                 co_await exec::schedule_after(sched, tick);
 
@@ -192,7 +196,7 @@ namespace Demo
             std::queue<std::string> connects;
             std::queue<std::string> disconnects;
             {
-                std::lock_guard lock(_connectMutex);
+                std::scoped_lock lock(_connectMutex);
                 std::swap(connects, _pendingConnects);
                 std::swap(disconnects, _pendingDisconnects);
             }
@@ -200,7 +204,7 @@ namespace Demo
             while (!connects.empty()) {
                 auto& target = connects.front();
                 if (_connector) {
-                    Log::Info("connecting {} -> {}", _peer.peerId, target);
+                    _logger.Info("connecting to {}", target);
                     _connector->Connect({target});
                 }
                 connects.pop();
@@ -210,7 +214,7 @@ namespace Demo
                 auto& target = disconnects.front();
                 auto it = _links.find(target);
                 if (it != _links.end() && it->second.link) {
-                    Log::Info("disconnecting {} -> {}", _peer.peerId, target);
+                    _logger.Info("disconnecting from {}", target);
                     it->second.link->Disconnect();
                     it->second.link = nullptr;
                 }
@@ -224,7 +228,7 @@ namespace Demo
             while (!pending.empty()) {
                 auto& p = pending.front();
                 auto remotePeerId = p.link->RemoteId().value;
-                Log::Info("link accepted {} <-> {}", _peer.peerId, remotePeerId);
+                _logger.Info("link accepted to {}", remotePeerId);
 
                 _peer.consensus.AddPeer(remotePeerId);
                 _links[remotePeerId] = PeerLinkState{
@@ -247,7 +251,7 @@ namespace Demo
                     auto& msg = msgs.front();
                     if (!msg) {
                         ls.link = nullptr;
-                        Log::Info("link disconnected {} -> {}", _peer.peerId, peerId);
+                        _logger.Info("link disconnected from {}", peerId);
                         break;
                     }
                     HandleMessage(peerId, *msg);
@@ -371,8 +375,8 @@ namespace Demo
         {
             for (auto it = _links.begin(); it != _links.end(); ) {
                 if (!it->second.link) {
+                    _logger.Info("removing link to {}", it->first);
                     _peer.consensus.RemovePeer(it->first);
-                    Log::Info("removed link {} -> {}", _peer.peerId, it->first);
                     it = _links.erase(it);
                 } else {
                     ++it;

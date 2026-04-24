@@ -75,6 +75,19 @@
             "type": "shell",
             "command": "echo ${input:buildTarget}", // ${relativeFileDirname}
             "problemMatcher": []
+        },
+        // ================ debug builds
+        {
+            "type": "shell",
+            "label": "build <user>",
+            "command": "bazel build ${config:tx.debugTaskName}",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "focus": true
+            }
         }
     ],
     // https://code.visualstudio.com/docs/reference/variables-reference#_input-variables

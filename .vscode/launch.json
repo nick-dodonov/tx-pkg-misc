@@ -3,7 +3,7 @@
     "configurations": [
         // ================ debug demo configurations
         {
-            "name": "demo <user> (LLDB)",
+            "name": "<user> (LLDB) (WSP)",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/bazel-bin/${config:tx.debugTaskName}",
@@ -14,7 +14,21 @@
                 "command source ${workspaceFolder}/.lldbinit",
             ],
             "preLaunchTask": "build demo <user>",
-        }
+        },
+        {
+            "name": "<user> (LLDB) (Runfiles)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${input:debugTask-output-file}",
+            "cwd": "${input:debugTask-output-file}.runfiles/_main",
+            "initCommands": [
+                "platform setting -w ${workspaceFolder}",
+                "command source ${env:HOME}/.lldbinit",
+                "command source ${workspaceFolder}/.lldbinit",
+            ],
+            "preLaunchTask": "build <user>",
+            "args": ["localhost"]
+        },
         // ================ debug experiments configurations
         // Useful links/commands to investigate source mapping issues.
         //  - https://github.com/bazelbuild/apple_support?tab=readme-ov-file
@@ -109,5 +123,17 @@
             ],
             "preLaunchTask": "test:misc",
         },
+    ],
+    "inputs": [
+        {
+            "id": "debugTask-output-file",
+            "type": "command",
+            "command": "shellCommand.execute",  // augustocdias.tasks-shell-input extension
+            "args": {
+                "command": "bazel cquery --output=files ${config:tx.debugTaskName}",
+                "cwd": "${workspaceFolder}",
+                "useSingleResult": true
+            }
+        }
     ]
 }
