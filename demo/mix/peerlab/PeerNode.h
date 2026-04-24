@@ -123,7 +123,7 @@ namespace Demo
         PeerNode(
             Peer& peer,
             std::shared_ptr<Rtt::ITransport> transport)
-            : _logger(std::format("PeerNode/{}", peer.peerId))
+            : _logger("PeerNode", peer.logger)
             , _peer(peer)
             , _transport(std::move(transport))
             , _acceptor(std::make_shared<PeerAcceptor>())

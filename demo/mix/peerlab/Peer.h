@@ -32,6 +32,8 @@ namespace Demo
     /// A single peer with identity, animated position, sync state, and velocity.
     struct Peer
     {
+        Log::Logger logger;
+
         int id = 0;
         std::string name;
         std::string peerId; ///< String ID used by transport/signaling.

@@ -43,18 +43,19 @@ namespace Demo
             std::string peerId = "p" + std::to_string(id);
 
             auto peer = std::make_unique<Peer>();
+            peer->logger = Log::Logger(std::format("[{}]", peerId));
             peer->id = id;
             peer->name = std::move(name);
             peer->peerId = peerId;
             peer->color = PeerColors[id % PeerColorCount];
 
             // Create transport and PeerNode coroutine.
-            auto transport = _transportFactory.CreateTransport(peerId);
+            auto transport = _transportFactory.CreateTransport(peerId, peer->logger);
             auto node = std::make_unique<PeerNode>(*peer, std::move(transport));
 
             // Create Domain from the coroutine and register with composite handler.
             auto domain = std::make_shared<Exec::Domain>(node->Run(), Exec::Domain::Options{
-                .logAreaPrefix = std::format("[{}] ", peerId)
+                .parentLogger = peer->logger
             });
             _composite.Add(*domain);
 

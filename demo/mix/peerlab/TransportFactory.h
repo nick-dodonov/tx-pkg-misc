@@ -39,12 +39,13 @@ namespace Demo
         [[nodiscard]] TransportMode Mode() const { return _mode; }
 
         /// Create a transport for a peer with the given string ID.
-        [[nodiscard]] std::shared_ptr<Rtt::ITransport> CreateTransport(const std::string& peerId)
+        [[nodiscard]] std::shared_ptr<Rtt::ITransport> CreateTransport(const std::string& peerId, Log::Logger parentLogger)
         {
             switch (_mode) {
                 case TransportMode::InProcessRtc: {
                     auto sigClient = std::make_shared<Rtt::Rtc::LocalSigClient>(_sigHub);
                     return Rtt::Rtc::RtcClient::MakeDefault({
+                        .parentLogger = parentLogger,
                         .sigClient = sigClient,
                         .localId = {peerId},
                     });
