@@ -8,6 +8,7 @@
 #include "Log/Log.h"
 #include "RunLoop/CompositeHandler.h"
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -47,8 +48,9 @@ namespace Demo
             auto node = std::make_unique<PeerNode>(*peer, std::move(transport));
 
             // Create Domain from the coroutine and register with composite handler.
-            auto domain = std::make_shared<Exec::Domain>(node->Run(), Exec::Domain::Options{
-                .parentLogger = peer->logger
+            auto domain = std::make_shared<Exec::Domain>(node->Run(), Exec::DomainOptions{
+                .retainRunner = true,
+                .parentLogger = peer->logger,
             });
             _composite.Add(*domain);
 
@@ -66,7 +68,7 @@ namespace Demo
 
         void RemovePeer(int peerId)
         {
-            auto it = std::find_if(_entries.begin(), _entries.end(), [peerId](const auto& e) { return e.peer->id == peerId; });
+            auto it = std::ranges::find_if(_entries, [peerId](const auto& e) { return e.peer->id == peerId; });
             if (it == _entries.end()) {
                 return;
             }
