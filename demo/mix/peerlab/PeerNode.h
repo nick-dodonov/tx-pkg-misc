@@ -30,34 +30,47 @@ namespace Demo
     /// Per-link bridge: transport callbacks enqueue messages for the coroutine.
     struct LinkBridge : std::enable_shared_from_this<LinkBridge>
     {
-        using Msg = std::optional<std::vector<std::byte>>;
+        /// A received message: data payload (nullopt = disconnect signal)
+        /// plus the local clock time at which the bytes arrived on the transport.
+        struct TimestampedMsg
+        {
+            std::optional<std::vector<std::byte>> data;
+            SynTm::Ticks receivedAt{};
+        };
 
         std::mutex mutex;
-        std::queue<Msg> pending;
+        std::queue<TimestampedMsg> pending;
 
-        [[nodiscard]] Rtt::LinkHandler MakeHandler()
+        /// Create a link handler that timestamps every incoming message.
+        /// @param clock  The peer's local clock (read from transport thread — safe
+        ///               because AppClock::Now() is const and reads steady_clock).
+        [[nodiscard]] Rtt::LinkHandler MakeHandler(SynTm::IClock* clock)
         {
             std::weak_ptr<LinkBridge> self = weak_from_this();
             return {
-                .onReceived = [self](std::span<const std::byte> data) {
+                .onReceived = [self, clock](std::span<const std::byte> data) {
                     if (auto bridge = self.lock()) {
+                        const SynTm::Ticks ts = clock ? clock->Now() : SynTm::Ticks{};
                         std::scoped_lock lock(bridge->mutex);
-                        bridge->pending.emplace(std::vector<std::byte>{data.begin(), data.end()});
+                        bridge->pending.push({
+                            .data = std::vector<std::byte>{data.begin(), data.end()},
+                            .receivedAt = ts,
+                        });
                     }
                 },
                 .onDisconnected = [self]() {
                     if (auto bridge = self.lock()) {
                         std::scoped_lock lock(bridge->mutex);
-                        bridge->pending.emplace(std::nullopt);
+                        bridge->pending.push({.data = std::nullopt});
                     }
                 },
             };
         }
 
-        [[nodiscard]] std::queue<Msg> Drain()
+        [[nodiscard]] std::queue<TimestampedMsg> Drain()
         {
             std::scoped_lock lock(mutex);
-            std::queue<Msg> result;
+            std::queue<TimestampedMsg> result;
             std::swap(result, pending);
             return result;
         }
@@ -87,6 +100,9 @@ namespace Demo
         std::mutex mutex;
         std::queue<PendingLink> pendingLinks;
 
+        /// Must be set before any links are accepted.
+        SynTm::IClock* clock = nullptr;
+
         Rtt::LinkHandler OnLink(Rtt::LinkResult result) override
         {
             if (!result) {
@@ -98,7 +114,7 @@ namespace Demo
                 std::scoped_lock lock(mutex);
                 pendingLinks.push({.link=link, .bridge=bridge});
             }
-            return bridge->MakeHandler();
+            return bridge->MakeHandler(clock);
         }
 
         [[nodiscard]] std::queue<PendingLink> DrainPending()
@@ -127,7 +143,9 @@ namespace Demo
             , _peer(peer)
             , _transport(std::move(transport))
             , _acceptor(std::make_shared<PeerAcceptor>())
-        {}
+        {
+            _acceptor->clock = &_peer.clock;
+        }
 
         [[nodiscard]] Peer& GetPeer() { return _peer; }
         [[nodiscard]] const Peer& GetPeer() const { return _peer; }
@@ -249,18 +267,21 @@ namespace Demo
                 auto msgs = ls.bridge->Drain();
                 while (!msgs.empty()) {
                     auto& msg = msgs.front();
-                    if (!msg) {
+                    if (!msg.data) {
                         ls.link = nullptr;
                         _logger.Info("link disconnected from {}", peerId);
                         break;
                     }
-                    HandleMessage(peerId, *msg);
+                    HandleMessage(peerId, *msg.data, msg.receivedAt);
                     msgs.pop();
                 }
             }
         }
 
-        void HandleMessage(const std::string& fromPeerId, std::span<const std::byte> data)
+        void HandleMessage(
+            const std::string& fromPeerId,
+            std::span<const std::byte> data,
+            SynTm::Ticks receivedAt)
         {
             auto parsed = ParseMessage(data);
             if (!parsed) {
@@ -269,7 +290,7 @@ namespace Demo
 
             switch (parsed->type) {
                 case MsgType::SyncProbe:
-                    HandleSyncProbe(fromPeerId, parsed->payload);
+                    HandleSyncProbe(fromPeerId, parsed->payload, receivedAt);
                     break;
                 case MsgType::PayloadUpdate:
                     HandlePayloadUpdate(fromPeerId, parsed->payload);
@@ -277,7 +298,10 @@ namespace Demo
             }
         }
 
-        void HandleSyncProbe(const std::string& fromPeerId, std::span<const std::byte> payload)
+        void HandleSyncProbe(
+            const std::string& fromPeerId,
+            std::span<const std::byte> payload,
+            SynTm::Ticks receivedAt)
         {
             auto syncMsg = SynTm::ParseSyncMessage(payload);
             if (!syncMsg) {
@@ -288,7 +312,8 @@ namespace Demo
             _peer.consensus.HandleRemoteEpoch(syncMsg->epoch);
 
             if (syncMsg->type == SynTm::SyncMessageType::ProbeRequest && syncMsg->request) {
-                auto resp = _peer.consensus.HandleProbeRequest(fromPeerId, *syncMsg->request);
+                auto resp = _peer.consensus.HandleProbeRequest(
+                    fromPeerId, *syncMsg->request, receivedAt);
                 if (resp) {
                     auto epoch = _peer.consensus.OurEpochInfo();
                     std::array<std::byte, 128> raw{};
@@ -299,7 +324,8 @@ namespace Demo
                     }
                 }
             } else if (syncMsg->type == SynTm::SyncMessageType::ProbeResponse && syncMsg->response) {
-                _peer.consensus.HandleProbeResponse(fromPeerId, *syncMsg->response, syncMsg->epoch);
+                _peer.consensus.HandleProbeResponse(
+                    fromPeerId, *syncMsg->response, syncMsg->epoch, receivedAt);
             }
         }
 
