@@ -5,6 +5,7 @@
 #include "imgui.h"
 #include "SynTm/Types.h"
 #include <chrono>
+#include <cmath>
 
 namespace Demo
 {
@@ -140,8 +141,11 @@ namespace Demo
                 return;
             }
 
-            if (ImGui::BeginTable("##conns", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders)) {
-                ImGui::TableSetupColumn("Remote");
+            constexpr ImGuiTableFlags kTableFlags =
+                ImGuiTableFlags_RowBg |
+                ImGuiTableFlags_Borders;
+            if (ImGui::BeginTable("##conns", 4, kTableFlags)) {
+                ImGui::TableSetupColumn("Peer");
                 ImGui::TableSetupColumn("Connected");
                 ImGui::TableSetupColumn("Has Payload");
                 ImGui::TableSetupColumn("Sync Quality");
@@ -181,9 +185,11 @@ namespace Demo
 
             bool synced = _peer.consensus.IsSynced();
             auto quality = _peer.consensus.Quality();
+            bool isOwner = _peer.consensus.IsEpochOwner();
 
             ImGui::Text("Synced: %s", synced ? "yes" : "no");
             ImGui::Text("Quality: %s", SynTm::SyncQualityToString(quality).data());
+            ImGui::Text("Epoch owner: %s", isOwner ? "yes" : "no");
             ImGui::Text("Peer count: %zu", _peer.consensus.PeerCount());
 
             const auto& epoch = _peer.consensus.Epoch();
@@ -192,6 +198,111 @@ namespace Demo
                 ImGui::Text("Epoch members: %u", epoch.memberCount);
             } else {
                 ImGui::TextDisabled("No epoch");
+            }
+
+            // Per-link sync diagnostics table.
+            if (_peer.consensus.PeerCount() > 0) {
+                ImGui::Separator();
+                ImGui::TextUnformatted("Per-link diagnostics:");
+
+                constexpr ImGuiTableFlags kTableFlags =
+                    ImGuiTableFlags_RowBg |
+                    ImGuiTableFlags_Borders |
+                    ImGuiTableFlags_SizingFixedFit;
+
+                if (ImGui::BeginTable("##syncdiag", 7, kTableFlags)) {
+                    ImGui::TableSetupColumn("Peer");
+                    ImGui::TableSetupColumn("RTT min");
+                    ImGui::TableSetupColumn("RTT max");
+                    ImGui::TableSetupColumn("RTT mean");
+                    ImGui::TableSetupColumn("Off. mean");
+                    ImGui::TableSetupColumn("Samples");
+                    ImGui::TableSetupColumn("Steps");
+                    ImGui::TableHeadersRow();
+
+                    _peer.consensus.ForEachPeer([&](const std::string& peerId) {
+                        auto diagOpt = _peer.consensus.GetSessionDiagnostics(peerId);
+                        if (!diagOpt) {
+                            return;
+                        }
+                        const auto& d = *diagOpt;
+
+                        ImGui::TableNextRow();
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(peerId.c_str());
+
+                        // Convert nanoseconds to milliseconds for display.
+                        auto toMs = [](SynTm::Ticks t) {
+                            return static_cast<double>(t.count()) / 1'000'000.0;
+                        };
+
+                        ImGui::TableNextColumn();
+                        if (d.sampleCount > 0) {
+                            ImGui::Text("%.2f ms", toMs(d.rttMin));
+                        } else {
+                            ImGui::TextDisabled("-");
+                        }
+
+                        ImGui::TableNextColumn();
+                        if (d.sampleCount > 0) {
+                            ImGui::Text("%.2f ms", toMs(d.rttMax));
+                        } else {
+                            ImGui::TextDisabled("-");
+                        }
+
+                        ImGui::TableNextColumn();
+                        if (d.sampleCount > 0) {
+                            ImGui::Text("%.2f ms", toMs(d.rttMean));
+                        } else {
+                            ImGui::TextDisabled("-");
+                        }
+
+                        ImGui::TableNextColumn();
+                        if (d.sampleCount > 0) {
+                            ImGui::Text("%+.2f ms", toMs(d.offsetMean));
+                        } else {
+                            ImGui::TextDisabled("-");
+                        }
+
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%zu", d.sampleCount);
+
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%u", d.stepCount);
+                    });
+
+                    ImGui::EndTable();
+                }
+
+                // Remote-vs-local time difference per peer (key health indicator).
+                ImGui::Separator();
+                ImGui::TextUnformatted("RemoteNow - LocalNow:");
+
+                auto localNow = _peer.clock.Now();
+                auto syncNow = _peer.syncClock.Now();
+                double syncOffsetMs =
+                    static_cast<double>((syncNow - localNow).count()) / 1'000'000.0;
+                ImGui::Text("  local->synced: %+.2f ms", syncOffsetMs);
+
+                _peer.consensus.ForEachPeer([&](const std::string& peerId) {
+                    const auto* session = _peer.consensus.GetSession(peerId);
+                    if (!session) {
+                        return;
+                    }
+                    SynTm::Ticks remoteNow = session->RemoteNow();
+                    double diffMs =
+                        static_cast<double>((remoteNow - localNow).count()) / 1'000'000.0;
+
+                    // Color code: green = < 5ms, yellow = < 20ms, red = >= 20ms.
+                    double absDiff = std::abs(diffMs);
+                    ImVec4 col = absDiff < 5.0
+                        ? ImVec4{0.26f, 0.85f, 0.42f, 1.0f}
+                        : absDiff < 20.0
+                            ? ImVec4{0.95f, 0.75f, 0.20f, 1.0f}
+                            : ImVec4{0.98f, 0.39f, 0.26f, 1.0f};
+
+                    ImGui::TextColored(col, "  %s: %+.2f ms", peerId.c_str(), diffMs);
+                });
             }
 
             ImGui::TreePop();

@@ -74,8 +74,8 @@ namespace Demo
                 + 1 // Synced clock column (optional)
                 ;
             constexpr auto tableFlags = 
-                ImGuiTableFlags_Borders 
-                | ImGuiTableFlags_SizingFixedFit;
+                ImGuiTableFlags_Borders |
+                ImGuiTableFlags_SizingFixedFit;
             if (ImGui::BeginTable("##connmatrix", columnsCount, tableFlags)) {
                 RenderConnectionHeaders(mgr);
 
@@ -137,13 +137,13 @@ namespace Demo
             ImGui::TableNextColumn();
             auto localNow = peer.clock.Now();
             double localSeconds = std::chrono::duration<double>(localNow).count();
-            ImGui::Text("%.3f s", localSeconds);
+            ImGui::Text("%.6f s", localSeconds);
 
             // synced time
             ImGui::TableNextColumn();
             auto syncNow = peer.syncClock.Now();
             double syncSeconds = std::chrono::duration<double>(syncNow).count();
-            ImGui::Text("%.3f s", syncSeconds);
+            ImGui::Text("%.6f s", syncSeconds);
         }
 
         void RenderConnectionElement(PeerManager& mgr, int i, int j) const
