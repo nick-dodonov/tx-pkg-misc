@@ -18,8 +18,8 @@ int main(const int argc, const char* argv[])
         Sdl::Loop::Sdl3Runner::Options{
             .Window = {
                 .Title = "Peer Lab Demo",
-                .Width = 1200,
-                .Height = 800,
+                .Width = 1300,
+                .Height = 900,
                 .Flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_FILL_DOCUMENT,
             },
         }

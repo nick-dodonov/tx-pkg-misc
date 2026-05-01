@@ -36,6 +36,14 @@ namespace Demo
         }
 
     private:
+        // Delta epoch sync quality colors
+        static constexpr ImVec4 ColDeltaGood   = {0.26f, 0.85f, 0.42f, 1.0f}; // green  — < 5 ms
+        static constexpr ImVec4 ColDeltaWarn   = {0.95f, 0.75f, 0.20f, 1.0f}; // yellow — < 20 ms
+        static constexpr ImVec4 ColDeltaBad    = {0.98f, 0.39f, 0.26f, 1.0f}; // red    — >= 20 ms
+
+        // Connected button colors
+        static constexpr ImVec4 ColConnected        = {0.2f, 0.65f, 0.3f, 0.8f}; // green
+        static constexpr ImVec4 ColConnectedHovered = {0.2f, 0.65f, 0.3f, 1.0f}; // green (hovered)
 
         void RenderPeerCreation(PeerManager& mgr)
         {
@@ -166,10 +174,10 @@ namespace Demo
                     static_cast<double>((syncNow - epochOwnerLocalNow).count()) / 1'000'000.0;
                 double absDelta = std::abs(deltaMs);
                 ImVec4 col = absDelta < 5.0
-                    ? ImVec4{0.26f, 0.85f, 0.42f, 1.0f}
+                    ? ColDeltaGood
                     : absDelta < 20.0
-                        ? ImVec4{0.95f, 0.75f, 0.20f, 1.0f}
-                        : ImVec4{0.98f, 0.39f, 0.26f, 1.0f};
+                        ? ColDeltaWarn
+                        : ColDeltaBad;
                 ImGui::TextColored(col, "%+.2f ms", deltaMs);
             } else {
                 ImGui::TextDisabled("-");
@@ -184,8 +192,8 @@ namespace Demo
             ImGui::PushID(i * entries.size() + j);
             bool connected = mgr.AreConnected(initiator.id, responder.id);
             if (connected) {
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{0.2f, 0.65f, 0.3f, 0.8f});
-                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4{0.2f, 0.65f, 0.3f, 1.0f});
+                ImGui::PushStyleColor(ImGuiCol_Button, ColConnected);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ColConnectedHovered);
                 if (ImGui::SmallButton("Dis")) {
                     mgr.Disconnect(initiator, responder);
                 }

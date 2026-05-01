@@ -56,6 +56,17 @@ namespace Demo
         [[nodiscard]] bool WantClose() const { return _wantClose; }
 
     private:
+        // Connection status colors
+        static constexpr ImVec4 ColLinkYes  = {0.26f, 0.85f, 0.42f, 1.0f}; // green  — connected
+        static constexpr ImVec4 ColLinkNo   = {0.98f, 0.39f, 0.26f, 1.0f}; // red    — disconnected
+
+        // Peer role colors
+        static constexpr ImVec4 ColRoleActive  = {0.40f, 0.60f, 1.0f, 1.0f}; // blue   — active peer
+        static constexpr ImVec4 ColRolePassive = {0.75f, 0.45f, 1.0f, 1.0f}; // purple — passive peer
+
+        // Epoch source highlight color
+        static constexpr ImVec4 ColEpochSrc = {0.95f, 0.75f, 0.20f, 1.0f}; // yellow — epoch source
+
         Peer& _peer;
         bool _wantClose = false;
         bool _firstRender = true;
@@ -168,7 +179,7 @@ namespace Demo
 
                     ImGui::TableNextColumn();
                     ImGui::TextColored(
-                        ls.link ? ImVec4{0.26f, 0.85f, 0.42f, 1.0f} : ImVec4{0.98f, 0.39f, 0.26f, 1.0f},
+                        ls.link ? ColLinkYes : ColLinkNo,
                         "%s", ls.link ? "yes" : "no");
 
                     ImGui::TableNextColumn();
@@ -186,13 +197,13 @@ namespace Demo
                     ImGui::TableNextColumn();
                     bool isActive = SynTm::Consensus::IsActivePeer(_peer.peerId, remotePeerId);
                     ImGui::TextColored(
-                        isActive ? ImVec4{0.40f, 0.60f, 1.0f, 1.0f} : ImVec4{0.75f, 0.45f, 1.0f, 1.0f},
+                        isActive ? ColRoleActive : ColRolePassive,
                         "%s", isActive ? "Active" : "Passive");
 
                     ImGui::TableNextColumn();
                     bool isEpochSrc = (epochSrcId == remotePeerId);
                     if (isEpochSrc) {
-                        ImGui::TextColored(ImVec4{0.95f, 0.75f, 0.20f, 1.0f}, "yes");
+                        ImGui::TextColored(ColEpochSrc, "yes");
                     } else {
                         ImGui::TextDisabled("no");
                     }
