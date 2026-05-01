@@ -304,28 +304,32 @@ namespace Demo
             SynTm::Ticks receivedAt)
         {
             auto syncMsg = SynTm::ParseSyncMessage(payload);
-            if (!syncMsg) {
+            if (!syncMsg || !syncMsg->pulse) {
                 return;
             }
 
             // Always process the remote epoch.
             _peer.consensus.HandleRemoteEpoch(syncMsg->epoch);
 
-            if (syncMsg->type == SynTm::SyncMessageType::ProbeRequest && syncMsg->request) {
-                auto resp = _peer.consensus.HandleProbeRequest(
-                    fromPeerId, *syncMsg->request, receivedAt);
-                if (resp) {
-                    auto epoch = _peer.consensus.OurEpochInfo();
-                    std::array<std::byte, 128> raw{};
-                    auto n = SynTm::WriteSyncProbeResponse(raw, epoch, *resp);
-                    if (n > 0) {
-                        auto wrapped = WrapSyncProbe(std::span<const std::byte>(raw.data(), n));
-                        SendTo(fromPeerId, wrapped);
-                    }
-                }
-            } else if (syncMsg->type == SynTm::SyncMessageType::ProbeResponse && syncMsg->response) {
-                _peer.consensus.HandleProbeResponse(
-                    fromPeerId, *syncMsg->response, syncMsg->epoch, receivedAt);
+            auto replyOpt = _peer.consensus.HandleSyncPulse(
+                fromPeerId, *syncMsg->pulse, receivedAt, syncMsg->epoch);
+
+            if (!replyOpt) {
+                return;
+            }
+
+            // Only Passive (higher id) sends the reply immediately.
+            const bool iAmPassive = !SynTm::Consensus::IsActivePeer(_peer.peerId, fromPeerId);
+            if (!iAmPassive) {
+                return;
+            }
+
+            auto epoch = _peer.consensus.OurEpochInfo();
+            std::array<std::byte, 128> raw{};
+            auto n = SynTm::WriteSyncPulse(raw, epoch, *replyOpt);
+            if (n > 0) {
+                auto wrapped = WrapSyncProbe(std::span<const std::byte>(raw.data(), n));
+                SendTo(fromPeerId, wrapped);
             }
         }
 
@@ -348,16 +352,16 @@ namespace Demo
                 if (!ls.link) {
                     continue;
                 }
-                if (!_peer.consensus.ShouldProbe(peerId)) {
+                if (!_peer.consensus.ShouldInitiateProbe(_peer.peerId, peerId)) {
                     continue;
                 }
-                auto req = _peer.consensus.MakeProbeRequest(peerId);
-                if (!req) {
+                auto pulseOpt = _peer.consensus.MakePulse(peerId);
+                if (!pulseOpt) {
                     continue;
                 }
                 auto epoch = _peer.consensus.OurEpochInfo();
                 std::array<std::byte, 128> raw{};
-                auto n = SynTm::WriteSyncProbeRequest(raw, epoch, *req);
+                auto n = SynTm::WriteSyncPulse(raw, epoch, *pulseOpt);
                 if (n > 0) {
                     auto wrapped = WrapSyncProbe(std::span<const std::byte>(raw.data(), n));
                     SendTo(peerId, wrapped);
