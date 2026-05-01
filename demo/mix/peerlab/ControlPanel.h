@@ -3,7 +3,6 @@
 #include "PeerManager.h"
 
 #include "imgui.h"
-#include "imgui_internal.h"
 #include <string>
 
 namespace Demo
@@ -16,11 +15,6 @@ namespace Demo
         
         void Render(PeerManager& mgr)
         {
-            // if (auto* w = ImGui::FindWindowByName(WindowName); !w || !w->DockIsActive) {
-            //     ImGuiWindowClass wc;
-            //     wc.DockNodeFlagsOverrideSet = static_cast<ImGuiDockNodeFlags>(ImGuiDockNodeFlags_NoDockingOverMe | ImGuiDockNodeFlags_NoDockingSplit);
-            //     ImGui::SetNextWindowClass(&wc);
-            // }
             if (!ImGui::Begin(WindowName)) {
                 ImGui::End();
                 return;
@@ -47,13 +41,8 @@ namespace Demo
 
         void RenderPeerCreation(PeerManager& mgr)
         {
-            ImGui::SetNextItemWidth(100);
-
-            char newPeerName[64] = {};
-            ImGui::InputTextWithHint("##name", "Name (optional)", newPeerName, sizeof(newPeerName));
-            ImGui::SameLine();
             if (ImGui::Button("Create")) {
-                mgr.CreatePeer(newPeerName);
+                mgr.CreatePeer();
             }
 
             ImGui::SameLine();
@@ -108,7 +97,7 @@ namespace Demo
 
             const auto& entries = mgr.Entries();
             for (const auto& entry : entries) {
-                ImGui::TableSetupColumn(entry.peer->name.c_str());
+                ImGui::TableSetupColumn(entry.peer->peerId.c_str());
             }
 
             ImGui::TableSetupColumn("local");
@@ -127,7 +116,7 @@ namespace Demo
             ImGui::PushID(peer.id);
             ImGui::ColorButton("##color", peer.color, ImGuiColorEditFlags_NoTooltip, {12, 12});
             ImGui::SameLine();
-            ImGui::TextUnformatted(peer.name.c_str());
+            ImGui::TextUnformatted(peer.peerId.c_str());
             ImGui::SameLine();
             if (ImGui::SmallButton("X")) {
                 pendingRemove = peer.id;
@@ -175,7 +164,7 @@ namespace Demo
                 double absDelta = std::abs(deltaMs);
                 ImVec4 col = absDelta < 5.0
                     ? ColDeltaGood
-                    : absDelta < 20.0
+                    : absDelta < 20.0 //NOLINT(readability-avoid-nested-conditional-operator)
                         ? ColDeltaWarn
                         : ColDeltaBad;
                 ImGui::TextColored(col, "%+.2f ms", deltaMs);
@@ -189,17 +178,17 @@ namespace Demo
             const auto& entries = mgr.Entries();
             auto& initiator = *entries[i].peer;
             auto& responder = *entries[j].peer;
-            ImGui::PushID(i * entries.size() + j);
+            ImGui::PushID(i * (int)entries.size() + j);
             bool connected = mgr.AreConnected(initiator.id, responder.id);
             if (connected) {
                 ImGui::PushStyleColor(ImGuiCol_Button, ColConnected);
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ColConnectedHovered);
-                if (ImGui::SmallButton("Dis")) {
+                if (ImGui::SmallButton("D")) { // Disconnect
                     mgr.Disconnect(initiator, responder);
                 }
                 ImGui::PopStyleColor(2);
             } else {
-                if (ImGui::SmallButton("Con")) {
+                if (ImGui::SmallButton("C")) { // Connect
                     mgr.Connect(initiator, responder);
                 }
             }

@@ -35,13 +35,10 @@ namespace Demo
             , _transportFactory(transportFactory)
         {}
 
-        Peer& CreatePeer(std::string name = "")
+        Peer& CreatePeer()
         {
             auto id = _nextId++;
-            if (name.empty()) {
-                name = "Peer-" + std::to_string(id);
-            }
-            auto peer = std::make_unique<Peer>(id, std::move(name), "p" + std::to_string(id));
+            auto peer = std::make_unique<Peer>(id, "p" + std::to_string(id));
 
             // Create transport and PeerNode coroutine.
             auto transport = _transportFactory.CreateTransport(peer->peerId, peer->logger);
@@ -54,7 +51,7 @@ namespace Demo
             });
             _composite.Add(*domain);
 
-            Log::Info("created {} (id={}, peerId={})", peer->name, peer->id, peer->peerId);
+            Log::Info("created peerId={} (id={})", peer->peerId, peer->id);
 
             auto& entry = _entries.emplace_back(
                 ManagedPeer{
@@ -72,7 +69,7 @@ namespace Demo
             if (it == _entries.end()) {
                 return;
             }
-            Log::Info("removing peer {} (id={})", it->peer->name, peerId);
+            Log::Info("removing peer {} (id={})", it->peer->peerId, peerId);
             _composite.Remove(*it->domain);
             _entries.erase(it);
         }
@@ -89,7 +86,7 @@ namespace Demo
                 return;
             }
             initiatorNode->ConnectTo(responder.peerId);
-            Log::Info("connecting {} -> {}", initiator.name, responder.name);
+            Log::Info("connecting {} -> {}", initiator.peerId, responder.peerId);
         }
 
         /// Request disconnection initiated by one peer; the other side detects it via onDisconnected.
@@ -100,7 +97,7 @@ namespace Demo
                 return;
             }
             initiatorNode->DisconnectFrom(responder.peerId);
-            Log::Info("disconnecting {} -> {}", initiator.name, responder.name);
+            Log::Info("disconnecting {} -> {}", initiator.peerId, responder.peerId);
         }
 
         /// Advance all peer positions (physics simulation on UI thread).

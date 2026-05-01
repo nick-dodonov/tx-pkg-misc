@@ -45,9 +45,9 @@ namespace Demo
                 case TransportMode::InProcessRtc: {
                     auto sigClient = std::make_shared<Rtt::Rtc::LocalSigClient>(_sigHub);
                     return Rtt::Rtc::RtcClient::MakeDefault({
-                        .parentLogger = parentLogger,
                         .sigClient = sigClient,
                         .localId = {peerId},
+                        .parentLogger = std::move(parentLogger),
                     });
                 }
             }

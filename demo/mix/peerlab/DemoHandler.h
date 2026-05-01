@@ -173,9 +173,9 @@ namespace Demo
                 if (!hasWindow) {
                     // Place new peer to the right of the last slot.
                     if (_dockingInitialized && _dockIdLastSlot != 0) {
-                        ImGuiID newSlot;
+                        ImGuiID newSlot{};
                         ImGui::DockBuilderSplitNode(_dockIdLastSlot, ImGuiDir_Right, 0.5f, &newSlot, nullptr);
-                        ImGui::DockBuilderDockWindow(entry.peer->name.c_str(), newSlot);
+                        ImGui::DockBuilderDockWindow(entry.peer->peerId.c_str(), newSlot);
                         _dockIdLastSlot = newSlot;
                     }
                     _peerWindows.push_back(std::make_unique<PeerWindow>(*entry.peer));
@@ -218,11 +218,11 @@ namespace Demo
                     continue;
                 }
                 if (i > 0) {
-                    ImGuiID newSlot;
+                    ImGuiID newSlot{};
                     ImGui::DockBuilderSplitNode(_dockIdLastSlot, ImGuiDir_Right, 0.5f, &newSlot, nullptr);
                     _dockIdLastSlot = newSlot;
                 }
-                ImGui::DockBuilderDockWindow(peer->name.c_str(), _dockIdLastSlot);
+                ImGui::DockBuilderDockWindow(peer->peerId.c_str(), _dockIdLastSlot);
             }
 
             ImGui::DockBuilderFinish(dockspaceId);

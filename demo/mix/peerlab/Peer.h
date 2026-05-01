@@ -32,10 +32,9 @@ namespace Demo
     /// A single peer with identity, animated position, sync state, and velocity.
     struct Peer
     {
-        Peer(int id, std::string name, std::string peerId)
+        Peer(int id, std::string peerId)
             : logger{std::format("[{}]", peerId)}
             , id{id}
-            , name{std::move(name)}
             , peerId{std::move(peerId)}
             , color{PeerColors[id % PeerColorCount]}
         {}
@@ -43,7 +42,6 @@ namespace Demo
         Log::Logger logger;
 
         int id = 0;
-        std::string name;
         std::string peerId; ///< String ID used by transport/signaling.
         ImVec4 color{1, 1, 1, 1};
 

@@ -24,7 +24,7 @@ namespace Demo
                 _firstRender = false;
             }
             bool open = true;
-            if (!ImGui::Begin(_peer.name.c_str(), &open)) {
+            if (!ImGui::Begin(_peer.peerId.c_str(), &open)) {
                 ImGui::End();
                 _wantClose = !open;
                 return;
@@ -372,7 +372,7 @@ namespace Demo
                     }
                     ImGui::PushID(entry.peer->id);
                     char label[64];
-                    std::snprintf(label, sizeof(label), "Connect to %s", entry.peer->name.c_str());
+                    std::snprintf(label, sizeof(label), "Connect to %s", entry.peer->peerId.c_str());
                     if (ImGui::SmallButton(label)) {
                         mgr.Connect(_peer, *entry.peer);
                     }
