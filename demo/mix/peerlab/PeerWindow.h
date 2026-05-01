@@ -15,6 +15,7 @@ namespace Demo
     public:
         explicit PeerWindow(Peer& peer) : _peer(peer) {}
 
+        [[nodiscard]] const Peer& GetPeer() const { return _peer; }
         [[nodiscard]] int GetPeerId() const { return _peer.id; }
 
         void Render(const PeerManager& mgr)
@@ -44,9 +45,11 @@ namespace Demo
             ImGui::EndGroup();
 
             ImGui::Separator();
-            RenderLinksTable(node);
+            RenderLinksDiagnostics(node);
+
             ImGui::Separator();
             RenderSyncDiagnostics();
+
             ImGui::Separator();
             RenderControls(mgr, node);
 
@@ -151,10 +154,15 @@ namespace Demo
             ImGui::Text("sync offset: %+.2f ms", syncOffsetMs);
         }
 
-        void RenderLinksTable(const PeerNode* node) const
+        void RenderLinksDiagnostics(const PeerNode* node) const
         {
+            if (!ImGui::TreeNodeEx("Links Diagnostics", ImGuiTreeNodeFlags_DefaultOpen)) {
+                return;
+            }
+
             if (!node || node->Links().empty()) {
                 ImGui::TextDisabled("No connections");
+                ImGui::TreePop();
                 return;
             }
 
@@ -174,6 +182,8 @@ namespace Demo
                 }
                 ImGui::EndTable();
             }
+
+            ImGui::TreePop();
         }
 
         void RenderLinkRow(const auto& remotePeerId, const auto& ls) const
