@@ -43,7 +43,7 @@ namespace Demo
         {
             switch (_mode) {
                 case TransportMode::InProcessRtc: {
-                    auto sigClient = std::make_shared<Rtt::Rtc::LocalSigClient>(_sigHub);
+                    const auto sigClient = std::make_shared<Rtt::Rtc::LocalSigClient>(_sigHub);
                     return Rtt::Rtc::RtcClient::MakeDefault({
                         .sigClient = sigClient,
                         .localId = {peerId},

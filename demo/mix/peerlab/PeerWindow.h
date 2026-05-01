@@ -132,15 +132,16 @@ namespace Demo
 
         void RenderPeerState() const
         {
-            ImGui::Text("peerId: %s", _peer.peerId.c_str());
+            const auto localNow = _peer.LocalNow();
+            const auto syncNow = _peer.SyncedNow();
+
+            ImGui::Text("id: %s", _peer.peerId.c_str());
             ImGui::Text("position: (%.3f, %.3f)", _peer.position.x, _peer.position.y);
             ImGui::Text("velocity: (%.3f, %.3f)", _peer.velocity.x, _peer.velocity.y);
 
-            const auto localNow = _peer.clock.Now();
             const auto localSeconds = std::chrono::duration<double>(localNow).count();
             ImGui::Text("local: %.3f s", localSeconds);
 
-            const auto syncNow = _peer.syncClock.Now();
             const auto syncSeconds = std::chrono::duration<double>(syncNow).count();
             ImGui::Text("sync: %.3f s", syncSeconds);
 
@@ -159,28 +160,26 @@ namespace Demo
 
             constexpr auto kTableFlags =
                 ImGuiTableFlags_RowBg |
-                ImGuiTableFlags_Borders;
-            if (ImGui::BeginTable("##conns", 6, kTableFlags)) {
+                ImGuiTableFlags_Borders |
+                ImGuiTableFlags_SizingFixedFit;
+            if (ImGui::BeginTable("##links", 4, kTableFlags)) {
                 ImGui::TableSetupColumn("Peer");
-                ImGui::TableSetupColumn("Connected");
-                ImGui::TableSetupColumn("Has Payload");
-                ImGui::TableSetupColumn("Sync Quality");
+                ImGui::TableSetupColumn("Link");
+                ImGui::TableSetupColumn("Payload");
                 ImGui::TableSetupColumn("Role");
-                ImGui::TableSetupColumn("Epoch Src");
                 ImGui::TableHeadersRow();
 
-                auto epochSrcId = _peer.consensus.EpochSourcePeerId();
-
                 for (const auto& [remotePeerId, ls] : node->Links()) {
-                    RenderLinkRow(remotePeerId, ls, epochSrcId);
+                    RenderLinkRow(remotePeerId, ls);
                 }
                 ImGui::EndTable();
             }
         }
 
-        void RenderLinkRow(const auto& remotePeerId, const auto& ls, const auto& epochSrcId) const
+        void RenderLinkRow(const auto& remotePeerId, const auto& ls) const
         {
             ImGui::TableNextRow();
+
             ImGui::TableNextColumn();
             ImGui::Text("%s", remotePeerId.c_str());
 
@@ -193,24 +192,90 @@ namespace Demo
             ImGui::Text("%s", ls.hasPayload ? "yes" : "no");
 
             ImGui::TableNextColumn();
-            if (auto* session = _peer.consensus.GetSession(remotePeerId)) {
-                auto q = session->Quality();
-                ImGui::Text("%s", std::format("{}", SynTm::SyncQualityToString(q)).c_str());
-            } else {
-                ImGui::TextDisabled("N/A");
-            }
-
-            ImGui::TableNextColumn();
             const auto isActive = SynTm::Consensus::IsActivePeer(_peer.peerId, remotePeerId);
             ImGui::TextColored(
                 isActive ? ColRoleActive : ColRolePassive,
                 "%s", isActive ? "Active" : "Passive");
+        }
 
-            ImGui::TableNextColumn();
-            if (epochSrcId == remotePeerId) {
-                ImGui::TextColored(ColEpochSrc, "yes");
-            } else {
-                ImGui::TextDisabled("no");
+        void RenderConsensusTable() const {
+            constexpr auto kTableFlags =
+                ImGuiTableFlags_RowBg |
+                ImGuiTableFlags_Borders |
+                ImGuiTableFlags_SizingFixedFit;
+            if (ImGui::BeginTable("##links-diag", 8, kTableFlags)) {
+                ImGui::TableSetupColumn("Peer");
+                ImGui::TableSetupColumn("Count");
+                ImGui::TableSetupColumn("Steps");
+                ImGui::TableSetupColumn("Epoch");
+                ImGui::TableSetupColumn("RTT min");
+                ImGui::TableSetupColumn("RTT max");
+                ImGui::TableSetupColumn("RTT mean");
+                ImGui::TableSetupColumn("Off. mean");
+                ImGui::TableHeadersRow();
+
+                const auto epochSrcId = _peer.consensus.EpochSourcePeerId();
+
+                _peer.consensus.ForEachPeer([&](const std::string& peerId) {
+                    const auto diagOpt = _peer.consensus.GetSessionDiagnostics(peerId);
+                    if (!diagOpt) {
+                        return;
+                    }
+                    const auto& d = *diagOpt;
+
+                    ImGui::TableNextRow();
+
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(peerId.c_str());
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%zu", d.sampleCount);
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%u", d.stepCount);
+
+                    ImGui::TableNextColumn();
+                    if (peerId == epochSrcId) {
+                        ImGui::TextColored(ColEpochSrc, "yes");
+                    } else {
+                        ImGui::TextDisabled("no");
+                    }
+
+                    // Convert nanoseconds to milliseconds for display.
+                    auto toMs = [](SynTm::Ticks t) {
+                        return static_cast<double>(t.count()) / 1'000'000.0;
+                    };
+
+                    ImGui::TableNextColumn();
+                    if (d.sampleCount > 0) {
+                        ImGui::Text("%.2f ms", toMs(d.rttMin));
+                    } else {
+                        ImGui::TextDisabled("-");
+                    }
+
+                    ImGui::TableNextColumn();
+                    if (d.sampleCount > 0) {
+                        ImGui::Text("%.2f ms", toMs(d.rttMax));
+                    } else {
+                        ImGui::TextDisabled("-");
+                    }
+
+                    ImGui::TableNextColumn();
+                    if (d.sampleCount > 0) {
+                        ImGui::Text("%.2f ms", toMs(d.rttMean));
+                    } else {
+                        ImGui::TextDisabled("-");
+                    }
+
+                    ImGui::TableNextColumn();
+                    if (d.sampleCount > 0) {
+                        ImGui::Text("%+.2f ms", toMs(d.offsetMean));
+                    } else {
+                        ImGui::TextDisabled("-");
+                    }
+                });
+
+                ImGui::EndTable();
             }
         }
 
@@ -250,75 +315,7 @@ namespace Demo
             // Per-link sync diagnostics table.
             if (_peer.consensus.PeerCount() > 0) {
                 ImGui::Separator();
-                ImGui::TextUnformatted("Per-link diagnostics:");
-
-                constexpr auto kTableFlags =
-                    ImGuiTableFlags_RowBg |
-                    ImGuiTableFlags_Borders |
-                    ImGuiTableFlags_SizingFixedFit;
-                if (ImGui::BeginTable("##sync-diag", 7, kTableFlags)) {
-                    ImGui::TableSetupColumn("Peer");
-                    ImGui::TableSetupColumn("RTT min");
-                    ImGui::TableSetupColumn("RTT max");
-                    ImGui::TableSetupColumn("RTT mean");
-                    ImGui::TableSetupColumn("Off. mean");
-                    ImGui::TableSetupColumn("Samples");
-                    ImGui::TableSetupColumn("Steps");
-                    ImGui::TableHeadersRow();
-
-                    _peer.consensus.ForEachPeer([&](const std::string& peerId) {
-                        auto diagOpt = _peer.consensus.GetSessionDiagnostics(peerId);
-                        if (!diagOpt) {
-                            return;
-                        }
-                        const auto& d = *diagOpt;
-
-                        ImGui::TableNextRow();
-                        ImGui::TableNextColumn();
-                        ImGui::TextUnformatted(peerId.c_str());
-
-                        // Convert nanoseconds to milliseconds for display.
-                        auto toMs = [](SynTm::Ticks t) {
-                            return static_cast<double>(t.count()) / 1'000'000.0;
-                        };
-
-                        ImGui::TableNextColumn();
-                        if (d.sampleCount > 0) {
-                            ImGui::Text("%.2f ms", toMs(d.rttMin));
-                        } else {
-                            ImGui::TextDisabled("-");
-                        }
-
-                        ImGui::TableNextColumn();
-                        if (d.sampleCount > 0) {
-                            ImGui::Text("%.2f ms", toMs(d.rttMax));
-                        } else {
-                            ImGui::TextDisabled("-");
-                        }
-
-                        ImGui::TableNextColumn();
-                        if (d.sampleCount > 0) {
-                            ImGui::Text("%.2f ms", toMs(d.rttMean));
-                        } else {
-                            ImGui::TextDisabled("-");
-                        }
-
-                        ImGui::TableNextColumn();
-                        if (d.sampleCount > 0) {
-                            ImGui::Text("%+.2f ms", toMs(d.offsetMean));
-                        } else {
-                            ImGui::TextDisabled("-");
-                        }
-
-                        ImGui::TableNextColumn();
-                        ImGui::Text("%zu", d.sampleCount);
-
-                        ImGui::TableNextColumn();
-                        ImGui::Text("%u", d.stepCount);
-                    });
-
-                    ImGui::EndTable();
-                }
+                RenderConsensusTable();
 
                 // epochOffset = SyncedNow - LocalNow: informational, unique per peer.
                 // Each peer has an independent clock origin, so this value is NOT
@@ -327,8 +324,8 @@ namespace Demo
                 // comparable to local time (independent clock origins).
                 ImGui::Separator();
 
-                const auto localNow = _peer.clock.Now();
-                const auto syncNow = _peer.syncClock.Now();
+                const auto localNow = _peer.LocalNow();
+                const auto syncNow = _peer.SyncedNow();
                 const auto syncOffsetMs = static_cast<double>((syncNow - localNow).count()) / 1'000'000.0;
                 ImGui::Text("epochOffset (synced-local): %+.2f ms", syncOffsetMs);
 
@@ -356,29 +353,19 @@ namespace Demo
             }
 
             const auto& entries = mgr.Entries();
-            auto hasUnconnected = false;
-            for (const auto& entry : entries) {
-                if (entry.peer->id != _peer.id && !mgr.AreConnected(_peer.id, entry.peer->id)) {
-                    hasUnconnected = true;
-                    break;
-                }
-            }
 
-            if (hasUnconnected) {
-                for (const auto& entry : entries) {
-                    if (entry.peer->id == _peer.id || mgr.AreConnected(_peer.id, entry.peer->id)) {
-                        continue;
-                    }
-                    ImGui::PushID(entry.peer->id);
-                    char label[64];
-                    std::snprintf(label, sizeof(label), "Connect to %s", entry.peer->peerId.c_str());
-                    if (ImGui::SmallButton(label)) {
-                        mgr.Connect(_peer, *entry.peer);
-                    }
-                    ImGui::PopID();
+            // Connect buttons for not existing links.
+            for (const auto& entry : entries) {
+                if (entry.peer->id == _peer.id || mgr.AreConnected(_peer.id, entry.peer->id)) {
+                    continue;
                 }
-            } else if (entries.size() > 1) {
-                ImGui::TextDisabled("Connected to all peers");
+                ImGui::PushID(entry.peer->id);
+                char label[64];
+                std::snprintf(label, sizeof(label), "Connect to %s", entry.peer->peerId.c_str());
+                if (ImGui::SmallButton(label)) {
+                    mgr.Connect(_peer, *entry.peer);
+                }
+                ImGui::PopID();
             }
 
             // Disconnect buttons for existing links.

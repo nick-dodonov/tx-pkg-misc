@@ -24,8 +24,6 @@ namespace Demo
                 return;
             }
 
-            RenderPeerCreation();
-            ImGui::Separator();
             RenderConnectionMatrix();
             ImGui::Separator();
             RenderStats();
@@ -60,6 +58,7 @@ namespace Demo
             if (!ImGui::TreeNodeEx("Connections", ImGuiTreeNodeFlags_DefaultOpen)) {
                 return;
             }
+            RenderPeerCreation();
 
             const auto& entries = _mgr.Entries();
             if (entries.empty()) {
@@ -138,15 +137,16 @@ namespace Demo
                 RenderConnectionElement(i, j);
             }
 
+            const auto localNow = peer.LocalNow();
+            const auto syncNow = peer.SyncedNow();
+
             // local time
             ImGui::TableNextColumn();
-            const auto localNow = peer.clock.Now();
             const auto localSeconds = std::chrono::duration<double>(localNow).count();
             ImGui::Text("%.6f s", localSeconds);
 
             // synced time
             ImGui::TableNextColumn();
-            const auto syncNow = peer.syncClock.Now();
             const auto syncSeconds = std::chrono::duration<double>(syncNow).count();
             ImGui::Text("%.6f s", syncSeconds);
 
@@ -164,7 +164,7 @@ namespace Demo
                 }
             }
             if (epochOwner) {
-                const auto epochOwnerLocalNow = epochOwner->clock.Now();
+                const auto epochOwnerLocalNow = epochOwner->LocalNow();
                 const auto deltaMs = static_cast<double>((syncNow - epochOwnerLocalNow).count()) / 1'000'000.0;
                 const auto absDelta = std::abs(deltaMs);
                 const auto col = absDelta < 5.0
@@ -172,7 +172,7 @@ namespace Demo
                     : absDelta < 20.0 //NOLINT(readability-avoid-nested-conditional-operator)
                         ? ColDeltaWarn
                         : ColDeltaBad;
-                ImGui::TextColored(col, "%+.2f ms", deltaMs);
+                ImGui::TextColored(col, "%+.3f ms", deltaMs);
             } else {
                 ImGui::TextDisabled("-");
             }

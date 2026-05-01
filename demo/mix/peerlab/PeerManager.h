@@ -53,7 +53,7 @@ namespace Demo
 
             Log::Info("created peerId={} (id={})", peer->peerId, peer->id);
 
-            auto& entry = _entries.emplace_back(
+            const auto& entry = _entries.emplace_back(
                 ManagedPeer{
                     .peer = std::move(peer),
                     .node = std::move(node),

@@ -59,7 +59,7 @@ namespace Demo
                     }
                 },
                 .onDisconnected = [self]() {
-                    if (auto bridge = self.lock()) {
+                    if (const auto bridge = self.lock()) {
                         std::scoped_lock lock(bridge->mutex);
                         bridge->pending.push({.data = std::nullopt});
                     }
@@ -103,13 +103,13 @@ namespace Demo
         /// Must be set before any links are accepted.
         SynTm::IClock* clock = nullptr;
 
-        Rtt::LinkHandler OnLink(Rtt::LinkResult result) override
+        Rtt::LinkHandler OnLink(const Rtt::LinkResult result) override
         {
             if (!result) {
                 return {};
             }
-            auto link = *result;
-            auto bridge = std::make_shared<LinkBridge>();
+            const auto& link = *result;
+            const auto bridge = std::make_shared<LinkBridge>();
             {
                 std::scoped_lock lock(mutex);
                 pendingLinks.push({.link=link, .bridge=bridge});
@@ -144,7 +144,7 @@ namespace Demo
             , _transport(std::move(transport))
             , _acceptor(std::make_shared<PeerAcceptor>())
         {
-            _acceptor->clock = &_peer.clock;
+            _acceptor->clock = &_peer.localClock;
         }
 
         [[nodiscard]] Peer& GetPeer() { return _peer; }
@@ -281,7 +281,7 @@ namespace Demo
             std::span<const std::byte> data,
             SynTm::Ticks receivedAt)
         {
-            auto parsed = ParseMessage(data);
+            const auto parsed = ParseMessage(data);
             if (!parsed) {
                 return;
             }
@@ -317,9 +317,9 @@ namespace Demo
                 return;
             }
 
-            auto epoch = _peer.consensus.OurEpochInfo();
+            const auto epoch = _peer.consensus.OurEpochInfo();
             std::array<std::byte, 128> raw{};
-            auto n = SynTm::WriteSyncPulse(raw, epoch, *replyOpt);
+            const auto n = SynTm::WriteSyncPulse(raw, epoch, *replyOpt);
             if (n > 0) {
                 auto wrapped = WrapSyncProbe(std::span<const std::byte>(raw.data(), n));
                 SendTo(fromPeerId, wrapped);
@@ -353,7 +353,7 @@ namespace Demo
                 }
                 auto epoch = _peer.consensus.OurEpochInfo();
                 std::array<std::byte, 128> raw{};
-                auto n = SynTm::WriteSyncPulse(raw, epoch, *pulseOpt);
+                const auto n = SynTm::WriteSyncPulse(raw, epoch, *pulseOpt);
                 if (n > 0) {
                     auto wrapped = WrapSyncProbe(std::span<const std::byte>(raw.data(), n));
                     SendTo(peerId, wrapped);
@@ -363,7 +363,7 @@ namespace Demo
 
         void BroadcastPayload()
         {
-            auto syncNow = _peer.syncClock.Now();
+            const auto syncNow = _peer.SyncedNow();
             auto msg = SerializePayloadUpdate({
                 .x = _peer.position.x,
                 .y = _peer.position.y,
@@ -381,13 +381,13 @@ namespace Demo
 
         void SendTo(const std::string& peerId, std::span<const std::byte> data)
         {
-            auto it = _links.find(peerId);
+            const auto it = _links.find(peerId);
             if (it == _links.end() || !it->second.link) {
                 return;
             }
             auto copy = std::vector<std::byte>(data.begin(), data.end());
             it->second.link->Send([copy = std::move(copy)](std::span<std::byte> buf) -> std::size_t {
-                auto n = std::min(buf.size(), copy.size());
+                const auto n = std::min(buf.size(), copy.size());
                 std::memcpy(buf.data(), copy.data(), n);
                 return n;
             });

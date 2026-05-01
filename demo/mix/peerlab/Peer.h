@@ -49,11 +49,22 @@ namespace Demo
         Vec2 velocity{};
 
         // SynTm time synchronization stack (one per peer).
-        SynTm::AppClock clock;
-        SynTm::Consensus consensus{clock, SynTm::ConsensusMode::Voter, SynTm::SessionConfig {
+        SynTm::AppClock localClock;
+        SynTm::Consensus consensus{localClock, SynTm::ConsensusMode::Voter, SynTm::SessionConfig {
             .parentLogger = logger,
         }};
-        SynTm::SyncClock syncClock{consensus};
+        SynTm::SyncClock cachedSyncClock{consensus};
+
+        [[nodiscard]] SynTm::Ticks LocalNow() const noexcept
+        {
+            return localClock.Now();
+        }
+
+        [[nodiscard]] SynTm::Ticks SyncedNow() const noexcept
+        {
+            //return syncClock.Now();
+            return consensus.SyncedNow();
+        }
 
         /// Update position using Lissajous curve animation.
         /// Each peer gets a unique pattern based on its id.
@@ -78,7 +89,7 @@ namespace Demo
             position.y = newY;
 
             // Refresh atomic snapshot for thread-safe reads.
-            syncClock.Update();
+            cachedSyncClock.Update();
         }
     };
 }
