@@ -133,13 +133,11 @@ namespace Demo
             double syncSeconds = std::chrono::duration<double>(syncNow).count();
             ImGui::Text("sync: %.3f s", syncSeconds);
 
-            // Show how far synced time is from local time.
+            // epochOffset = SyncedNow - LocalNow. Unique per peer; reflects clock
+            // origin difference from epoch owner. Zero for epoch owner.
             double syncOffsetMs =
                 static_cast<double>((syncNow - localNow).count()) / 1'000'000.0;
-            ImVec4 col = std::abs(syncOffsetMs) < 5.0
-                ? ImVec4{0.26f, 0.85f, 0.42f, 1.0f}
-                : ImVec4{0.95f, 0.75f, 0.20f, 1.0f};
-            ImGui::TextColored(col, "sync offset: %+.2f ms", syncOffsetMs);
+            ImGui::Text("sync offset: %+.2f ms", syncOffsetMs);
         }
 
         void RenderConnections(PeerNode* node) const
@@ -310,34 +308,31 @@ namespace Demo
                     ImGui::EndTable();
                 }
 
-                // Remote-vs-local time difference per peer (key health indicator).
+                // epochOffset = SyncedNow - LocalNow: informational, unique per peer.
+                // Each peer has an independent clock origin, so this value is NOT
+                // comparable across peers. Use ControlPanel "Δ epoch" to compare.
+                // RemoteNow is the remote peer's raw steady time — also not
+                // comparable to local time (independent clock origins).
                 ImGui::Separator();
-                ImGui::TextUnformatted("RemoteNow - LocalNow:");
 
                 auto localNow = _peer.clock.Now();
                 auto syncNow = _peer.syncClock.Now();
                 double syncOffsetMs =
                     static_cast<double>((syncNow - localNow).count()) / 1'000'000.0;
-                ImGui::Text("  local->synced: %+.2f ms", syncOffsetMs);
+                ImGui::Text("epochOffset (synced-local): %+.2f ms", syncOffsetMs);
 
+                ImGui::TextUnformatted("Session RemoteNow (raw remote local time):");
                 _peer.consensus.ForEachPeer([&](const std::string& peerId) {
                     const auto* session = _peer.consensus.GetSession(peerId);
                     if (!session) {
                         return;
                     }
+                    // RemoteNow is expressed in the remote peer's own steady clock.
+                    // It cannot be compared to LocalNow — difference is always large.
                     SynTm::Ticks remoteNow = session->RemoteNow();
-                    double diffMs =
-                        static_cast<double>((remoteNow - localNow).count()) / 1'000'000.0;
-
-                    // Color code: green = < 5ms, yellow = < 20ms, red = >= 20ms.
-                    double absDiff = std::abs(diffMs);
-                    ImVec4 col = absDiff < 5.0
-                        ? ImVec4{0.26f, 0.85f, 0.42f, 1.0f}
-                        : absDiff < 20.0
-                            ? ImVec4{0.95f, 0.75f, 0.20f, 1.0f}
-                            : ImVec4{0.98f, 0.39f, 0.26f, 1.0f};
-
-                    ImGui::TextColored(col, "  %s: %+.2f ms", peerId.c_str(), diffMs);
+                    double remoteSeconds =
+                        std::chrono::duration<double>(remoteNow).count();
+                    ImGui::Text("  %s: %.3f s", peerId.c_str(), remoteSeconds);
                 });
             }
 

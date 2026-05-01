@@ -71,7 +71,8 @@ namespace Demo
             auto columnsCount = 1 // Row header
                 + n // Peer columns
                 + 1 // Local clock column
-                + 1 // Synced clock column (optional)
+                + 1 // Synced clock column
+                + 1 // Δ epoch column (syncNow - epochOwner.localNow)
                 ;
             constexpr auto tableFlags = 
                 ImGuiTableFlags_Borders |
@@ -104,6 +105,7 @@ namespace Demo
 
             ImGui::TableSetupColumn("local");
             ImGui::TableSetupColumn("synced");
+            ImGui::TableSetupColumn("\xce\x94 epoch"); // Δ epoch
 
             ImGui::TableHeadersRow();
         }
@@ -144,6 +146,34 @@ namespace Demo
             auto syncNow = peer.syncClock.Now();
             double syncSeconds = std::chrono::duration<double>(syncNow).count();
             ImGui::Text("%.6f s", syncSeconds);
+
+            // Δ epoch: syncNow - epochOwner.localNow, where the owner is the peer
+            // that owns the same epoch as this peer (matched by epoch ID).
+            // Multiple disconnected groups may coexist, each with its own owner.
+            ImGui::TableNextColumn();
+            const auto thisEpochId = peer.consensus.Epoch().id;
+            const Peer* epochOwner = nullptr;
+            for (const auto& e : entries) {
+                if (e.peer->consensus.IsEpochOwner() &&
+                    e.peer->consensus.Epoch().id == thisEpochId) {
+                    epochOwner = e.peer.get();
+                    break;
+                }
+            }
+            if (epochOwner) {
+                const auto epochOwnerLocalNow = epochOwner->clock.Now();
+                double deltaMs =
+                    static_cast<double>((syncNow - epochOwnerLocalNow).count()) / 1'000'000.0;
+                double absDelta = std::abs(deltaMs);
+                ImVec4 col = absDelta < 5.0
+                    ? ImVec4{0.26f, 0.85f, 0.42f, 1.0f}
+                    : absDelta < 20.0
+                        ? ImVec4{0.95f, 0.75f, 0.20f, 1.0f}
+                        : ImVec4{0.98f, 0.39f, 0.26f, 1.0f};
+                ImGui::TextColored(col, "%+.2f ms", deltaMs);
+            } else {
+                ImGui::TextDisabled("-");
+            }
         }
 
         void RenderConnectionElement(PeerManager& mgr, int i, int j) const
