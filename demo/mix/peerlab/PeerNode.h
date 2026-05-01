@@ -308,19 +308,14 @@ namespace Demo
                 return;
             }
 
-            // Always process the remote epoch.
-            _peer.consensus.HandleRemoteEpoch(syncMsg->epoch);
-
+            // HandleSyncPulse processes the epoch and stores epochOffset internally.
+            // Returns std::nullopt when the incoming pulse was a reply to our own
+            // outstanding probe — in that case we must NOT send another reply
+            // (would create an infinite reply chain with symmetric probing).
             auto replyOpt = _peer.consensus.HandleSyncPulse(
                 fromPeerId, *syncMsg->pulse, receivedAt, syncMsg->epoch);
 
             if (!replyOpt) {
-                return;
-            }
-
-            // Only Passive (higher id) sends the reply immediately.
-            const bool iAmPassive = !SynTm::Consensus::IsActivePeer(_peer.peerId, fromPeerId);
-            if (!iAmPassive) {
                 return;
             }
 
@@ -352,7 +347,7 @@ namespace Demo
                 if (!ls.link) {
                     continue;
                 }
-                if (!_peer.consensus.ShouldInitiateProbe(_peer.peerId, peerId)) {
+                if (!_peer.consensus.ShouldInitiateProbe(peerId)) {
                     continue;
                 }
                 auto pulseOpt = _peer.consensus.MakePulse(peerId);

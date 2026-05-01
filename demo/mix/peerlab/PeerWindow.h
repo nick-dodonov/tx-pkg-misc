@@ -132,6 +132,14 @@ namespace Demo
             auto syncNow = _peer.syncClock.Now();
             double syncSeconds = std::chrono::duration<double>(syncNow).count();
             ImGui::Text("sync: %.3f s", syncSeconds);
+
+            // Show how far synced time is from local time.
+            double syncOffsetMs =
+                static_cast<double>((syncNow - localNow).count()) / 1'000'000.0;
+            ImVec4 col = std::abs(syncOffsetMs) < 5.0
+                ? ImVec4{0.26f, 0.85f, 0.42f, 1.0f}
+                : ImVec4{0.95f, 0.75f, 0.20f, 1.0f};
+            ImGui::TextColored(col, "sync offset: %+.2f ms", syncOffsetMs);
         }
 
         void RenderConnections(PeerNode* node) const
@@ -144,12 +152,16 @@ namespace Demo
             constexpr ImGuiTableFlags kTableFlags =
                 ImGuiTableFlags_RowBg |
                 ImGuiTableFlags_Borders;
-            if (ImGui::BeginTable("##conns", 4, kTableFlags)) {
+            if (ImGui::BeginTable("##conns", 6, kTableFlags)) {
                 ImGui::TableSetupColumn("Peer");
                 ImGui::TableSetupColumn("Connected");
                 ImGui::TableSetupColumn("Has Payload");
                 ImGui::TableSetupColumn("Sync Quality");
+                ImGui::TableSetupColumn("Role");
+                ImGui::TableSetupColumn("Epoch Src");
                 ImGui::TableHeadersRow();
+
+                auto epochSrcId = _peer.consensus.EpochSourcePeerId();
 
                 for (const auto& [remotePeerId, ls] : node->Links()) {
                     ImGui::TableNextRow();
@@ -172,6 +184,20 @@ namespace Demo
                     } else {
                         ImGui::TextDisabled("N/A");
                     }
+
+                    ImGui::TableNextColumn();
+                    bool isActive = SynTm::Consensus::IsActivePeer(_peer.peerId, remotePeerId);
+                    ImGui::TextColored(
+                        isActive ? ImVec4{0.40f, 0.60f, 1.0f, 1.0f} : ImVec4{0.75f, 0.45f, 1.0f, 1.0f},
+                        "%s", isActive ? "Active" : "Passive");
+
+                    ImGui::TableNextColumn();
+                    bool isEpochSrc = (epochSrcId == remotePeerId);
+                    if (isEpochSrc) {
+                        ImGui::TextColored(ImVec4{0.95f, 0.75f, 0.20f, 1.0f}, "yes");
+                    } else {
+                        ImGui::TextDisabled("no");
+                    }
                 }
                 ImGui::EndTable();
             }
@@ -190,6 +216,16 @@ namespace Demo
             ImGui::Text("Synced: %s", synced ? "yes" : "no");
             ImGui::Text("Quality: %s", SynTm::SyncQualityToString(quality).data());
             ImGui::Text("Epoch owner: %s", isOwner ? "yes" : "no");
+
+            // Show epoch source peer (the peer we learned the current epoch from).
+            auto epochSrcId = _peer.consensus.EpochSourcePeerId();
+            if (isOwner || epochSrcId.empty()) {
+                ImGui::Text("Epoch source: (self)");
+            } else {
+                ImGui::Text("Epoch source: %.*s",
+                    static_cast<int>(epochSrcId.size()), epochSrcId.data());
+            }
+
             ImGui::Text("Peer count: %zu", _peer.consensus.PeerCount());
 
             const auto& epoch = _peer.consensus.Epoch();
