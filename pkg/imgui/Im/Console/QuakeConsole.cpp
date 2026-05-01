@@ -1,6 +1,7 @@
 #include "QuakeConsole.h"
 #include "Log/Log.h"
 #include "Log/Sink.h"
+#include "Im/Ext.h"
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -64,12 +65,6 @@ namespace Im
     void QuakeConsole::Initialize()
     {
         Log::Detail::AddSink(_sink);
-
-        // Find monospace font (should be the second font loaded by Deputy)
-        auto& io = ImGui::GetIO();
-        if (io.Fonts->Fonts.Size > 1) {
-            _monoFont = io.Fonts->Fonts[1];
-        }
     }
 
     void QuakeConsole::Toggle()
@@ -319,8 +314,7 @@ namespace Im
         ImGui::BeginChild("ScrollingRegion", ImVec2(0, -footerHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
 
         // Use monospace font for log output
-        if (_monoFont) {
-            ImGui::PushFont(_monoFont);
+        if (Im::PushDefaultMonoFont()) {
             ImGui::SetWindowFontScale(CONSOLE_FONT_SCALE);
         }
 
@@ -365,9 +359,8 @@ namespace Im
             ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
         }
 
-        if (_monoFont) {
+        if (Im::PopDefaultMonoFont()) {
             ImGui::SetWindowFontScale(1.0f); // BeginChild starts with scale 1.0f by default
-            ImGui::PopFont();
         }
 
         ImGui::EndChild();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PeerManager.h"
+#include "Im/Ext.h"
 
 #include "imgui.h"
 #include <string>
@@ -16,7 +17,7 @@ namespace Demo
         explicit ControlPanel(PeerManager& mgr)
             : _mgr(mgr)
         {}
-        
+
         void Render() const
         {
             if (!ImGui::Begin(WindowName)) {
@@ -163,19 +164,22 @@ namespace Demo
                     break;
                 }
             }
+
+            Im::PushDefaultMonoFont();
             if (epochOwner) {
                 const auto epochOwnerLocalNow = epochOwner->LocalNow();
                 const auto deltaMs = static_cast<double>((syncNow - epochOwnerLocalNow).count()) / 1'000'000.0;
                 const auto absDelta = std::abs(deltaMs);
-                const auto col = absDelta < 5.0
+                const auto col = absDelta < 1.0
                     ? ColDeltaGood
-                    : absDelta < 20.0 //NOLINT(readability-avoid-nested-conditional-operator)
+                    : absDelta < 5.0 //NOLINT(readability-avoid-nested-conditional-operator)
                         ? ColDeltaWarn
                         : ColDeltaBad;
                 ImGui::TextColored(col, "%+.3f ms", deltaMs);
             } else {
                 ImGui::TextDisabled("-");
             }
+            Im::PopDefaultMonoFont();
         }
 
         void RenderConnectionElement(const int i, const int j) const
