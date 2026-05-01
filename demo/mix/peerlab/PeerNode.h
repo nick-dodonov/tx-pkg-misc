@@ -46,11 +46,11 @@ namespace Demo
         ///               because AppClock::Now() is const and reads steady_clock).
         [[nodiscard]] Rtt::LinkHandler MakeHandler(SynTm::IClock* clock)
         {
-            std::weak_ptr<LinkBridge> self = weak_from_this();
+            auto self = weak_from_this();
             return {
                 .onReceived = [self, clock](std::span<const std::byte> data) {
-                    if (auto bridge = self.lock()) {
-                        const SynTm::Ticks ts = clock ? clock->Now() : SynTm::Ticks{};
+                    if (const auto bridge = self.lock()) {
+                        const auto ts = clock ? clock->Now() : SynTm::Ticks{};
                         std::scoped_lock lock(bridge->mutex);
                         bridge->pending.push({
                             .data = std::vector<std::byte>{data.begin(), data.end()},
@@ -204,8 +204,6 @@ namespace Demo
                 // Remove disconnected links.
                 RemoveDisconnected();
             }
-
-            co_return 0;
         }
 
     private:
@@ -312,7 +310,7 @@ namespace Demo
             // Returns std::nullopt when the incoming pulse was a reply to our own
             // outstanding probe — in that case we must NOT send another reply
             // (would create an infinite reply chain with symmetric probing).
-            auto replyOpt = _peer.consensus.HandleSyncPulse(
+            const auto replyOpt = _peer.consensus.HandleSyncPulse(
                 fromPeerId, *syncMsg->pulse, receivedAt, syncMsg->epoch);
 
             if (!replyOpt) {
@@ -330,12 +328,11 @@ namespace Demo
 
         void HandlePayloadUpdate(const std::string& fromPeerId, std::span<const std::byte> payload)
         {
-            auto update = ReadPayload<PayloadUpdateMsg>(payload);
+            const auto update = ReadPayload<PayloadUpdateMsg>(payload);
             if (!update) {
                 return;
             }
-            auto it = _links.find(fromPeerId);
-            if (it != _links.end()) {
+            if (const auto it = _links.find(fromPeerId); it != _links.end()) {
                 it->second.lastPayload = *update;
                 it->second.hasPayload = true;
             }

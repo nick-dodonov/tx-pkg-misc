@@ -11,20 +11,24 @@ namespace Demo
     class ControlPanel
     {
     public:
-        constexpr static const char* WindowName = "Control Panel";
+        constexpr static auto WindowName = "Control Panel";
+
+        explicit ControlPanel(PeerManager& mgr)
+            : _mgr(mgr)
+        {}
         
-        void Render(PeerManager& mgr)
+        void Render() const
         {
             if (!ImGui::Begin(WindowName)) {
                 ImGui::End();
                 return;
             }
 
-            RenderPeerCreation(mgr);
+            RenderPeerCreation();
             ImGui::Separator();
-            RenderConnectionMatrix(mgr);
+            RenderConnectionMatrix();
             ImGui::Separator();
-            RenderStats(mgr);
+            RenderStats();
 
             ImGui::End();
         }
@@ -39,33 +43,35 @@ namespace Demo
         static constexpr ImVec4 ColConnected        = {0.2f, 0.65f, 0.3f, 0.8f}; // green
         static constexpr ImVec4 ColConnectedHovered = {0.2f, 0.65f, 0.3f, 1.0f}; // green (hovered)
 
-        void RenderPeerCreation(PeerManager& mgr)
+        PeerManager& _mgr;
+
+        void RenderPeerCreation() const
         {
             if (ImGui::Button("Create")) {
-                mgr.CreatePeer();
+                _mgr.CreatePeer();
             }
 
             ImGui::SameLine();
-            ImGui::Text("(transport: %s)", TransportModeName(mgr.GetTransportMode()));
+            ImGui::Text("(transport: %s)", TransportModeName(_mgr.GetTransportMode()));
         }
 
-        void RenderConnectionMatrix(PeerManager& mgr)
+        void RenderConnectionMatrix() const
         {
             if (!ImGui::TreeNodeEx("Connections", ImGuiTreeNodeFlags_DefaultOpen)) {
                 return;
             }
 
-            const auto& entries = mgr.Entries();
+            const auto& entries = _mgr.Entries();
             if (entries.empty()) {
                 ImGui::TextDisabled("No peers created yet");
                 ImGui::TreePop();
                 return;
             }
 
-            int n = static_cast<int>(entries.size());
-            int pendingRemove = -1;
+            const auto n = static_cast<int>(entries.size());
+            auto pendingRemove = -1;
 
-            auto columnsCount = 1 // Row header
+            const auto columnsCount = 1 // Row header
                 + n // Peer columns
                 + 1 // Local clock column
                 + 1 // Synced clock column
@@ -74,28 +80,28 @@ namespace Demo
             constexpr auto tableFlags = 
                 ImGuiTableFlags_Borders |
                 ImGuiTableFlags_SizingFixedFit;
-            if (ImGui::BeginTable("##connmatrix", columnsCount, tableFlags)) {
-                RenderConnectionHeaders(mgr);
+            if (ImGui::BeginTable("##conn-matrix", columnsCount, tableFlags)) {
+                RenderConnectionHeaders();
 
-                for (int i = 0; i < n; ++i) {
+                for (auto i = 0; i < n; ++i) {
                     ImGui::TableNextRow();
-                    RenderConnectionRow(mgr, i, n, pendingRemove);
+                    RenderConnectionRow(i, n, pendingRemove);
                 }
                 ImGui::EndTable();
             }
 
             if (pendingRemove != -1) {
-                mgr.RemovePeer(pendingRemove);
+                _mgr.RemovePeer(pendingRemove);
             }
 
             ImGui::TreePop();
         }
 
-        void RenderConnectionHeaders(PeerManager& mgr)
+        void RenderConnectionHeaders() const
         {
             ImGui::TableSetupColumn("");
 
-            const auto& entries = mgr.Entries();
+            const auto& entries = _mgr.Entries();
             for (const auto& entry : entries) {
                 ImGui::TableSetupColumn(entry.peer->peerId.c_str());
             }
@@ -107,12 +113,12 @@ namespace Demo
             ImGui::TableHeadersRow();
         }
 
-        void RenderConnectionRow(PeerManager& mgr, int i, int n, int& pendingRemove)
+        void RenderConnectionRow(const int i, const int n, int& pendingRemove) const
         {
             ImGui::TableNextColumn();
 
-            const auto& entries = mgr.Entries();
-            auto& peer = *entries[i].peer;
+            const auto& entries = _mgr.Entries();
+            const auto& peer = *entries[i].peer;
             ImGui::PushID(peer.id);
             ImGui::ColorButton("##color", peer.color, ImGuiColorEditFlags_NoTooltip, {12, 12});
             ImGui::SameLine();
@@ -123,25 +129,25 @@ namespace Demo
             }
             ImGui::PopID();
 
-            for (int j = 0; j < n; ++j) {
+            for (auto j = 0; j < n; ++j) {
                 ImGui::TableNextColumn();
                 if (i == j) {
                     ImGui::TextDisabled(" - ");
                     continue;
                 }
-                RenderConnectionElement(mgr, i, j);
+                RenderConnectionElement(i, j);
             }
 
             // local time
             ImGui::TableNextColumn();
-            auto localNow = peer.clock.Now();
-            double localSeconds = std::chrono::duration<double>(localNow).count();
+            const auto localNow = peer.clock.Now();
+            const auto localSeconds = std::chrono::duration<double>(localNow).count();
             ImGui::Text("%.6f s", localSeconds);
 
             // synced time
             ImGui::TableNextColumn();
-            auto syncNow = peer.syncClock.Now();
-            double syncSeconds = std::chrono::duration<double>(syncNow).count();
+            const auto syncNow = peer.syncClock.Now();
+            const auto syncSeconds = std::chrono::duration<double>(syncNow).count();
             ImGui::Text("%.6f s", syncSeconds);
 
             // Δ epoch: syncNow - epochOwner.localNow, where the owner is the peer
@@ -159,10 +165,9 @@ namespace Demo
             }
             if (epochOwner) {
                 const auto epochOwnerLocalNow = epochOwner->clock.Now();
-                double deltaMs =
-                    static_cast<double>((syncNow - epochOwnerLocalNow).count()) / 1'000'000.0;
-                double absDelta = std::abs(deltaMs);
-                ImVec4 col = absDelta < 5.0
+                const auto deltaMs = static_cast<double>((syncNow - epochOwnerLocalNow).count()) / 1'000'000.0;
+                const auto absDelta = std::abs(deltaMs);
+                const auto col = absDelta < 5.0
                     ? ColDeltaGood
                     : absDelta < 20.0 //NOLINT(readability-avoid-nested-conditional-operator)
                         ? ColDeltaWarn
@@ -173,47 +178,46 @@ namespace Demo
             }
         }
 
-        void RenderConnectionElement(PeerManager& mgr, int i, int j) const
+        void RenderConnectionElement(const int i, const int j) const
         {
-            const auto& entries = mgr.Entries();
+            const auto& entries = _mgr.Entries();
             auto& initiator = *entries[i].peer;
             auto& responder = *entries[j].peer;
-            ImGui::PushID(i * (int)entries.size() + j);
-            bool connected = mgr.AreConnected(initiator.id, responder.id);
-            if (connected) {
+            ImGui::PushID(i * static_cast<int>(entries.size()) + j);
+            if (_mgr.AreConnected(initiator.id, responder.id)) {
                 ImGui::PushStyleColor(ImGuiCol_Button, ColConnected);
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ColConnectedHovered);
                 if (ImGui::SmallButton("D")) { // Disconnect
-                    mgr.Disconnect(initiator, responder);
+                    _mgr.Disconnect(initiator, responder);
                 }
                 ImGui::PopStyleColor(2);
             } else {
                 if (ImGui::SmallButton("C")) { // Connect
-                    mgr.Connect(initiator, responder);
+                    _mgr.Connect(initiator, responder);
                 }
             }
             ImGui::PopID();
         }
 
-        void RenderStats(const PeerManager& mgr)
+        void RenderStats() const
         {
             if (!ImGui::TreeNodeEx("Stats", ImGuiTreeNodeFlags_DefaultOpen)) {
                 return;
             }
 
-            ImGui::Text("Peers: %zu", mgr.Entries().size());
+            ImGui::Text("Peers: %zu", _mgr.Entries().size());
 
             // Count total links and synced peers.
-            int totalLinks = 0;
-            int syncedPeers = 0;
-            for (const auto& entry : mgr.Entries()) {
+            auto totalLinks = 0;
+            auto syncedPeers = 0;
+            for (const auto& entry : _mgr.Entries()) {
                 totalLinks += static_cast<int>(entry.node->Links().size());
                 if (entry.peer->consensus.IsSynced()) {
                     syncedPeers++;
                 }
             }
             ImGui::Text("Links: %d", totalLinks / 2); // Each link counted twice.
-            ImGui::Text("Synced peers: %d / %zu", syncedPeers, mgr.Entries().size());
+            ImGui::Text("Synced peers: %d / %zu", syncedPeers, _mgr.Entries().size());
 
             ImGui::TreePop();
         }

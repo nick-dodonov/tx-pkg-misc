@@ -12,13 +12,13 @@ int main(const int argc, const char* argv[])
     auto handler = std::make_shared<Demo::DemoHandler>(*composite);
     composite->Add(*handler);
 
-    auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
+    const auto runner = std::make_shared<Sdl::Loop::Sdl3Runner>(
         composite,
         handler,
         Sdl::Loop::Sdl3Runner::Options{
             .Window = {
                 .Title = "Peer Lab Demo",
-                .Width = 1300,
+                .Width = 1400,
                 .Height = 900,
                 .Flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_FILL_DOCUMENT,
             },

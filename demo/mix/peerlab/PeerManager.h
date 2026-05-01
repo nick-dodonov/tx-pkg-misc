@@ -65,7 +65,7 @@ namespace Demo
 
         void RemovePeer(int peerId)
         {
-            auto it = std::ranges::find_if(_entries, [peerId](const auto& e) { return e.peer->id == peerId; });
+            const auto it = std::ranges::find_if(_entries, [peerId](const auto& e) { return e.peer->id == peerId; });
             if (it == _entries.end()) {
                 return;
             }
@@ -101,7 +101,7 @@ namespace Demo
         }
 
         /// Advance all peer positions (physics simulation on UI thread).
-        void Update(float dt, double sessionTime)
+        void Update(float dt, double sessionTime) const
         {
             for (auto& entry : _entries) {
                 entry.peer->UpdatePosition(dt, sessionTime);
@@ -111,11 +111,11 @@ namespace Demo
         /// Check if two peers have an active link between them.
         [[nodiscard]] bool AreConnected(int peerAId, int peerBId) const
         {
-            auto* nodeA = FindNode(peerAId);
+            const auto* nodeA = FindNode(peerAId);
             if (!nodeA) {
                 return false;
             }
-            auto peerBPeerId = FindPeerIdStr(peerBId);
+            const auto peerBPeerId = FindPeerIdStr(peerBId);
             if (peerBPeerId.empty()) {
                 return false;
             }

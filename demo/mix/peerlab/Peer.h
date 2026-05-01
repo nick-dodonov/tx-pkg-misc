@@ -32,7 +32,7 @@ namespace Demo
     /// A single peer with identity, animated position, sync state, and velocity.
     struct Peer
     {
-        Peer(int id, std::string peerId)
+        Peer(const int id, std::string peerId)
             : logger{std::format("[{}]", peerId)}
             , id{id}
             , peerId{std::move(peerId)}
@@ -57,17 +57,17 @@ namespace Demo
 
         /// Update position using Lissajous curve animation.
         /// Each peer gets a unique pattern based on its id.
-        void UpdatePosition(float dt, double sessionTime)
+        void UpdatePosition(const float dt, const double sessionTime)
         {
-            float phase = static_cast<float>(id) * 1.17f;
-            float freqX = 0.5f + static_cast<float>(id % 3) * 0.3f;
-            float freqY = 0.7f + static_cast<float>(id % 4) * 0.2f;
+            const auto phase = static_cast<float>(id) * 1.17f;
+            const auto freqX = 0.5f + static_cast<float>(id % 3) * 0.3f;
+            const auto freqY = 0.7f + static_cast<float>(id % 4) * 0.2f;
 
-            float t = static_cast<float>(sessionTime) + phase;
-            float radius = 0.35f;
+            const auto t = static_cast<float>(sessionTime) + phase;
+            constexpr auto radius = 0.35f;
 
-            float newX = radius * std::sin(freqX * t);
-            float newY = radius * std::cos(freqY * t);
+            const auto newX = radius * std::sin(freqX * t);
+            const auto newY = radius * std::cos(freqY * t);
 
             if (dt > 0.0f) {
                 velocity.x = (newX - position.x) / dt;

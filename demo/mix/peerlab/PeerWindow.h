@@ -5,7 +5,7 @@
 #include "imgui.h"
 #include "SynTm/Types.h"
 #include <chrono>
-#include <cmath>
+#include <format>
 
 namespace Demo
 {
@@ -17,13 +17,13 @@ namespace Demo
 
         [[nodiscard]] int GetPeerId() const { return _peer.id; }
 
-        void Render(PeerManager& mgr)
+        void Render(const PeerManager& mgr)
         {
             if (_firstRender) {
                 ImGui::SetNextWindowFocus();
                 _firstRender = false;
             }
-            bool open = true;
+            auto open = true;
             if (!ImGui::Begin(_peer.peerId.c_str(), &open)) {
                 ImGui::End();
                 _wantClose = !open;
@@ -44,7 +44,7 @@ namespace Demo
             ImGui::EndGroup();
 
             ImGui::Separator();
-            RenderConnections(node);
+            RenderLinksTable(node);
             ImGui::Separator();
             RenderSyncDiagnostics();
             ImGui::Separator();
@@ -82,8 +82,8 @@ namespace Demo
 
         void RenderCanvas(const PeerNode* node) const
         {
-            ImVec2 canvasSize{100, 100};
-            ImVec2 canvasMin = ImGui::GetCursorScreenPos();
+            constexpr ImVec2 canvasSize{100, 100};
+            auto canvasMin = ImGui::GetCursorScreenPos();
 
             auto* drawList = ImGui::GetWindowDrawList();
             ImVec2 canvasMax{canvasMin.x + canvasSize.x, canvasMin.y + canvasSize.y};
@@ -91,9 +91,9 @@ namespace Demo
             drawList->AddRect(canvasMin, canvasMax, IM_COL32(80, 80, 100, 255));
 
             // Grid
-            for (int i = 1; i < 4; ++i) {
-                float x = canvasMin.x + canvasSize.x * (static_cast<float>(i) / 4.0f);
-                float y = canvasMin.y + canvasSize.y * (static_cast<float>(i) / 4.0f);
+            for (auto i = 1; i < 4; ++i) {
+                auto x = canvasMin.x + canvasSize.x * (static_cast<float>(i) / 4.0f);
+                auto y = canvasMin.y + canvasSize.y * (static_cast<float>(i) / 4.0f);
                 drawList->AddLine({x, canvasMin.y}, {x, canvasMax.y}, IM_COL32(40, 40, 60, 255));
                 drawList->AddLine({canvasMin.x, y}, {canvasMax.x, y}, IM_COL32(40, 40, 60, 255));
             }
@@ -108,11 +108,11 @@ namespace Demo
                     //auto syncNow = _peer.syncClock.Now();
                     // auto dt = static_cast<float>(
                     //     std::chrono::duration<double>(syncNow - SynTm::Ticks{ls.lastPayload.syncTimeNs}).count());
-                    Vec2 remotePos{
+                    const Vec2 remotePos{
                         .x = ls.lastPayload.x,// + ls.lastPayload.vx * dt,
                         .y = ls.lastPayload.y,// + ls.lastPayload.vy * dt,
                     };
-                    ImVec2 px = ToCanvas(remotePos, canvasMin, canvasSize);
+                    auto px = ToCanvas(remotePos, canvasMin, canvasSize);
                     drawList->AddCircleFilled(px, 5.0f, IM_COL32(200, 200, 200, 200));
                     drawList->AddText({px.x + 7, px.y - 6}, IM_COL32(200, 200, 200, 200),
                         remotePeerId.c_str());
@@ -121,8 +121,8 @@ namespace Demo
 
             // Draw local peer position (larger, on top).
             {
-                ImVec2 px = ToCanvas(_peer.position, canvasMin, canvasSize);
-                ImU32 col = ImGui::ColorConvertFloat4ToU32(_peer.color);
+                const auto px = ToCanvas(_peer.position, canvasMin, canvasSize);
+                const auto col = ImGui::ColorConvertFloat4ToU32(_peer.color);
                 drawList->AddCircleFilled(px, 8.0f, col);
                 drawList->AddCircle(px, 8.0f, IM_COL32(255, 255, 255, 180), 0, 1.5f);
             }
@@ -136,29 +136,28 @@ namespace Demo
             ImGui::Text("position: (%.3f, %.3f)", _peer.position.x, _peer.position.y);
             ImGui::Text("velocity: (%.3f, %.3f)", _peer.velocity.x, _peer.velocity.y);
 
-            auto localNow = _peer.clock.Now();
-            double localSeconds = std::chrono::duration<double>(localNow).count();
+            const auto localNow = _peer.clock.Now();
+            const auto localSeconds = std::chrono::duration<double>(localNow).count();
             ImGui::Text("local: %.3f s", localSeconds);
 
-            auto syncNow = _peer.syncClock.Now();
-            double syncSeconds = std::chrono::duration<double>(syncNow).count();
+            const auto syncNow = _peer.syncClock.Now();
+            const auto syncSeconds = std::chrono::duration<double>(syncNow).count();
             ImGui::Text("sync: %.3f s", syncSeconds);
 
             // epochOffset = SyncedNow - LocalNow. Unique per peer; reflects clock
             // origin difference from epoch owner. Zero for epoch owner.
-            double syncOffsetMs =
-                static_cast<double>((syncNow - localNow).count()) / 1'000'000.0;
+            const auto syncOffsetMs = static_cast<double>((syncNow - localNow).count()) / 1'000'000.0;
             ImGui::Text("sync offset: %+.2f ms", syncOffsetMs);
         }
 
-        void RenderConnections(PeerNode* node) const
+        void RenderLinksTable(const PeerNode* node) const
         {
             if (!node || node->Links().empty()) {
                 ImGui::TextDisabled("No connections");
                 return;
             }
 
-            constexpr ImGuiTableFlags kTableFlags =
+            constexpr auto kTableFlags =
                 ImGuiTableFlags_RowBg |
                 ImGuiTableFlags_Borders;
             if (ImGui::BeginTable("##conns", 6, kTableFlags)) {
@@ -173,42 +172,45 @@ namespace Demo
                 auto epochSrcId = _peer.consensus.EpochSourcePeerId();
 
                 for (const auto& [remotePeerId, ls] : node->Links()) {
-                    ImGui::TableNextRow();
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%s", remotePeerId.c_str());
-
-                    ImGui::TableNextColumn();
-                    ImGui::TextColored(
-                        ls.link ? ColLinkYes : ColLinkNo,
-                        "%s", ls.link ? "yes" : "no");
-
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%s", ls.hasPayload ? "yes" : "no");
-
-                    ImGui::TableNextColumn();
-                    auto* session = _peer.consensus.GetSession(remotePeerId);
-                    if (session) {
-                        auto q = session->Quality();
-                        ImGui::Text("%s", SynTm::SyncQualityToString(q).data());
-                    } else {
-                        ImGui::TextDisabled("N/A");
-                    }
-
-                    ImGui::TableNextColumn();
-                    bool isActive = SynTm::Consensus::IsActivePeer(_peer.peerId, remotePeerId);
-                    ImGui::TextColored(
-                        isActive ? ColRoleActive : ColRolePassive,
-                        "%s", isActive ? "Active" : "Passive");
-
-                    ImGui::TableNextColumn();
-                    bool isEpochSrc = (epochSrcId == remotePeerId);
-                    if (isEpochSrc) {
-                        ImGui::TextColored(ColEpochSrc, "yes");
-                    } else {
-                        ImGui::TextDisabled("no");
-                    }
+                    RenderLinkRow(remotePeerId, ls, epochSrcId);
                 }
                 ImGui::EndTable();
+            }
+        }
+
+        void RenderLinkRow(const auto& remotePeerId, const auto& ls, const auto& epochSrcId) const
+        {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::Text("%s", remotePeerId.c_str());
+
+            ImGui::TableNextColumn();
+            ImGui::TextColored(
+                ls.link ? ColLinkYes : ColLinkNo,
+                "%s", ls.link ? "yes" : "no");
+
+            ImGui::TableNextColumn();
+            ImGui::Text("%s", ls.hasPayload ? "yes" : "no");
+
+            ImGui::TableNextColumn();
+            if (auto* session = _peer.consensus.GetSession(remotePeerId)) {
+                auto q = session->Quality();
+                ImGui::Text("%s", std::format("{}", SynTm::SyncQualityToString(q)).c_str());
+            } else {
+                ImGui::TextDisabled("N/A");
+            }
+
+            ImGui::TableNextColumn();
+            const auto isActive = SynTm::Consensus::IsActivePeer(_peer.peerId, remotePeerId);
+            ImGui::TextColored(
+                isActive ? ColRoleActive : ColRolePassive,
+                "%s", isActive ? "Active" : "Passive");
+
+            ImGui::TableNextColumn();
+            if (epochSrcId == remotePeerId) {
+                ImGui::TextColored(ColEpochSrc, "yes");
+            } else {
+                ImGui::TextDisabled("no");
             }
         }
 
@@ -218,16 +220,16 @@ namespace Demo
                 return;
             }
 
-            bool synced = _peer.consensus.IsSynced();
-            auto quality = _peer.consensus.Quality();
-            bool isOwner = _peer.consensus.IsEpochOwner();
+            const auto synced = _peer.consensus.IsSynced();
+            const auto quality = _peer.consensus.Quality();
+            const auto isOwner = _peer.consensus.IsEpochOwner();
 
             ImGui::Text("Synced: %s", synced ? "yes" : "no");
-            ImGui::Text("Quality: %s", SynTm::SyncQualityToString(quality).data());
+            ImGui::Text("Quality: %s", std::format("{}", SynTm::SyncQualityToString(quality)).c_str());
             ImGui::Text("Epoch owner: %s", isOwner ? "yes" : "no");
 
             // Show epoch source peer (the peer we learned the current epoch from).
-            auto epochSrcId = _peer.consensus.EpochSourcePeerId();
+            const auto epochSrcId = _peer.consensus.EpochSourcePeerId();
             if (isOwner || epochSrcId.empty()) {
                 ImGui::Text("Epoch source: (self)");
             } else {
@@ -250,12 +252,11 @@ namespace Demo
                 ImGui::Separator();
                 ImGui::TextUnformatted("Per-link diagnostics:");
 
-                constexpr ImGuiTableFlags kTableFlags =
+                constexpr auto kTableFlags =
                     ImGuiTableFlags_RowBg |
                     ImGuiTableFlags_Borders |
                     ImGuiTableFlags_SizingFixedFit;
-
-                if (ImGui::BeginTable("##syncdiag", 7, kTableFlags)) {
+                if (ImGui::BeginTable("##sync-diag", 7, kTableFlags)) {
                     ImGui::TableSetupColumn("Peer");
                     ImGui::TableSetupColumn("RTT min");
                     ImGui::TableSetupColumn("RTT max");
@@ -326,10 +327,9 @@ namespace Demo
                 // comparable to local time (independent clock origins).
                 ImGui::Separator();
 
-                auto localNow = _peer.clock.Now();
-                auto syncNow = _peer.syncClock.Now();
-                double syncOffsetMs =
-                    static_cast<double>((syncNow - localNow).count()) / 1'000'000.0;
+                const auto localNow = _peer.clock.Now();
+                const auto syncNow = _peer.syncClock.Now();
+                const auto syncOffsetMs = static_cast<double>((syncNow - localNow).count()) / 1'000'000.0;
                 ImGui::Text("epochOffset (synced-local): %+.2f ms", syncOffsetMs);
 
                 ImGui::TextUnformatted("Session RemoteNow (raw remote local time):");
@@ -340,9 +340,8 @@ namespace Demo
                     }
                     // RemoteNow is expressed in the remote peer's own steady clock.
                     // It cannot be compared to LocalNow — difference is always large.
-                    SynTm::Ticks remoteNow = session->RemoteNow();
-                    double remoteSeconds =
-                        std::chrono::duration<double>(remoteNow).count();
+                    const auto remoteNow = session->RemoteNow();
+                    const auto remoteSeconds = std::chrono::duration<double>(remoteNow).count();
                     ImGui::Text("  %s: %.3f s", peerId.c_str(), remoteSeconds);
                 });
             }
@@ -357,7 +356,7 @@ namespace Demo
             }
 
             const auto& entries = mgr.Entries();
-            bool hasUnconnected = false;
+            auto hasUnconnected = false;
             for (const auto& entry : entries) {
                 if (entry.peer->id != _peer.id && !mgr.AreConnected(_peer.id, entry.peer->id)) {
                     hasUnconnected = true;

@@ -38,6 +38,7 @@ namespace Demo
     public:
         explicit DemoHandler(RunLoop::CompositeHandler& composite)
             : _peerManager(composite, _transportFactory)
+            , _controlPanel(_peerManager)
         {}
 
         bool Start() override
@@ -106,7 +107,7 @@ namespace Demo
             if (_dockIdTop != 0) {
                 ImGui::SetNextWindowDockID(_dockIdTop, ImGuiCond_FirstUseEver);
             }
-            _controlPanel.Render(_peerManager);
+            _controlPanel.Render();
 
             // Process window closures: remove peers whose window was closed.
             for (const auto& win : _peerWindows) {
@@ -135,7 +136,7 @@ namespace Demo
             }
 
             if (event.type == SDL_EVENT_TEXT_INPUT) {
-                const char* text = event.text.text;
+                const auto* text = event.text.text;
                 if (text && (text[0] == '`' || text[0] == '~')) {
                     return SDL_APP_CONTINUE;
                 }
@@ -168,7 +169,7 @@ namespace Demo
 
             // Create windows for peers that have no window yet.
             for (const auto& entry : _peerManager.Entries()) {
-                bool hasWindow = std::ranges::any_of(_peerWindows,
+                const auto hasWindow = std::ranges::any_of(_peerWindows,
                     [id = entry.peer->id](const auto& w) { return w->GetPeerId() == id; });
                 if (!hasWindow) {
                     // Place new peer to the right of the last slot.
