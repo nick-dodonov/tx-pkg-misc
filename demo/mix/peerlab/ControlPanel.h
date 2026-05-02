@@ -1,6 +1,8 @@
 #pragma once
 
 #include "PeerManager.h"
+#include "UiHelpers.h"
+
 #include "Im/Ext.h"
 
 #include "imgui.h"
@@ -33,11 +35,6 @@ namespace Demo
         }
 
     private:
-        // Delta epoch sync quality colors
-        static constexpr ImVec4 ColDeltaGood   = {0.26f, 0.85f, 0.42f, 1.0f}; // green  — < 5 ms
-        static constexpr ImVec4 ColDeltaWarn   = {0.95f, 0.75f, 0.20f, 1.0f}; // yellow — < 20 ms
-        static constexpr ImVec4 ColDeltaBad    = {0.98f, 0.39f, 0.26f, 1.0f}; // red    — >= 20 ms
-
         // Connected button colors
         static constexpr ImVec4 ColConnected        = {0.2f, 0.65f, 0.3f, 0.8f}; // green
         static constexpr ImVec4 ColConnectedHovered = {0.2f, 0.65f, 0.3f, 1.0f}; // green (hovered)
@@ -113,6 +110,18 @@ namespace Demo
             ImGui::TableHeadersRow();
         }
 
+        static Peer* FindEpochOwner(const std::vector<ManagedPeer>& entries, const Peer& peer)
+        {
+            const auto peerEpochId = peer.consensus.Epoch().id;
+            for (const auto& e : entries) {
+                if (e.peer->consensus.IsEpochOwner() &&
+                    e.peer->consensus.Epoch().id == peerEpochId) {
+                    return e.peer.get();
+                }
+            }
+            return nullptr;
+        }
+
         void RenderConnectionRow(const int i, const int n, int& pendingRemove) const
         {
             ImGui::TableNextColumn();
@@ -139,6 +148,10 @@ namespace Demo
             }
 
             const auto localNow = peer.LocalNow();
+
+            const Peer* epochOwner = FindEpochOwner(entries, peer);
+            const auto epochOwnerLocalNow = epochOwner ? epochOwner->LocalNow() : SynTm::Ticks{};
+
             const auto syncNow = peer.SyncedNow();
 
             // local time
@@ -155,26 +168,11 @@ namespace Demo
             // that owns the same epoch as this peer (matched by epoch ID).
             // Multiple disconnected groups may coexist, each with its own owner.
             ImGui::TableNextColumn();
-            const auto thisEpochId = peer.consensus.Epoch().id;
-            const Peer* epochOwner = nullptr;
-            for (const auto& e : entries) {
-                if (e.peer->consensus.IsEpochOwner() &&
-                    e.peer->consensus.Epoch().id == thisEpochId) {
-                    epochOwner = e.peer.get();
-                    break;
-                }
-            }
 
             Im::PushDefaultMonoFont();
             if (epochOwner) {
-                const auto epochOwnerLocalNow = epochOwner->LocalNow();
                 const auto deltaMs = static_cast<double>((syncNow - epochOwnerLocalNow).count()) / 1'000'000.0;
-                const auto absDelta = std::abs(deltaMs);
-                const auto col = absDelta < 1.0
-                    ? ColDeltaGood
-                    : absDelta < 5.0 //NOLINT(readability-avoid-nested-conditional-operator)
-                        ? ColDeltaWarn
-                        : ColDeltaBad;
+                const auto col = GetDeltaCol(deltaMs, 1.0, 5.0);
                 ImGui::TextColored(col, "%+.3f ms", deltaMs);
             } else {
                 ImGui::TextDisabled("-");

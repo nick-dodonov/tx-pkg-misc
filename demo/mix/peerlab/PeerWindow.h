@@ -1,9 +1,11 @@
 #pragma once
 
 #include "PeerManager.h"
+#include "UiHelpers.h"
+
+#include "SynTm/Types.h"
 
 #include "imgui.h"
-#include "SynTm/Types.h"
 #include <chrono>
 #include <format>
 
@@ -48,7 +50,7 @@ namespace Demo
             RenderLinksDiagnostics(node);
 
             ImGui::Separator();
-            RenderSyncDiagnostics();
+            RenderSyncDiagnostics(mgr);
 
             ImGui::Separator();
             RenderControls(mgr, node);
@@ -143,15 +145,15 @@ namespace Demo
             ImGui::Text("velocity: (%.3f, %.3f)", _peer.velocity.x, _peer.velocity.y);
 
             const auto localSeconds = std::chrono::duration<double>(localNow).count();
-            ImGui::Text("local: %.3f s", localSeconds);
+            ImGui::Text("local time: %.3f s", localSeconds);
 
             const auto syncSeconds = std::chrono::duration<double>(syncNow).count();
-            ImGui::Text("sync: %.3f s", syncSeconds);
+            ImGui::Text("sync time: %.3f s", syncSeconds);
 
-            // epochOffset = SyncedNow - LocalNow. Unique per peer; reflects clock
-            // origin difference from epoch owner. Zero for epoch owner.
+            // syncOffsetMs = SyncedNow - LocalNow: informational, unique per peer.
+            // Each peer has an independent clock origin, so this value is NOT comparable across peers.
             const auto syncOffsetMs = static_cast<double>((syncNow - localNow).count()) / 1'000'000.0;
-            ImGui::Text("sync offset: %+.2f ms", syncOffsetMs);
+            ImGui::Text("sync offset: %+.3f ms", syncOffsetMs);
         }
 
         void RenderLinksDiagnostics(const PeerNode* node) const
@@ -226,7 +228,7 @@ namespace Demo
 
                 const auto epochSrcId = _peer.consensus.EpochSourcePeerId();
 
-                _peer.consensus.ForEachPeer([&](const std::string& peerId) {
+                _peer.consensus.ForEachPeerId([&](const std::string& peerId) {
                     const auto diagOpt = _peer.consensus.GetSessionDiagnostics(peerId);
                     if (!diagOpt) {
                         return;
@@ -289,16 +291,18 @@ namespace Demo
             }
         }
 
-        void RenderSyncDiagnostics() const
+        void RenderSyncDiagnostics(const PeerManager& mgr) const
         {
             if (!ImGui::TreeNodeEx("Sync Diagnostics", ImGuiTreeNodeFlags_DefaultOpen)) {
                 return;
             }
 
+            const auto peerCount = _peer.consensus.PeerCount();
             const auto synced = _peer.consensus.IsSynced();
             const auto quality = _peer.consensus.Quality();
             const auto isOwner = _peer.consensus.IsEpochOwner();
 
+            ImGui::Text("Peer count: %zu", peerCount);
             ImGui::Text("Synced: %s", synced ? "yes" : "no");
             ImGui::Text("Quality: %s", std::format("{}", SynTm::SyncQualityToString(quality)).c_str());
             ImGui::Text("Epoch owner: %s", isOwner ? "yes" : "no");
@@ -312,8 +316,6 @@ namespace Demo
                     static_cast<int>(epochSrcId.size()), epochSrcId.data());
             }
 
-            ImGui::Text("Peer count: %zu", _peer.consensus.PeerCount());
-
             const auto& epoch = _peer.consensus.Epoch();
             if (epoch.IsValid()) {
                 ImGui::Text("Epoch ID: %llu", static_cast<unsigned long long>(epoch.id));
@@ -323,34 +325,53 @@ namespace Demo
             }
 
             // Per-link sync diagnostics table.
-            if (_peer.consensus.PeerCount() > 0) {
+            if (peerCount > 0) {
                 ImGui::Separator();
                 RenderConsensusTable();
 
-                // epochOffset = SyncedNow - LocalNow: informational, unique per peer.
-                // Each peer has an independent clock origin, so this value is NOT
-                // comparable across peers. Use ControlPanel "Δ epoch" to compare.
-                // RemoteNow is the remote peer's raw steady time — also not
-                // comparable to local time (independent clock origins).
                 ImGui::Separator();
+                ImGui::TextUnformatted("Sessions:");
+                constexpr auto kTableFlags =
+                    ImGuiTableFlags_RowBg |
+                    ImGuiTableFlags_Borders |
+                    ImGuiTableFlags_SizingFixedFit;
+                if (ImGui::BeginTable("##sessions-diag", 3, kTableFlags)) {
+                    ImGui::TableSetupColumn("peer");
+                    ImGui::TableSetupColumn("remote");
+                    ImGui::TableSetupColumn("Δ local");
+                    ImGui::TableHeadersRow();
 
-                const auto localNow = _peer.LocalNow();
-                const auto syncNow = _peer.SyncedNow();
-                const auto syncOffsetMs = static_cast<double>((syncNow - localNow).count()) / 1'000'000.0;
-                ImGui::Text("epochOffset (synced-local): %+.2f ms", syncOffsetMs);
+                    _peer.consensus.ForEachPeerId([&](const std::string& peerId) {
+                        const auto* session = _peer.consensus.GetSession(peerId);
+                        if (!session) {
+                            return;
+                        }
+                        ImGui::TableNextColumn();
+                        ImGui::TextUnformatted(peerId.c_str());
 
-                ImGui::TextUnformatted("Session RemoteNow (raw remote local time):");
-                _peer.consensus.ForEachPeer([&](const std::string& peerId) {
-                    const auto* session = _peer.consensus.GetSession(peerId);
-                    if (!session) {
-                        return;
-                    }
-                    // RemoteNow is expressed in the remote peer's own steady clock.
-                    // It cannot be compared to LocalNow — difference is always large.
-                    const auto remoteNow = session->RemoteNow();
-                    const auto remoteSeconds = std::chrono::duration<double>(remoteNow).count();
-                    ImGui::Text("  %s: %.3f s", peerId.c_str(), remoteSeconds);
-                });
+                        // RemoteNow is the remote peer's raw steady time — not comparable to my local time (independent clock origins)
+                        //  but comparable with peer's local time (only when both peers in the same process).
+                        const auto* peer = mgr.FindPeer(peerId);
+                        const auto peerLocalNow = peer ? peer->LocalNow() : SynTm::Ticks{};
+
+                        const auto remoteNow = session->RemoteNow();
+
+                        ImGui::TableNextColumn();
+                        const auto remoteSeconds = std::chrono::duration<double>(remoteNow).count();
+                        ImGui::Text("%.3f s", remoteSeconds);
+
+                        ImGui::TableNextColumn();
+                        if (peer) {
+                            const auto deltaMs = static_cast<double>((remoteNow - peerLocalNow).count()) / 1'000'000.0;
+                            const auto col = GetDeltaCol(deltaMs, 1.0, 5.0);
+                            ImGui::TextColored(col, "%+.3f ms", deltaMs);
+                        } else {
+                            ImGui::TextDisabled("-");
+                        }
+                    });
+
+                    ImGui::EndTable();
+                }
             }
 
             ImGui::TreePop();

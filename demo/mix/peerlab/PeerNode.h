@@ -347,6 +347,7 @@ namespace Demo
                 if (!_peer.consensus.ShouldInitiateProbe(peerId)) {
                     continue;
                 }
+                _logger.Info("initiating probe to {}", peerId);
                 auto pulseOpt = _peer.consensus.MakePulse(peerId);
                 if (!pulseOpt) {
                     continue;

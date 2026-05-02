@@ -103,7 +103,7 @@ namespace Demo
         /// Advance all peer positions (physics simulation on UI thread).
         void Update(float dt, double sessionTime) const
         {
-            for (auto& entry : _entries) {
+            for (const auto& entry : _entries) {
                 entry.peer->UpdatePosition(dt, sessionTime);
             }
         }
@@ -126,6 +126,16 @@ namespace Demo
         {
             for (const auto& e : _entries) {
                 if (e.peer->id == id) {
+                    return e.peer.get();
+                }
+            }
+            return nullptr;
+        }
+
+        [[nodiscard]] Peer* FindPeer(std::string_view peerId) const
+        {
+            for (const auto& e : _entries) {
+                if (e.peer->peerId == peerId) {
                     return e.peer.get();
                 }
             }
